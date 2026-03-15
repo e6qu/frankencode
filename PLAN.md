@@ -25,29 +25,34 @@ OpenCode agents accumulate stale tool output, wrong assumptions, and off-topic e
 **New file:** `packages/opencode/src/cas/index.ts`
 
 The CAS lives in SQLite (same DB as everything else). This gives us:
+
 - Atomic transactions with part updates (CAS write + part edit in one tx)
 - Queryable (find all CAS entries for a session, GC orphans)
 - No filesystem overhead
 - Conversation content is text, well within SQLite's comfort zone
 
 **Schema:**
+
 ```typescript
 // cas.sql.ts
-export const CASObjectTable = sqliteTable("cas_object", {
-  hash: text().primaryKey(),                    // SHA-256 of content
-  content: text().notNull(),                    // Original content (JSON-serialized)
-  content_type: text().notNull(),               // "part" | "text" | "tool-output" | "reasoning"
-  tokens: integer().notNull(),                  // Token estimate
-  session_id: text(),                           // Source session
-  message_id: text(),                           // Source message
-  part_id: text(),                              // Source part
-  ...Timestamps,
-}, (table) => [
-  index("cas_object_session_idx").on(table.session_id),
-])
+export const CASObjectTable = sqliteTable(
+  "cas_object",
+  {
+    hash: text().primaryKey(), // SHA-256 of content
+    content: text().notNull(), // Original content (JSON-serialized)
+    content_type: text().notNull(), // "part" | "text" | "tool-output" | "reasoning"
+    tokens: integer().notNull(), // Token estimate
+    session_id: text(), // Source session
+    message_id: text(), // Source message
+    part_id: text(), // Source part
+    ...Timestamps,
+  },
+  (table) => [index("cas_object_session_idx").on(table.session_id)],
+)
 ```
 
 **Migration:** `packages/opencode/migration/YYYYMMDDHHMMSS_cas/migration.sql`
+
 ```sql
 CREATE TABLE `cas_object` (
   `hash` text PRIMARY KEY NOT NULL,
@@ -64,17 +69,25 @@ CREATE INDEX `cas_object_session_idx` ON `cas_object`(`session_id`);
 ```
 
 **Export from schema registry:** Add to `packages/opencode/src/storage/schema.ts`:
+
 ```typescript
 export { CASObjectTable } from "../cas/cas.sql"
 ```
 
 **Module (~80 lines):**
+
 ```typescript
 // cas/index.ts
 export namespace CAS {
-  export async function store(content: string, meta: {
-    contentType: string, sessionID?: string, messageID?: string, partID?: string
-  }): Promise<string> {
+  export async function store(
+    content: string,
+    meta: {
+      contentType: string
+      sessionID?: string
+      messageID?: string
+      partID?: string
+    },
+  ): Promise<string> {
     const hash = createHash("sha256").update(content).digest("hex")
     Database.use((db) => {
       db.insert(CASObjectTable)
@@ -87,21 +100,20 @@ export namespace CAS {
           message_id: meta.messageID,
           part_id: meta.partID,
         })
-        .onConflictDoNothing()  // idempotent — same content = same hash
+        .onConflictDoNothing() // idempotent — same content = same hash
         .run()
     })
     return hash
   }
 
   export function get(hash: string): CASObject | null {
-    return Database.use((db) =>
-      db.select().from(CASObjectTable).where(eq(CASObjectTable.hash, hash)).get() ?? null
-    )
+    return Database.use((db) => db.select().from(CASObjectTable).where(eq(CASObjectTable.hash, hash)).get() ?? null)
   }
 
   export function exists(hash: string): boolean {
-    return Database.use((db) =>
-      !!db.select({ hash: CASObjectTable.hash }).from(CASObjectTable).where(eq(CASObjectTable.hash, hash)).get()
+    return Database.use(
+      (db) =>
+        !!db.select({ hash: CASObjectTable.hash }).from(CASObjectTable).where(eq(CASObjectTable.hash, hash)).get(),
     )
   }
 }
@@ -115,23 +127,25 @@ Note: SQLite ops are synchronous (Bun SQLite), matching the pattern in `todo.ts`
 
 ```typescript
 // NEW: Insert before PartBase (line 81)
-export const EditMeta = z.object({
-  hidden: z.boolean(),
-  casHash: z.string().optional(),           // hash into CAS for original content
-  supersededBy: PartID.zod.optional(),      // points to replacement part
-  replacementOf: PartID.zod.optional(),     // on replacement: points to original
-  annotation: z.string().optional(),
-  editedAt: z.number(),
-  editedBy: z.string(),                     // agent name
-  version: z.string().optional(),           // graph node ID
-}).optional()
+export const EditMeta = z
+  .object({
+    hidden: z.boolean(),
+    casHash: z.string().optional(), // hash into CAS for original content
+    supersededBy: PartID.zod.optional(), // points to replacement part
+    replacementOf: PartID.zod.optional(), // on replacement: points to original
+    annotation: z.string().optional(),
+    editedAt: z.number(),
+    editedBy: z.string(), // agent name
+    version: z.string().optional(), // graph node ID
+  })
+  .optional()
 
 // MODIFY: PartBase (line 81-85) — add edit field
 const PartBase = z.object({
   id: PartID.zod,
   sessionID: SessionID.zod,
   messageID: MessageID.zod,
-  edit: EditMeta,   // NEW — all 12 part types inherit this
+  edit: EditMeta, // NEW — all 12 part types inherit this
 })
 ```
 
@@ -144,16 +158,16 @@ Safe: `.optional()` means existing parts parse as `edit: undefined`. No SQL migr
 ```typescript
 export function filterEdited(messages: WithParts[]): WithParts[] {
   return messages
-    .map(msg => ({
+    .map((msg) => ({
       ...msg,
-      parts: msg.parts.filter(part => {
+      parts: msg.parts.filter((part) => {
         if (!part.edit) return true
         if (part.edit.hidden) return false
         if (part.edit.supersededBy) return false
         return true
-      })
+      }),
     }))
-    .filter(msg => msg.parts.length > 0)
+    .filter((msg) => msg.parts.length > 0)
 }
 ```
 
@@ -170,9 +184,10 @@ export function filterEdited(messages: WithParts[]): WithParts[] {
 
 **New file:** `packages/opencode/src/context-edit/index.ts` (~300 lines)
 
-Operations: `hide`, `unhide`, `replace`, `annotate`, `externalize`
+Operations: `hide`, `unhide`, `replace`, `annotate`, `externalize`, `mark`
 
 Each operation:
+
 1. Validates ownership (`msg.role !== "user"`, `msg.agent === caller.agent`)
 2. Validates budget (max 10/turn, max 70% hidden)
 3. Validates recency (cannot edit last 2 turns)
@@ -182,12 +197,23 @@ Each operation:
 7. Publishes bus event via `Database.effect()`
 
 Key: `replace` uses `Database.transaction()` for atomicity:
+
 ```typescript
 Database.transaction(() => {
   const hash = CAS.store(JSON.stringify(part), { contentType: "part", sessionID, partID })
   const newPartID = Identifier.ascending("part")
-  Session.updatePart({...part, edit: {hidden:true, casHash:hash, supersededBy:newPartID, editedAt:Date.now(), editedBy:agent}})
-  Session.updatePart({id:newPartID, sessionID, messageID, type:"text", text:replacement, edit:{hidden:false, replacementOf:partID, editedAt:Date.now(), editedBy:agent}})
+  Session.updatePart({
+    ...part,
+    edit: { hidden: true, casHash: hash, supersededBy: newPartID, editedAt: Date.now(), editedBy: agent },
+  })
+  Session.updatePart({
+    id: newPartID,
+    sessionID,
+    messageID,
+    type: "text",
+    text: replacement,
+    edit: { hidden: false, replacementOf: partID, editedAt: Date.now(), editedBy: agent },
+  })
 })
 ```
 
@@ -214,7 +240,9 @@ Constraints: own messages only, not last 2 turns, max 10 edits/turn.`,
     annotation: z.string().optional(),
     summary: z.string().optional(),
   }),
-  async execute(args, ctx) { /* dispatch to ContextEdit.* */ }
+  async execute(args, ctx) {
+    /* dispatch to ContextEdit.* */
+  },
 }))
 ```
 
@@ -228,7 +256,7 @@ export const ContextDerefTool = Tool.define("context_deref", async () => ({
     const entry = CAS.get(args.hash)
     if (!entry) return { title: "Not found", output: `No content for hash ${args.hash}`, metadata: {} }
     return { title: "Retrieved", output: entry.content, metadata: { hash: args.hash, tokens: entry.tokens } }
-  }
+  },
 }))
 ```
 
@@ -255,28 +283,30 @@ The conversation graph models edits as a DAG with parent pointers — like git c
 **New file:** `packages/opencode/src/cas/graph.sql.ts`
 
 ```typescript
-export const EditGraphNodeTable = sqliteTable("edit_graph_node", {
-  id: text().primaryKey(),                      // Node ID
-  parent_id: text(),                            // Parent node (forms DAG)
-  session_id: text().notNull(),                 // Session scope
-  part_id: text().notNull(),                    // Part that was edited
-  operation: text().notNull(),                  // hide | unhide | replace | annotate | externalize
-  cas_hash: text(),                             // CAS hash of content BEFORE this edit
-  agent: text().notNull(),                      // Who made the edit
-  ...Timestamps,
-}, (table) => [
-  index("edit_graph_session_idx").on(table.session_id),
-  index("edit_graph_parent_idx").on(table.parent_id),
-])
+export const EditGraphNodeTable = sqliteTable(
+  "edit_graph_node",
+  {
+    id: text().primaryKey(), // Node ID
+    parent_id: text(), // Parent node (forms DAG)
+    session_id: text().notNull(), // Session scope
+    part_id: text().notNull(), // Part that was edited
+    operation: text().notNull(), // hide | unhide | replace | annotate | externalize
+    cas_hash: text(), // CAS hash of content BEFORE this edit
+    agent: text().notNull(), // Who made the edit
+    ...Timestamps,
+  },
+  (table) => [index("edit_graph_session_idx").on(table.session_id), index("edit_graph_parent_idx").on(table.parent_id)],
+)
 
 export const EditGraphHeadTable = sqliteTable("edit_graph_head", {
-  session_id: text().primaryKey(),              // One head per session
-  node_id: text().notNull(),                    // Current tip
+  session_id: text().primaryKey(), // One head per session
+  node_id: text().notNull(), // Current tip
   branches: text({ mode: "json" }).$type<Record<string, string>>(), // name → node ID
 })
 ```
 
 **Migration:** Same migration directory as CAS (or separate):
+
 ```sql
 CREATE TABLE `edit_graph_node` (
   `id` text PRIMARY KEY NOT NULL,
@@ -308,14 +338,18 @@ CREATE TABLE `edit_graph_head` (
 ```typescript
 export namespace EditGraph {
   export function commit(input: {
-    sessionID: string, partID: string, operation: string,
-    casHash?: string, agent: string, parentID?: string
-  }): string  // returns node ID
+    sessionID: string
+    partID: string
+    operation: string
+    casHash?: string
+    agent: string
+    parentID?: string
+  }): string // returns node ID
 
   export function log(sessionID: string): GraphNode[]
   // Walk parent pointers from head to root
 
-  export function tree(sessionID: string): { nodes: GraphNode[], head: string, branches: Record<string, string> }
+  export function tree(sessionID: string): { nodes: GraphNode[]; head: string; branches: Record<string, string> }
   // Full DAG for the session
 
   export function checkout(sessionID: string, nodeID: string): void
@@ -344,7 +378,9 @@ export const ContextHistoryTool = Tool.define("context_history", async () => ({
     nodeID: z.string().optional(),
     branch: z.string().optional(),
   }),
-  async execute(args, ctx) { /* dispatch to EditGraph.* */ }
+  async execute(args, ctx) {
+    /* dispatch to EditGraph.* */
+  },
 }))
 ```
 
@@ -376,23 +412,33 @@ The session index for the graph is the `edit_graph_head` table — one row per s
 **New file:** `packages/opencode/src/session/side-thread.sql.ts`
 
 ```typescript
-export const SideThreadTable = sqliteTable("side_thread", {
-  id: text().primaryKey(),
-  project_id: text().notNull().references(() => ProjectTable.id, { onDelete: "cascade" }),
-  title: text().notNull(),
-  description: text().notNull(),
-  status: text().notNull().$default(() => "parked"),
-  priority: text().notNull().$default(() => "medium"),
-  category: text().notNull().$default(() => "other"),
-  source_session_id: text(),
-  source_part_ids: text({ mode: "json" }).$type<string[]>(),
-  cas_refs: text({ mode: "json" }).$type<string[]>(),
-  related_files: text({ mode: "json" }).$type<string[]>(),
-  created_by: text().notNull(),
-  ...Timestamps,
-}, (table) => [
-  index("side_thread_project_idx").on(table.project_id, table.status),
-])
+export const SideThreadTable = sqliteTable(
+  "side_thread",
+  {
+    id: text().primaryKey(),
+    project_id: text()
+      .notNull()
+      .references(() => ProjectTable.id, { onDelete: "cascade" }),
+    title: text().notNull(),
+    description: text().notNull(),
+    status: text()
+      .notNull()
+      .$default(() => "parked"),
+    priority: text()
+      .notNull()
+      .$default(() => "medium"),
+    category: text()
+      .notNull()
+      .$default(() => "other"),
+    source_session_id: text(),
+    source_part_ids: text({ mode: "json" }).$type<string[]>(),
+    cas_refs: text({ mode: "json" }).$type<string[]>(),
+    related_files: text({ mode: "json" }).$type<string[]>(),
+    created_by: text().notNull(),
+    ...Timestamps,
+  },
+  (table) => [index("side_thread_project_idx").on(table.project_id, table.status)],
+)
 ```
 
 Add to same migration. Export from `storage/schema.ts`.
@@ -435,17 +481,9 @@ focus: {
 **New file:** `packages/opencode/src/tool/thread-park.ts` (~60 lines)
 **New file:** `packages/opencode/src/tool/thread-list.ts` (~40 lines)
 
-### 3.5 Post-turn focus hook
+### 3.5 Focus agent invocation (on-demand)
 
-**Modify:** `packages/opencode/src/session/prompt.ts` (~line 686)
-
-```typescript
-if (config.experimental?.focus_agent && step >= 2 && result === "continue") {
-  await runFocusAgent(sessionID, model, abort, msgs)
-}
-```
-
-Follows `SessionCompaction.process()` pattern.
+**Note:** The automatic post-turn focus hook was removed in v2. The focus agent is now invoked on-demand via the `/focus` command. The system prompt injects focus status (objective + parked threads) when `context_edit` is in the resolved tool set, so build/plan agents self-manage context.
 
 ### 3.6 Objective tracker
 
@@ -467,32 +505,32 @@ Follows `SessionCompaction.process()` pattern.
 
 ## Files Summary
 
-| Phase | File | Action | ~LOC |
-|:-----:|------|--------|:----:|
-| 1 | `src/cas/cas.sql.ts` | New | 20 |
-| 1 | `src/cas/index.ts` | New | 80 |
-| 1 | `src/storage/schema.ts` | Modify | +3 |
-| 1 | `migration/.../migration.sql` | New | 30 |
-| 1 | `src/session/message-v2.ts` | Modify | +25 |
-| 1 | `src/session/prompt.ts` | Modify | +1 |
-| 1 | `src/context-edit/index.ts` | New | 300 |
-| 1 | `src/tool/context-edit.ts` | New | 80 |
-| 1 | `src/tool/context-deref.ts` | New | 40 |
-| 1 | `src/tool/registry.ts` | Modify | +5 |
-| 2 | `src/cas/graph.sql.ts` | New | 30 |
-| 2 | `src/cas/graph.ts` | New | 200 |
-| 2 | `src/tool/context-history.ts` | New | 60 |
-| 3 | `src/session/side-thread.sql.ts` | New | 25 |
-| 3 | `src/session/side-thread.ts` | New | 120 |
-| 3 | `src/agent/agent.ts` | Modify | +20 |
-| 3 | `src/agent/prompt/focus.txt` | New | 50 |
-| 3 | `src/tool/thread-park.ts` | New | 60 |
-| 3 | `src/tool/thread-list.ts` | New | 40 |
-| 3 | `src/session/prompt.ts` | Modify | +15 |
-| 3 | `src/session/objective.ts` | New | 80 |
-| 4 | `src/session/prompt.ts` | Modify | +10 |
-| 4 | `packages/plugin/src/index.ts` | Modify | +12 |
-| | | **Total** | **~1,380** |
+| Phase | File                             | Action    |    ~LOC    |
+| :---: | -------------------------------- | --------- | :--------: |
+|   1   | `src/cas/cas.sql.ts`             | New       |     20     |
+|   1   | `src/cas/index.ts`               | New       |     80     |
+|   1   | `src/storage/schema.ts`          | Modify    |     +3     |
+|   1   | `migration/.../migration.sql`    | New       |     30     |
+|   1   | `src/session/message-v2.ts`      | Modify    |    +25     |
+|   1   | `src/session/prompt.ts`          | Modify    |     +1     |
+|   1   | `src/context-edit/index.ts`      | New       |    300     |
+|   1   | `src/tool/context-edit.ts`       | New       |     80     |
+|   1   | `src/tool/context-deref.ts`      | New       |     40     |
+|   1   | `src/tool/registry.ts`           | Modify    |     +5     |
+|   2   | `src/cas/graph.sql.ts`           | New       |     30     |
+|   2   | `src/cas/graph.ts`               | New       |    200     |
+|   2   | `src/tool/context-history.ts`    | New       |     60     |
+|   3   | `src/session/side-thread.sql.ts` | New       |     25     |
+|   3   | `src/session/side-thread.ts`     | New       |    120     |
+|   3   | `src/agent/agent.ts`             | Modify    |    +20     |
+|   3   | `src/agent/prompt/focus.txt`     | New       |     50     |
+|   3   | `src/tool/thread-park.ts`        | New       |     60     |
+|   3   | `src/tool/thread-list.ts`        | New       |     40     |
+|   3   | `src/session/prompt.ts`          | Modify    |    +15     |
+|   3   | `src/session/objective.ts`       | New       |     80     |
+|   4   | `src/session/prompt.ts`          | Modify    |    +10     |
+|   4   | `packages/plugin/src/index.ts`   | Modify    |    +12     |
+|       |                                  | **Total** | **~1,380** |
 
 All paths relative to `packages/opencode/`.
 
@@ -502,19 +540,20 @@ All paths relative to `packages/opencode/`.
 
 ### Why SQLite for CAS (not files)
 
-| Concern | SQLite | File-based |
-|---------|--------|------------|
-| Atomicity with part updates | Same transaction | Separate write, can drift |
-| Queryable (GC, session lookup) | Yes (SQL) | Must scan filesystem |
-| Deduplication | `ON CONFLICT DO NOTHING` | Check before write |
-| Performance | Fast for text blobs <1MB | File-per-blob overhead |
-| DB size growth | Only concern | Not an issue |
+| Concern                        | SQLite                   | File-based                |
+| ------------------------------ | ------------------------ | ------------------------- |
+| Atomicity with part updates    | Same transaction         | Separate write, can drift |
+| Queryable (GC, session lookup) | Yes (SQL)                | Must scan filesystem      |
+| Deduplication                  | `ON CONFLICT DO NOTHING` | Check before write        |
+| Performance                    | Fast for text blobs <1MB | File-per-blob overhead    |
+| DB size growth                 | Only concern             | Not an issue              |
 
 Mitigation for DB growth: add `VACUUM` to the existing hourly `Snapshot.cleanup()` scheduler. Content is text, compresses well in WAL mode.
 
 ### Why conversation graph in SQLite (not file-based Storage)
 
 The graph needs:
+
 - Parent pointer traversal (walk DAG) — `WHERE parent_id = ?` is fast with index
 - Session-scoped queries — `WHERE session_id = ?`
 - Atomic commits (graph node + CAS entry + part update in one tx)
@@ -542,25 +581,26 @@ Session.fork() copies messages. Edit graph.fork() creates a branch within the sa
 
 ## Key Reuse Points
 
-| Existing Code | Reuse For |
-|--------------|-----------|
-| `Database.transaction()` + `Database.use()` | Atomic CAS + part + graph writes |
-| `Database.effect()` | Bus events after DB commit |
-| `Session.updatePart()` | All part mutations |
-| `BusEvent.define()` + `Bus.publish()` | Edit events |
-| `SessionCompaction.process()` pattern | Focus agent post-turn invocation |
-| `Todo` module pattern | Side thread CRUD |
-| `Identifier.ascending("part")` | New part IDs, graph node IDs |
-| `Token.estimate()` | Token counting for CAS |
-| `Timestamps` from `storage/schema.ts` | `time_created`/`time_updated` on new tables |
-| `index()` from drizzle-orm | Table indexes |
-| Schema export pattern in `storage/schema.ts` | Register new tables |
+| Existing Code                                | Reuse For                                   |
+| -------------------------------------------- | ------------------------------------------- |
+| `Database.transaction()` + `Database.use()`  | Atomic CAS + part + graph writes            |
+| `Database.effect()`                          | Bus events after DB commit                  |
+| `Session.updatePart()`                       | All part mutations                          |
+| `BusEvent.define()` + `Bus.publish()`        | Edit events                                 |
+| `SessionCompaction.process()` pattern        | Focus agent post-turn invocation            |
+| `Todo` module pattern                        | Side thread CRUD                            |
+| `Identifier.ascending("part")`               | New part IDs, graph node IDs                |
+| `Token.estimate()`                           | Token counting for CAS                      |
+| `Timestamps` from `storage/schema.ts`        | `time_created`/`time_updated` on new tables |
+| `index()` from drizzle-orm                   | Table indexes                               |
+| Schema export pattern in `storage/schema.ts` | Register new tables                         |
 
 ---
 
 ## Verification
 
 ### Phase 1
+
 1. Create session, get assistant response with tool calls
 2. `context_edit(operation:"hide", partID:"prt_...", messageID:"msg_...")`
 3. Verify: hidden part absent from next LLM call; CAS entry exists in `cas_object` table
@@ -571,20 +611,24 @@ Session.fork() copies messages. Edit graph.fork() creates a branch within the sa
 8. Verify: original in CAS, new TextPart created, old part has `supersededBy`
 
 ### Phase 2
+
 9. After edits, `context_history(operation:"log")` — verify chain n1→n2→n3
 10. `context_history(operation:"fork", nodeID:"n2", branch:"alt")` — branch created
 11. `context_history(operation:"checkout", nodeID:"n1")` — parts restored from CAS
 
 ### Phase 3
+
 12. Enable focus agent, multi-turn session with divergence
 13. Verify focus agent parks a side thread, hides divergent content
 14. `thread_list` — parked thread appears with CAS refs
 
 ### Phase 4
+
 15. Verify system prompt contains focus status + thread summary
 16. Verify plugin `context.edit.before` hook fires
 
 ### Running Tests
+
 ```bash
 cd packages/opencode
 bun test src/cas/

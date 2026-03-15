@@ -35,6 +35,8 @@
     // "context_history": false,
     // "thread_park": false,
     // "thread_list": false,
+    // "classifier_threads": false,
+    // "distill_threads": false,
   },
   "agent": {
     // classifier is enabled by default — used by classifier_threads and distill_threads tools

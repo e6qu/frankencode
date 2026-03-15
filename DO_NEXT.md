@@ -1,34 +1,25 @@
 # Frankencode — Do Next
 
-## All 4 Phases Complete
+## Implemented
 
-### Implementation done:
-- [x] Phase 1: CAS (SQLite) + Part Editing (EditMeta, filterEdited, context_edit, context_deref)
-- [x] Phase 2: Conversation Graph (edit_graph DAG, context_history with log/tree/checkout/fork)
-- [x] Phase 3: Focus Agent + Side Threads (side_thread table, thread_park, thread_list, focus agent, objective tracker)
-- [x] Phase 4: Integration (system prompt injection, plugin hooks)
+- [x] CAS (SQLite) + Part Editing (EditMeta, LifecycleMeta, filterEdited, context_edit, context_deref)
+- [x] Conversation Graph (edit_graph DAG, context_history with log/tree/checkout/fork)
+- [x] Focus Agent + Side Threads (side_thread table, thread_park, thread_list, classifier, focus agents)
+- [x] Integration (system prompt injection, plugin hooks, lifecycle sweeper)
+- [x] v2: query/toolName targeting, classifier_threads, distill_threads, /btw, /focus, /reset-context
+- [x] Config-based control (no feature toggles)
+- [x] Documentation (README, docs/context-editing, docs/schema, docs/agents, AGENTS.md)
 
-### Remaining (polish & testing):
-- [ ] Write unit tests for CAS (store, get, dedup via ON CONFLICT)
-- [ ] Write unit tests for filterEdited (hidden parts stripped, superseded parts stripped, empty messages dropped)
-- [ ] Write unit tests for EditGraph (commit chain, log walk, checkout restore, fork branch)
-- [ ] Write unit tests for SideThread CRUD
-- [ ] Write unit tests for ContextEdit validation (ownership, budget, recency)
-- [ ] Manual end-to-end test: enable `OPENCODE_EXPERIMENTAL_FOCUS_AGENT=1`, run a session, verify:
-  - context_edit(hide) removes part from next LLM call
-  - context_edit(externalize) replaces with summary, context_deref retrieves original
-  - context_history(log) shows edit chain
-  - thread_park creates a project-level thread
-  - Focus agent runs post-turn and parks side threads
-  - System prompt includes focus status + thread summary
+## Next
 
-### Future enhancements (from design docs):
-- [ ] Threshold refocus mode (configurable %, proactive context rewrite)
-- [ ] Background curator mode (between-turn cleanup)
-- [ ] Pin & decay scoring (relevance decay per turn)
-- [ ] Handoff artifacts (cross-session persistence)
-- [ ] thread_investigate (spawn subagent with pre-loaded CAS context)
-- [ ] thread_promote (swap side thread into main objective)
-- [ ] TUI rendering (toggle edit indicators, sidebar thread panel)
-- [ ] Focus intensity levels (relaxed/moderate/strict)
-- [ ] CAS garbage collection (orphan cleanup)
+- [ ] Unit tests for CAS (store, get, dedup via ON CONFLICT)
+- [ ] Unit tests for filterEdited (hidden parts stripped, empty messages dropped)
+- [ ] Unit tests for EditGraph (commit chain, log walk, checkout restore)
+- [ ] Unit tests for SideThread CRUD
+- [ ] Unit tests for ContextEdit validation (ownership, budget, recency, privileged agents)
+- [ ] Unit tests for lifecycle sweeper (discardable auto-hide, ephemeral auto-externalize)
+- [ ] Test classifier_threads + distill_threads with a real session
+- [ ] Test /btw command (verify it forks, doesn't pollute main thread)
+- [ ] Explore: make /btw use Session.fork() for true message-level isolation
+- [ ] Explore: CAS garbage collection (orphan cleanup, size limits)
+- [ ] Explore: TUI rendering of edit indicators (hidden/replaced/annotated parts)
