@@ -78,6 +78,19 @@ export namespace MessageV2 {
   })
   export type OutputFormat = z.infer<typeof Format>
 
+  export const LifecycleMeta = z
+    .object({
+      hint: z.enum(["discardable", "ephemeral", "side-thread", "pinned"]),
+      afterTurns: z.number().int().min(1).optional(),
+      reason: z.string().optional(),
+      setAt: z.number(),
+      setBy: z.string(),
+      turnWhenSet: z.number(),
+    })
+    .optional()
+    .meta({ ref: "LifecycleMeta" })
+  export type LifecycleMeta = z.infer<typeof LifecycleMeta>
+
   export const EditMeta = z
     .object({
       hidden: z.boolean(),
@@ -98,6 +111,7 @@ export namespace MessageV2 {
     sessionID: SessionID.zod,
     messageID: MessageID.zod,
     edit: EditMeta,
+    lifecycle: LifecycleMeta,
   })
 
   export const SnapshotPart = PartBase.extend({
@@ -919,22 +933,25 @@ export namespace MessageV2 {
     return result
   }
 
-  /**
-   * Filter out parts that have been hidden or superseded by edits.
-   * Messages with no remaining visible parts are dropped entirely.
-   */
   export function filterEdited(messages: WithParts[]): WithParts[] {
-    return messages
-      .map((msg) => ({
-        ...msg,
-        parts: msg.parts.filter((part) => {
-          if (!part.edit) return true
-          if (part.edit.hidden) return false
-          if (part.edit.supersededBy) return false
-          return true
-        }),
-      }))
-      .filter((msg) => msg.parts.length > 0)
+    let hasEdits = false
+    for (const msg of messages) {
+      if (hasEdits) break
+      for (const part of msg.parts) {
+        if (part.edit) {
+          hasEdits = true
+          break
+        }
+      }
+    }
+    if (!hasEdits) return messages
+
+    const result: WithParts[] = []
+    for (const msg of messages) {
+      const parts = msg.parts.filter((part) => !part.edit?.hidden && !part.edit?.supersededBy)
+      if (parts.length > 0) result.push(parts === msg.parts ? msg : { ...msg, parts })
+    }
+    return result
   }
 
   export function fromError(e: unknown, ctx: { providerID: ProviderID }): NonNullable<Assistant["error"]> {

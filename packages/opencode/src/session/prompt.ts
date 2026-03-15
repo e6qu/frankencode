@@ -40,6 +40,7 @@ import { NamedError } from "@opencode-ai/util/error"
 import { fn } from "@/util/fn"
 import { Objective } from "./objective"
 import { SideThread } from "./side-thread"
+import { ContextEdit } from "@/context-edit"
 import { SessionProcessor } from "./processor"
 import { TaskTool } from "@/tool/task"
 import { Tool } from "@/tool/tool"
@@ -302,6 +303,8 @@ export namespace SessionPrompt {
       if (abort.aborted) break
       let msgs = await MessageV2.filterCompacted(MessageV2.stream(sessionID))
       msgs = MessageV2.filterEdited(msgs)
+      const currentTurn = msgs.filter((m) => m.info.role === "user").length
+      msgs = ContextEdit.sweep(msgs, currentTurn)
 
       let lastUser: MessageV2.User | undefined
       let lastAssistant: MessageV2.Assistant | undefined
@@ -666,8 +669,8 @@ export namespace SessionPrompt {
         system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
       }
 
-      // Inject focus status and side thread summary when focus agent is enabled
-      if (Flag.OPENCODE_EXPERIMENTAL_FOCUS_AGENT) {
+      // Inject focus status and side thread summary when context editing tools are available
+      if ("context_edit" in tools) {
         const parts: string[] = []
         const objective = await Objective.get(sessionID)
         if (objective) parts.push(`**Objective:** ${objective}`)
@@ -681,7 +684,7 @@ export namespace SessionPrompt {
         }
         if (parts.length > 0) {
           parts.push(
-            `\nStay focused on the objective. If you find unrelated issues, note them briefly. The focus agent will park them.`,
+            `\nStay focused on the objective. If you find unrelated issues, use thread_park to defer them. Use context_edit to hide or externalize stale tool output.`,
           )
           system.push(`## Focus Status\n${parts.join("\n")}`)
         }
@@ -742,62 +745,6 @@ export namespace SessionPrompt {
           auto: true,
           overflow: !processor.message.finish,
         })
-      }
-
-      // Post-turn focus agent: park side threads, hide off-topic content
-      if (result === "continue" && step >= 2 && Flag.OPENCODE_EXPERIMENTAL_FOCUS_AGENT) {
-        try {
-          const focusAgent = await Agent.get("focus")
-          if (focusAgent) {
-            const objective = await Objective.extract(sessionID, msgs)
-            const focusPrompt = [focusAgent.prompt ?? "", objective ? `\n## Current Objective\n${objective}` : ""]
-              .filter(Boolean)
-              .join("\n")
-            const focusMsg = (await Session.updateMessage({
-              id: MessageID.ascending(),
-              role: "assistant",
-              parentID: lastUser.id,
-              sessionID,
-              agent: "focus",
-              mode: "focus",
-              variant: lastUser.variant,
-              summary: false,
-              path: { cwd: Instance.directory, root: Instance.worktree },
-              cost: 0,
-              tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-              modelID: model.id,
-              providerID: model.providerID,
-              time: { created: Date.now() },
-            })) as MessageV2.Assistant
-            const focusProcessor = SessionProcessor.create({
-              assistantMessage: focusMsg,
-              sessionID,
-              model,
-              abort,
-            })
-            const focusTools = await resolveTools({
-              agent: focusAgent,
-              session,
-              model,
-              tools: {},
-              processor: focusProcessor,
-              bypassAgentCheck: true,
-              messages: msgs,
-            })
-            await focusProcessor.process({
-              user: lastUser,
-              agent: focusAgent,
-              abort,
-              sessionID,
-              system: [focusPrompt],
-              messages: MessageV2.toModelMessages(MessageV2.filterEdited(msgs), model),
-              tools: focusTools,
-              model,
-            })
-          }
-        } catch (e) {
-          log.warn("focus agent error", { error: String(e) })
-        }
       }
 
       continue
