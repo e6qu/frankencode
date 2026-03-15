@@ -28,10 +28,7 @@ export const EditGraphNodeTable = sqliteTable(
     agent: text().notNull(),
     ...Timestamps,
   },
-  (table) => [
-    index("edit_graph_session_idx").on(table.session_id),
-    index("edit_graph_parent_idx").on(table.parent_id),
-  ],
+  (table) => [index("edit_graph_session_idx").on(table.session_id), index("edit_graph_parent_idx").on(table.parent_id)],
 )
 
 export const EditGraphHeadTable = sqliteTable("edit_graph_head", {

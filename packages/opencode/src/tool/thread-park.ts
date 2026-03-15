@@ -16,19 +16,12 @@ Examples of when to park:
   parameters: z.object({
     title: z.string().describe("Short title (under 80 chars)"),
     description: z.string().describe("2-3 sentence summary: what was found, why it matters"),
-    priority: z
-      .enum(["low", "medium", "high", "critical"])
-      .default("medium")
-      .describe("Priority level"),
+    priority: z.enum(["low", "medium", "high", "critical"]).default("medium").describe("Priority level"),
     category: z
       .enum(["bug", "tech-debt", "security", "performance", "test", "other"])
       .default("other")
       .describe("Category of the finding"),
-    sourcePartIDs: z
-      .string()
-      .array()
-      .optional()
-      .describe("Part IDs containing the relevant finding"),
+    sourcePartIDs: z.string().array().optional().describe("Part IDs containing the relevant finding"),
     relatedFiles: z.string().array().optional().describe("File paths involved"),
   }),
 

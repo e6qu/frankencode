@@ -174,7 +174,10 @@ export namespace EditGraph {
    * Checkout a specific version: undo edits between current head and target,
    * restoring parts from CAS.
    */
-  export async function checkout(sessionID: string, targetNodeID: string): Promise<{ success: boolean; error?: string }> {
+  export async function checkout(
+    sessionID: string,
+    targetNodeID: string,
+  ): Promise<{ success: boolean; error?: string }> {
     const head = getHead(sessionID)
     if (!head) return { success: false, error: "No edit history for this session" }
 
@@ -225,9 +228,7 @@ export namespace EditGraph {
         .where(eq(EditGraphHeadTable.session_id, sessionID))
         .run()
 
-      Database.effect(() =>
-        Bus.publish(Event.CheckedOut, { sessionID, nodeID: targetNodeID }),
-      )
+      Database.effect(() => Bus.publish(Event.CheckedOut, { sessionID, nodeID: targetNodeID }))
     })
 
     log.info("checked out", { sessionID, targetNodeID, undone: nodesToUndo.length })
@@ -258,9 +259,7 @@ export namespace EditGraph {
         .where(eq(EditGraphHeadTable.session_id, sessionID))
         .run()
 
-      Database.effect(() =>
-        Bus.publish(Event.Forked, { sessionID, nodeID, branch: branchName }),
-      )
+      Database.effect(() => Bus.publish(Event.Forked, { sessionID, nodeID, branch: branchName }))
     })
 
     log.info("forked", { sessionID, nodeID, branchName })
@@ -270,7 +269,10 @@ export namespace EditGraph {
   /**
    * Switch to a named branch.
    */
-  export async function switchBranch(sessionID: string, branchName: string): Promise<{ success: boolean; error?: string }> {
+  export async function switchBranch(
+    sessionID: string,
+    branchName: string,
+  ): Promise<{ success: boolean; error?: string }> {
     const head = getHead(sessionID)
     if (!head) return { success: false, error: "No edit history for this session" }
 

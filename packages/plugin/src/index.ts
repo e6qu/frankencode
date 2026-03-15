@@ -236,7 +236,14 @@ export interface Hooks {
     output: { allow: boolean; reason?: string },
   ) => Promise<void>
   "context.edit.after"?: (
-    input: { operation: string; sessionID: string; partID?: string; messageID?: string; agent: string; success: boolean },
+    input: {
+      operation: string
+      sessionID: string
+      partID?: string
+      messageID?: string
+      agent: string
+      success: boolean
+    },
     output: {},
   ) => Promise<void>
 }

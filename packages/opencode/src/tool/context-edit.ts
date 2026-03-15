@@ -25,10 +25,7 @@ Constraints:
     messageID: z.string().describe("Parent message ID"),
     replacement: z.string().optional().describe("Replacement text (for replace operation)"),
     annotation: z.string().optional().describe("Annotation text (for annotate operation)"),
-    summary: z
-      .string()
-      .optional()
-      .describe("Summary of externalized content (for externalize operation)"),
+    summary: z.string().optional().describe("Summary of externalized content (for externalize operation)"),
   }),
 
   async execute(args, ctx) {
@@ -81,7 +78,11 @@ Constraints:
         break
 
       default:
-        return { title: "Error", metadata: { operation: args.operation }, output: `Unknown operation: ${args.operation}` }
+        return {
+          title: "Error",
+          metadata: { operation: args.operation },
+          output: `Unknown operation: ${args.operation}`,
+        }
     }
 
     if (!result.success)

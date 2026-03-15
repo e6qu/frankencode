@@ -12,8 +12,8 @@ permissions:
   contents: read
 
 jobs:
-  unit:
-    name: unit
+  ci:
+    name: format + typecheck + test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -27,5 +27,11 @@ jobs:
           git config --global user.email "ci@frankencode"
           git config --global user.name "frankencode-ci"
 
-      - name: Run unit tests
+      - name: Format check
+        run: bun prettier --check "packages/opencode/src/**/*.ts" "packages/plugin/src/**/*.ts"
+
+      - name: Typecheck
+        run: bun turbo typecheck
+
+      - name: Unit tests
         run: bun turbo test
