@@ -6,6 +6,10 @@ import { Instance } from "../project/instance"
 import { Identifier } from "../id/id"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
+import PROMPT_BTW from "./template/btw.txt"
+import PROMPT_FOCUS from "./template/focus.txt"
+import PROMPT_REWRITE_HISTORY from "./template/focus-rewrite-history.txt"
+import PROMPT_RESET_CONTEXT from "./template/reset-context.txt"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 
@@ -55,6 +59,10 @@ export namespace Command {
   export const Default = {
     INIT: "init",
     REVIEW: "review",
+    BTW: "btw",
+    FOCUS: "focus",
+    FOCUS_REWRITE: "focus-rewrite-history",
+    RESET_CONTEXT: "reset-context",
   } as const
 
   const state = Instance.state(async () => {
@@ -79,6 +87,46 @@ export namespace Command {
         },
         subtask: true,
         hints: hints(PROMPT_REVIEW),
+      },
+      [Default.BTW]: {
+        name: Default.BTW,
+        description: "side conversation — forks session, answers without polluting main thread",
+        source: "command",
+        get template() {
+          return PROMPT_BTW
+        },
+        subtask: true,
+        agent: "general",
+        hints: hints(PROMPT_BTW),
+      },
+      [Default.FOCUS]: {
+        name: Default.FOCUS,
+        description: "clean up context — classify messages, externalize stale output, park side threads",
+        source: "command",
+        get template() {
+          return PROMPT_FOCUS
+        },
+        hints: hints(PROMPT_FOCUS),
+      },
+      [Default.FOCUS_REWRITE]: {
+        name: Default.FOCUS_REWRITE,
+        description: "rewrite conversation history to focus on the objective (asks for confirmation first)",
+        source: "command",
+        get template() {
+          return PROMPT_REWRITE_HISTORY
+        },
+        subtask: true,
+        agent: "focus-rewrite-history",
+        hints: hints(PROMPT_REWRITE_HISTORY),
+      },
+      [Default.RESET_CONTEXT]: {
+        name: Default.RESET_CONTEXT,
+        description: "reset all context edits — restore every part to its original content from CAS",
+        source: "command",
+        get template() {
+          return PROMPT_RESET_CONTEXT
+        },
+        hints: hints(PROMPT_RESET_CONTEXT),
       },
     }
 

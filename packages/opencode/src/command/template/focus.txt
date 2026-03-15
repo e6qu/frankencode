@@ -1,0 +1,16 @@
+Clean up the conversation context using a two-phase approach:
+
+Phase 1 — Classify: Read messages from most recent to oldest. For each message, determine:
+- "main": on-topic, relates to the current objective
+- "side": off-topic, tangential discovery or rabbit hole
+- "mixed": partially on-topic, partially off-topic
+- Assign topic labels (e.g. "pagination", "auth-middleware", "db-pool")
+
+Phase 2 — Act on classifications:
+- "side" messages: externalize parts to CAS via context_edit, park as side thread via thread_park
+- "mixed" messages: externalize only the off-topic parts, keep on-topic parts
+- "main" messages: leave untouched
+
+Current objective context: $ARGUMENTS
+
+Report what you classified, what you externalized, and what side threads you parked.

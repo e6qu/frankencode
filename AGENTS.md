@@ -145,6 +145,12 @@ Use `context_history` to navigate the edit DAG:
 - Test actual implementation, do not duplicate logic into tests
 - Tests cannot run from repo root (guard: `do-not-run-tests-from-root`); run from package dirs like `packages/opencode`.
 
+## Git Hooks
+
+- NEVER bypass pre-commit hooks. No `HUSKY=0`, no `--no-verify`. Fix the issue instead.
+- Pre-commit runs: prettier format, typecheck, tests. All must pass before commit.
+- Commit messages must follow conventional commits (`feat:`, `fix:`, `chore:`, etc).
+
 ## Type Checking
 
 - Always run `bun typecheck` from package directories (e.g., `packages/opencode`), never `tsc` directly.

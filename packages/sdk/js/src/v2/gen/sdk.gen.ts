@@ -48,6 +48,7 @@ import type {
   GlobalEventResponses,
   GlobalHealthResponses,
   InstanceDisposeResponses,
+  LifecycleMeta,
   LspStatusResponses,
   McpAddErrors,
   McpAddResponses,
@@ -2030,6 +2031,7 @@ export class Session2 extends HeyApiClient {
       parts?: Array<{
         id?: string
         edit?: EditMeta
+        lifecycle?: LifecycleMeta
         type: "file"
         mime: string
         filename?: string

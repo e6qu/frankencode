@@ -29,5 +29,19 @@
   "tools": {
     "github-triage": false,
     "github-pr-search": false,
+    // Set any of these to false to disable context editing tools:
+    // "context_edit": false,
+    // "context_deref": false,
+    // "context_history": false,
+    // "thread_park": false,
+    // "thread_list": false,
+  },
+  "agent": {
+    // classifier is enabled by default — used by classifier_threads and distill_threads tools
+    // "classifier": { "disable": true },
+
+    // focus and focus-rewrite-history are opt-in
+    "focus": { "disable": true },
+    "focus-rewrite-history": { "disable": true },
   },
 }

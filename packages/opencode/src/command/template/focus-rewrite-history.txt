@@ -1,0 +1,9 @@
+Rewrite the conversation history to focus entirely on the current objective.
+
+First, ask me to confirm the objective and whether anything off-topic should be preserved.
+Then classify all messages (main/side/mixed with topics).
+Then rewrite: externalize side content, tighten mixed messages, clean up verbose main messages.
+
+Nothing is deleted — all original content goes to CAS. Side threads are parked with topics.
+
+$ARGUMENTS

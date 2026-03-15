@@ -1,0 +1,3 @@
+Answer this question concisely using the conversation context. Do not make file changes or run commands — just answer.
+
+$ARGUMENTS

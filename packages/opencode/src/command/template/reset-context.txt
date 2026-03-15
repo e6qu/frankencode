@@ -1,0 +1,3 @@
+Reset all context edits in this session. Restore every hidden, externalized, or replaced part back to its original content from the content-addressable store. This undoes all context_edit operations.
+
+$ARGUMENTS

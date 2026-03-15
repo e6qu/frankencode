@@ -19,6 +19,7 @@ export namespace ContextEdit {
   const MAX_HIDDEN_RATIO = 0.7
   const PROTECTED_RECENT_TURNS = 2
   const PROTECTED_TOOLS = ["skill"]
+  const PRIVILEGED_AGENTS = ["focus", "compaction"]
 
   async function pluginGuard(
     op: string,
@@ -120,6 +121,7 @@ export namespace ContextEdit {
   // ── Validation ─────────────────────────────────────────
 
   function validateOwnership(agent: string, message: MessageV2.Info): string | null {
+    if (PRIVILEGED_AGENTS.includes(agent)) return null
     if (message.role === "user") return "Cannot edit user messages"
     if (message.agent !== agent) return `Cannot edit messages from agent '${message.agent}'`
     return null
@@ -525,5 +527,150 @@ export namespace ContextEdit {
     log.info("externalized", { partID: input.partID, casHash: casHash! })
     await pluginNotify("externalize", input, true)
     return { success: true, casHash: casHash! }
+  }
+
+  export async function mark(input: {
+    sessionID: string
+    partID: string
+    messageID: string
+    agent: string
+    hint: "discardable" | "ephemeral" | "side-thread" | "pinned"
+    afterTurns?: number
+    reason?: string
+    currentTurn: number
+  }): Promise<EditResult> {
+    const msg = await MessageV2.get({
+      sessionID: SessionID.make(input.sessionID),
+      messageID: MessageID.make(input.messageID),
+    })
+    if (!msg) return { success: false, error: "Message not found" }
+
+    const part = findPart(msg, input.partID)
+    if (!part) return { success: false, error: "Part not found" }
+
+    Session.updatePart({
+      ...part,
+      lifecycle: {
+        hint: input.hint,
+        afterTurns: input.afterTurns ?? (input.hint === "discardable" ? 3 : input.hint === "ephemeral" ? 5 : undefined),
+        reason: input.reason,
+        setAt: Date.now(),
+        setBy: input.agent,
+        turnWhenSet: input.currentTurn,
+      },
+    })
+
+    log.info("marked", { partID: input.partID, hint: input.hint })
+    return { success: true }
+  }
+
+  /**
+   * Deterministic sweeper: processes lifecycle markers without LLM calls.
+   * Call from the prompt loop after filterEdited().
+   */
+  export function sweep(messages: MessageV2.WithParts[], currentTurn: number): MessageV2.WithParts[] {
+    let changed = false
+    for (const msg of messages) {
+      for (const part of msg.parts) {
+        if (!part.lifecycle) continue
+        if (part.lifecycle.hint === "pinned") continue
+        if (part.edit?.hidden) continue
+
+        const turns = part.lifecycle.afterTurns
+        if (!turns) continue
+        const elapsed = currentTurn - part.lifecycle.turnWhenSet
+        if (elapsed < turns) continue
+
+        if (part.lifecycle.hint === "discardable") {
+          const content = getPartContent(part)
+          const casHash = CAS.store(content, {
+            contentType: part.type === "tool" ? "tool-output" : part.type,
+            sessionID: msg.info.sessionID,
+            partID: part.id,
+          })
+          Session.updatePart({
+            ...part,
+            edit: {
+              hidden: true,
+              casHash,
+              editedAt: Date.now(),
+              editedBy: "sweeper",
+            },
+          })
+          changed = true
+        } else if (part.lifecycle.hint === "ephemeral") {
+          const content = getPartContent(part)
+          const casHash = CAS.store(content, {
+            contentType: part.type === "tool" ? "tool-output" : part.type,
+            sessionID: msg.info.sessionID,
+            partID: part.id,
+          })
+          const summary = part.lifecycle.reason ?? "Auto-externalized ephemeral content"
+          const summaryText = `[Externalized: ${summary}. Use context_deref("${casHash}") to retrieve.]`
+          if (part.type === "text") {
+            Session.updatePart({
+              ...part,
+              text: summaryText,
+              edit: { hidden: false, casHash, editedAt: Date.now(), editedBy: "sweeper" },
+            })
+          } else {
+            Session.updatePart({
+              ...part,
+              edit: { hidden: true, casHash, editedAt: Date.now(), editedBy: "sweeper" },
+            })
+          }
+          changed = true
+        }
+      }
+    }
+    return changed ? MessageV2.filterEdited(messages) : messages
+  }
+
+  export async function reset(sessionID: string): Promise<{ restored: number; removed: number; errors: string[] }> {
+    const messages = await Session.messages({ sessionID: SessionID.make(sessionID) })
+    let restored = 0
+    let removed = 0
+    const errors: string[] = []
+
+    for (const msg of messages) {
+      for (const part of msg.parts) {
+        if (!part.edit) continue
+
+        if (part.edit.replacementOf) {
+          Session.updatePart({ ...part, edit: undefined })
+          removed++
+          continue
+        }
+
+        if (part.edit.casHash) {
+          const entry = CAS.get(part.edit.casHash)
+          if (!entry) {
+            errors.push(`CAS entry not found: ${part.edit.casHash.slice(0, 12)} for part ${part.id.slice(0, 12)}`)
+            continue
+          }
+          try {
+            const original = JSON.parse(entry.content)
+            Session.updatePart({
+              ...original,
+              id: part.id,
+              sessionID: part.sessionID,
+              messageID: part.messageID,
+              edit: undefined,
+              lifecycle: undefined,
+            })
+            restored++
+          } catch {
+            Session.updatePart({ ...part, edit: undefined, lifecycle: undefined })
+            restored++
+          }
+        } else {
+          Session.updatePart({ ...part, edit: undefined, lifecycle: undefined })
+          restored++
+        }
+      }
+    }
+
+    log.info("reset", { sessionID: sessionID.slice(0, 12), restored, removed })
+    return { restored, removed, errors }
   }
 }

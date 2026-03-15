@@ -371,11 +371,21 @@ export type EditMeta = {
   version?: string
 }
 
+export type LifecycleMeta = {
+  hint: "discardable" | "ephemeral" | "side-thread" | "pinned"
+  afterTurns?: number
+  reason?: string
+  setAt: number
+  setBy: string
+  turnWhenSet: number
+}
+
 export type TextPart = {
   id: string
   sessionID: string
   messageID: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "text"
   text: string
   synthetic?: boolean
@@ -394,6 +404,7 @@ export type SubtaskPart = {
   sessionID: string
   messageID: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "subtask"
   prompt: string
   description: string
@@ -410,6 +421,7 @@ export type ReasoningPart = {
   sessionID: string
   messageID: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "reasoning"
   text: string
   metadata?: {
@@ -467,6 +479,7 @@ export type FilePart = {
   sessionID: string
   messageID: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "file"
   mime: string
   filename?: string
@@ -536,6 +549,7 @@ export type ToolPart = {
   sessionID: string
   messageID: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "tool"
   callID: string
   tool: string
@@ -550,6 +564,7 @@ export type StepStartPart = {
   sessionID: string
   messageID: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "step-start"
   snapshot?: string
 }
@@ -559,6 +574,7 @@ export type StepFinishPart = {
   sessionID: string
   messageID: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "step-finish"
   reason: string
   snapshot?: string
@@ -580,6 +596,7 @@ export type SnapshotPart = {
   sessionID: string
   messageID: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "snapshot"
   snapshot: string
 }
@@ -589,6 +606,7 @@ export type PatchPart = {
   sessionID: string
   messageID: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "patch"
   hash: string
   files: Array<string>
@@ -599,6 +617,7 @@ export type AgentPart = {
   sessionID: string
   messageID: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "agent"
   name: string
   source?: {
@@ -613,6 +632,7 @@ export type RetryPart = {
   sessionID: string
   messageID: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "retry"
   attempt: number
   error: ApiError
@@ -626,6 +646,7 @@ export type CompactionPart = {
   sessionID: string
   messageID: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "compaction"
   auto: boolean
   overflow?: boolean
@@ -1858,6 +1879,7 @@ export type McpResource = {
 export type TextPartInput = {
   id?: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "text"
   text: string
   synthetic?: boolean
@@ -1874,6 +1896,7 @@ export type TextPartInput = {
 export type FilePartInput = {
   id?: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "file"
   mime: string
   filename?: string
@@ -1884,6 +1907,7 @@ export type FilePartInput = {
 export type AgentPartInput = {
   id?: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "agent"
   name: string
   source?: {
@@ -1896,6 +1920,7 @@ export type AgentPartInput = {
 export type SubtaskPartInput = {
   id?: string
   edit?: EditMeta
+  lifecycle?: LifecycleMeta
   type: "subtask"
   prompt: string
   description: string
@@ -3673,6 +3698,7 @@ export type SessionCommandData = {
     parts?: Array<{
       id?: string
       edit?: EditMeta
+      lifecycle?: LifecycleMeta
       type: "file"
       mime: string
       filename?: string
