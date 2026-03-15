@@ -125,13 +125,21 @@ Use `context_edit` to keep the conversation context clean and accurate:
 - **Replace** incorrect statements with corrections.
 - **Externalize** verbose tool output into CAS, leaving a compact summary inline. Use `context_deref` to retrieve the full content later if needed.
 - **Annotate** parts with notes for future reference.
-- Do not hide errors the user should see. Do not edit user messages. Do not edit the last 2 turns.
+- **Mark** parts with lifecycle hints for automatic cleanup:
+  - `discardable` (auto-hide after 3 turns) — for failed commands, dead-end explorations
+  - `ephemeral` (auto-externalize after 5 turns) — for verbose output where only the conclusion matters
+  - `side-thread` — candidate for parking when `/focus` runs
+  - `pinned` — never auto-discard
+- Do not hide errors the user should see. Do not edit the last 2 turns.
+- Target parts using `query` (content search), `toolName`, or `nthFromEnd`. Avoid guessing raw part/message IDs.
 
 Use `thread_park` to defer off-topic findings:
 
 - When you discover a bug, security issue, or tech debt unrelated to the current task, park it as a side thread instead of chasing it.
 - Include a clear title, description, priority, category, and related files.
 - Use `thread_list` to check existing threads before parking duplicates.
+
+Use `classifier_threads` to analyze the conversation by topic, and `distill_threads` to classify + park side threads in one step.
 
 Use `context_history` to navigate the edit DAG:
 

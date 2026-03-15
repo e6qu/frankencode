@@ -48,6 +48,12 @@ Edit conversation parts. Targets parts by content search, tool name, or exact ID
 - Max 10 edits/turn, max 70% hidden ratio
 - `skill` tool results are protected
 
+**Deterministic sweeper:**
+
+The sweeper runs automatically in the prompt loop (after `filterEdited()`, before `toModelMessages()`). No LLM call — it reads lifecycle markers, checks how many turns have elapsed since `turnWhenSet`, and auto-hides or auto-externalizes expired parts. All swept content is preserved in CAS.
+
+Defaults are set in the `mark` operation: `afterTurns` defaults to 3 for `discardable`, 5 for `ephemeral`. Override per-mark by passing a custom `afterTurns` value.
+
 ## context_deref
 
 Retrieve content by CAS hash. Returns the original content before it was externalized or hidden.
