@@ -78,10 +78,26 @@ export namespace MessageV2 {
   })
   export type OutputFormat = z.infer<typeof Format>
 
+  export const EditMeta = z
+    .object({
+      hidden: z.boolean(),
+      casHash: z.string().optional(),
+      supersededBy: z.string().optional(),
+      replacementOf: z.string().optional(),
+      annotation: z.string().optional(),
+      editedAt: z.number(),
+      editedBy: z.string(),
+      version: z.string().optional(),
+    })
+    .optional()
+    .meta({ ref: "EditMeta" })
+  export type EditMeta = z.infer<typeof EditMeta>
+
   const PartBase = z.object({
     id: PartID.zod,
     sessionID: SessionID.zod,
     messageID: MessageID.zod,
+    edit: EditMeta,
   })
 
   export const SnapshotPart = PartBase.extend({
@@ -522,7 +538,7 @@ export namespace MessageV2 {
       id: row.id,
       sessionID: row.session_id,
       messageID: row.message_id,
-    }) as MessageV2.Part
+    }) as unknown as MessageV2.Part
 
   const older = (row: Cursor) =>
     or(
@@ -854,7 +870,7 @@ export namespace MessageV2 {
       db.select().from(PartTable).where(eq(PartTable.message_id, message_id)).orderBy(PartTable.id).all(),
     )
     return rows.map(
-      (row) => ({ ...row.data, id: row.id, sessionID: row.session_id, messageID: row.message_id }) as MessageV2.Part,
+      (row) => ({ ...row.data, id: row.id, sessionID: row.session_id, messageID: row.message_id }) as unknown as MessageV2.Part,
     )
   })
 
@@ -895,6 +911,24 @@ export namespace MessageV2 {
     }
     result.reverse()
     return result
+  }
+
+  /**
+   * Filter out parts that have been hidden or superseded by edits.
+   * Messages with no remaining visible parts are dropped entirely.
+   */
+  export function filterEdited(messages: WithParts[]): WithParts[] {
+    return messages
+      .map((msg) => ({
+        ...msg,
+        parts: msg.parts.filter((part) => {
+          if (!part.edit) return true
+          if (part.edit.hidden) return false
+          if (part.edit.supersededBy) return false
+          return true
+        }),
+      }))
+      .filter((msg) => msg.parts.length > 0)
   }
 
   export function fromError(e: unknown, ctx: { providerID: ProviderID }): NonNullable<Assistant["error"]> {

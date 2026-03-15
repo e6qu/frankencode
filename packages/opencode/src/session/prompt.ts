@@ -38,6 +38,8 @@ import { ConfigMarkdown } from "../config/markdown"
 import { SessionSummary } from "./summary"
 import { NamedError } from "@opencode-ai/util/error"
 import { fn } from "@/util/fn"
+import { Objective } from "./objective"
+import { SideThread } from "./side-thread"
 import { SessionProcessor } from "./processor"
 import { TaskTool } from "@/tool/task"
 import { Tool } from "@/tool/tool"
@@ -299,6 +301,7 @@ export namespace SessionPrompt {
       log.info("loop", { step, sessionID })
       if (abort.aborted) break
       let msgs = await MessageV2.filterCompacted(MessageV2.stream(sessionID))
+      msgs = MessageV2.filterEdited(msgs)
 
       let lastUser: MessageV2.User | undefined
       let lastAssistant: MessageV2.Assistant | undefined
@@ -663,6 +666,25 @@ export namespace SessionPrompt {
         system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
       }
 
+      // Inject focus status and side thread summary when focus agent is enabled
+      if (Flag.OPENCODE_EXPERIMENTAL_FOCUS_AGENT) {
+        const parts: string[] = []
+        const objective = await Objective.get(sessionID)
+        if (objective) parts.push(`**Objective:** ${objective}`)
+        const threads = SideThread.list({ projectID: Instance.project.id, status: "parked" })
+        if (threads.length > 0) {
+          parts.push(`**Parked side threads (${threads.length}):**`)
+          for (const t of threads.slice(0, 5)) {
+            parts.push(`- ${t.id} [${t.priority}, ${t.category}] ${t.title}`)
+          }
+          if (threads.length > 5) parts.push(`  ...and ${threads.length - 5} more`)
+        }
+        if (parts.length > 0) {
+          parts.push(`\nStay focused on the objective. If you find unrelated issues, note them briefly. The focus agent will park them.`)
+          system.push(`## Focus Status\n${parts.join("\n")}`)
+        }
+      }
+
       const result = await processor.process({
         user: lastUser,
         agent,
@@ -719,6 +741,69 @@ export namespace SessionPrompt {
           overflow: !processor.message.finish,
         })
       }
+
+      // Post-turn focus agent: park side threads, hide off-topic content
+      if (result === "continue" && step >= 2 && Flag.OPENCODE_EXPERIMENTAL_FOCUS_AGENT) {
+        try {
+          const focusAgent = await Agent.get("focus")
+          if (focusAgent) {
+            const objective = await Objective.extract(sessionID, msgs)
+            const focusPrompt = [
+              focusAgent.prompt ?? "",
+              objective ? `\n## Current Objective\n${objective}` : "",
+            ]
+              .filter(Boolean)
+              .join("\n")
+            const focusMsg = (await Session.updateMessage({
+              id: MessageID.ascending(),
+              role: "assistant",
+              parentID: lastUser.id,
+              sessionID,
+              agent: "focus",
+              mode: "focus",
+              variant: lastUser.variant,
+              summary: false,
+              path: { cwd: Instance.directory, root: Instance.worktree },
+              cost: 0,
+              tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+              modelID: model.id,
+              providerID: model.providerID,
+              time: { created: Date.now() },
+            })) as MessageV2.Assistant
+            const focusProcessor = SessionProcessor.create({
+              assistantMessage: focusMsg,
+              sessionID,
+              model,
+              abort,
+            })
+            const focusTools = await resolveTools({
+              agent: focusAgent,
+              session,
+              model,
+              tools: {},
+              processor: focusProcessor,
+              bypassAgentCheck: true,
+              messages: msgs,
+            })
+            await focusProcessor.process({
+              user: lastUser,
+              agent: focusAgent,
+              abort,
+              sessionID,
+              system: [focusPrompt],
+              messages: MessageV2.toModelMessages(
+                MessageV2.filterEdited(msgs),
+                model,
+              ),
+              tools: focusTools,
+              model,
+            })
+          }
+        } catch (e) {
+          log.warn("focus agent error", { error: String(e) })
+        }
+      }
+
       continue
     }
     SessionCompaction.prune({ sessionID })
@@ -988,10 +1073,11 @@ export namespace SessionPrompt {
     using _ = defer(() => InstructionPrompt.clear(info.id))
 
     type Draft<T> = T extends MessageV2.Part ? Omit<T, "id"> & { id?: string } : never
-    const assign = (part: Draft<MessageV2.Part>): MessageV2.Part => ({
-      ...part,
-      id: part.id ? PartID.make(part.id) : PartID.ascending(),
-    })
+    const assign = (part: Draft<MessageV2.Part>): MessageV2.Part =>
+      ({
+        ...part,
+        id: part.id ? PartID.make(part.id) : PartID.ascending(),
+      }) as unknown as MessageV2.Part
 
     const parts = await Promise.all(
       input.parts.map(async (part): Promise<Draft<MessageV2.Part>[]> => {
