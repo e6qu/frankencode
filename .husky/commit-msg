@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+
+msg=$(head -1 "$1")
+
+# Conventional commit format: type(scope): description
+# or: type: description
+if ! echo "$msg" | grep -qE '^(feat|fix|docs|chore|refactor|test|perf|ci|build|revert)(\([a-zA-Z0-9_-]+\))?!?: .+'; then
+  echo "ERROR: Commit message does not follow conventional commit format."
+  echo ""
+  echo "Expected: <type>(<scope>): <description>"
+  echo "  type: feat|fix|docs|chore|refactor|test|perf|ci|build|revert"
+  echo "  scope: optional, e.g. opencode, cas, plugin"
+  echo ""
+  echo "Got: $msg"
+  exit 1
+fi

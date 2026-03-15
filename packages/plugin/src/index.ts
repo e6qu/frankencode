@@ -231,4 +231,12 @@ export interface Hooks {
    * Modify tool definitions (description and parameters) sent to LLM
    */
   "tool.definition"?: (input: { toolID: string }, output: { description: string; parameters: any }) => Promise<void>
+  "context.edit.before"?: (
+    input: { operation: string; sessionID: string; partID?: string; messageID?: string; agent: string },
+    output: { allow: boolean; reason?: string },
+  ) => Promise<void>
+  "context.edit.after"?: (
+    input: { operation: string; sessionID: string; partID?: string; messageID?: string; agent: string; success: boolean },
+    output: {},
+  ) => Promise<void>
 }
