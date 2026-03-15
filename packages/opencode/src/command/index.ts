@@ -8,6 +8,7 @@ import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
+import PROMPT_BTW from "./template/btw.txt"
 
 export namespace Command {
   export const Event = {
@@ -55,6 +56,7 @@ export namespace Command {
   export const Default = {
     INIT: "init",
     REVIEW: "review",
+    BTW: "btw",
   } as const
 
   const state = Instance.state(async () => {
@@ -79,6 +81,17 @@ export namespace Command {
         },
         subtask: true,
         hints: hints(PROMPT_REVIEW),
+      },
+      [Default.BTW]: {
+        name: Default.BTW,
+        description: "side conversation — ask a question without polluting the main thread (forks session)",
+        source: "command",
+        get template() {
+          return PROMPT_BTW
+        },
+        subtask: true,
+        agent: "general",
+        hints: hints(PROMPT_BTW),
       },
     }
 

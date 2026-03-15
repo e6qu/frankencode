@@ -19,6 +19,7 @@ export namespace ContextEdit {
   const MAX_HIDDEN_RATIO = 0.7
   const PROTECTED_RECENT_TURNS = 2
   const PROTECTED_TOOLS = ["skill"]
+  const PRIVILEGED_AGENTS = ["focus", "compaction"]
 
   async function pluginGuard(
     op: string,
@@ -120,6 +121,7 @@ export namespace ContextEdit {
   // ── Validation ─────────────────────────────────────────
 
   function validateOwnership(agent: string, message: MessageV2.Info): string | null {
+    if (PRIVILEGED_AGENTS.includes(agent)) return null
     if (message.role === "user") return "Cannot edit user messages"
     if (message.agent !== agent) return `Cannot edit messages from agent '${message.agent}'`
     return null
