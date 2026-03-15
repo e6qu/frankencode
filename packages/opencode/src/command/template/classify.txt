@@ -1,0 +1,1 @@
+Classify messages in this conversation by topic using the classifier_threads tool. Report which messages are main (on-topic), side (off-topic), or mixed, along with their topic labels.

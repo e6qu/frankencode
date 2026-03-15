@@ -674,7 +674,7 @@ export namespace SessionPrompt {
         const parts: string[] = []
         const objective = await Objective.get(sessionID)
         if (objective) parts.push(`**Objective:** ${objective}`)
-        const threads = SideThread.list({ projectID: Instance.project.id, status: "parked" })
+        const { threads } = SideThread.list({ projectID: Instance.project.id, status: "parked" })
         if (threads.length > 0) {
           parts.push(`**Parked side threads (${threads.length}):**`)
           for (const t of threads.slice(0, 5)) {
@@ -999,6 +999,9 @@ export namespace SessionPrompt {
         : undefined
     const variant = input.variant ?? (agent.variant && full?.variants?.[agent.variant] ? agent.variant : undefined)
 
+    // Get current objective for message metadata
+    const currentObjective = await Objective.get(input.sessionID)
+
     const info: MessageV2.Info = {
       id: input.messageID ?? MessageID.ascending(),
       role: "user",
@@ -1012,6 +1015,7 @@ export namespace SessionPrompt {
       system: input.system,
       format: input.format,
       variant,
+      objective: currentObjective ?? undefined,
     }
     using _ = defer(() => InstructionPrompt.clear(info.id))
 
@@ -1914,6 +1918,27 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       parts,
       variant: input.variant,
     })) as MessageV2.WithParts
+
+    if (command.ephemeral) {
+      const msgs: MessageV2.WithParts[] = []
+      for await (const m of MessageV2.stream(input.sessionID)) msgs.push(m)
+      const turn = msgs.filter((m) => m.info.role === "user").length
+      for (const part of result.parts) {
+        if (part.type === "tool" || part.type === "text") {
+          Session.updatePart({
+            ...part,
+            lifecycle: {
+              hint: "ephemeral",
+              afterTurns: 0,
+              reason: "Ephemeral command output",
+              setAt: Date.now(),
+              setBy: "system",
+              turnWhenSet: turn,
+            },
+          })
+        }
+      }
+    }
 
     Bus.publish(Command.Event.Executed, {
       name: input.command,

@@ -10,6 +10,12 @@ import PROMPT_BTW from "./template/btw.txt"
 import PROMPT_FOCUS from "./template/focus.txt"
 import PROMPT_REWRITE_HISTORY from "./template/focus-rewrite-history.txt"
 import PROMPT_RESET_CONTEXT from "./template/reset-context.txt"
+import PROMPT_OBJECTIVE from "./template/objective.txt"
+import PROMPT_THREADS from "./template/threads.txt"
+import PROMPT_HISTORY from "./template/history.txt"
+import PROMPT_TREE from "./template/tree.txt"
+import PROMPT_DEREF from "./template/deref.txt"
+import PROMPT_CLASSIFY from "./template/classify.txt"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 
@@ -37,6 +43,7 @@ export namespace Command {
       // https://zod.dev/v4/changelog?id=zfunction
       template: z.promise(z.string()).or(z.string()),
       subtask: z.boolean().optional(),
+      ephemeral: z.boolean().optional(),
       hints: z.array(z.string()),
     })
     .meta({
@@ -63,6 +70,12 @@ export namespace Command {
     FOCUS: "focus",
     FOCUS_REWRITE: "focus-rewrite-history",
     RESET_CONTEXT: "reset-context",
+    OBJECTIVE: "objective",
+    THREADS: "threads",
+    HISTORY: "history",
+    TREE: "tree",
+    DEREF: "deref",
+    CLASSIFY: "classify",
   } as const
 
   const state = Instance.state(async () => {
@@ -128,6 +141,65 @@ export namespace Command {
         },
         hints: hints(PROMPT_RESET_CONTEXT),
       },
+      [Default.OBJECTIVE]: {
+        name: Default.OBJECTIVE,
+        description: "set or update the session objective (1-500 chars) — used for context cleanup classification",
+        source: "command",
+        get template() {
+          return PROMPT_OBJECTIVE
+        },
+        hints: hints(PROMPT_OBJECTIVE),
+      },
+      [Default.THREADS]: {
+        name: Default.THREADS,
+        description: "list side threads for the current project (readonly, output not stored in context)",
+        source: "command",
+        ephemeral: true,
+        get template() {
+          return PROMPT_THREADS
+        },
+        hints: hints(PROMPT_THREADS),
+      },
+      [Default.HISTORY]: {
+        name: Default.HISTORY,
+        description: "show linear edit history for this session (readonly, output not stored in context)",
+        source: "command",
+        ephemeral: true,
+        get template() {
+          return PROMPT_HISTORY
+        },
+        hints: hints(PROMPT_HISTORY),
+      },
+      [Default.TREE]: {
+        name: Default.TREE,
+        description: "show full edit DAG with branches (readonly, output not stored in context)",
+        source: "command",
+        ephemeral: true,
+        get template() {
+          return PROMPT_TREE
+        },
+        hints: hints(PROMPT_TREE),
+      },
+      [Default.DEREF]: {
+        name: Default.DEREF,
+        description: "retrieve externalized content from CAS by hash (readonly, output not stored in context)",
+        source: "command",
+        ephemeral: true,
+        get template() {
+          return PROMPT_DEREF
+        },
+        hints: hints(PROMPT_DEREF),
+      },
+      [Default.CLASSIFY]: {
+        name: Default.CLASSIFY,
+        description: "classify messages by topic (readonly, output not stored in context)",
+        source: "command",
+        ephemeral: true,
+        get template() {
+          return PROMPT_CLASSIFY
+        },
+        hints: hints(PROMPT_CLASSIFY),
+      },
     }
 
     for (const [name, command] of Object.entries(cfg.command ?? {})) {
@@ -141,6 +213,7 @@ export namespace Command {
           return command.template
         },
         subtask: command.subtask,
+        ephemeral: command.ephemeral,
         hints: hints(command.template),
       }
     }

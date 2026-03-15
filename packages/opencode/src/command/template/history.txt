@@ -1,0 +1,1 @@
+Show the linear edit history for this session using the context_history tool with operation "log". Format each entry showing: node ID, operation, part ID, agent, and timestamp.

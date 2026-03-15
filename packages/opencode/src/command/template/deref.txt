@@ -1,0 +1,1 @@
+Retrieve and display the externalized content from the CAS using the context_deref tool with hash: $ARGUMENTS
