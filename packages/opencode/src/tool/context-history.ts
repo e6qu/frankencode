@@ -25,7 +25,11 @@ Branches allow exploring alternative edit paths without losing the original.`,
       case "log": {
         const nodes = EditGraph.getLog(ctx.sessionID)
         if (nodes.length === 0)
-          return { title: "No edit history", metadata: { count: 0, branches: [] as string[] }, output: "No edits have been made in this session." }
+          return {
+            title: "No edit history",
+            metadata: { count: 0, branches: [] as string[] },
+            output: "No edits have been made in this session.",
+          }
 
         const lines = nodes.map((n, i) => {
           const marker = i === 0 ? " (HEAD)" : ""
@@ -42,7 +46,11 @@ Branches allow exploring alternative edit paths without losing the original.`,
       case "tree": {
         const { nodes, head, branches } = EditGraph.tree(ctx.sessionID)
         if (nodes.length === 0)
-          return { title: "No edit history", metadata: { count: 0, branches: [] as string[] }, output: "No edits have been made in this session." }
+          return {
+            title: "No edit history",
+            metadata: { count: 0, branches: [] as string[] },
+            output: "No edits have been made in this session.",
+          }
 
         const branchLabels = new Map<string, string[]>()
         for (const [name, nodeID] of Object.entries(branches)) {
@@ -53,7 +61,11 @@ Branches allow exploring alternative edit paths without losing the original.`,
 
         const lines = nodes.map((n) => {
           const isHead = n.id === head ? " <- HEAD" : ""
-          const branchTags = branchLabels.get(n.id)?.map((b) => ` [${b}]`).join("") ?? ""
+          const branchTags =
+            branchLabels
+              .get(n.id)
+              ?.map((b) => ` [${b}]`)
+              .join("") ?? ""
           const parent = n.parent_id ? ` parent:${n.parent_id.slice(0, 12)}` : " (root)"
           return `${n.id.slice(0, 12)} ${n.operation} on ${n.part_id.slice(0, 12)} by ${n.agent}${parent}${branchTags}${isHead}`
         })
@@ -66,10 +78,18 @@ Branches allow exploring alternative edit paths without losing the original.`,
 
       case "checkout": {
         if (!args.nodeID)
-          return { title: "Error", metadata: { count: 0, branches: [] as string[] }, output: "nodeID is required for checkout" }
+          return {
+            title: "Error",
+            metadata: { count: 0, branches: [] as string[] },
+            output: "nodeID is required for checkout",
+          }
         const result = await EditGraph.checkout(ctx.sessionID, args.nodeID)
         if (!result.success)
-          return { title: "Checkout failed", metadata: { count: 0, branches: [] as string[] }, output: `Error: ${result.error}` }
+          return {
+            title: "Checkout failed",
+            metadata: { count: 0, branches: [] as string[] },
+            output: `Error: ${result.error}`,
+          }
         return {
           title: `Checked out ${args.nodeID.slice(0, 12)}`,
           metadata: { count: 0, branches: [] as string[] },
@@ -79,10 +99,18 @@ Branches allow exploring alternative edit paths without losing the original.`,
 
       case "fork": {
         if (!args.nodeID || !args.branch)
-          return { title: "Error", metadata: { count: 0, branches: [] as string[] }, output: "nodeID and branch are required for fork" }
+          return {
+            title: "Error",
+            metadata: { count: 0, branches: [] as string[] },
+            output: "nodeID and branch are required for fork",
+          }
         const result = EditGraph.fork(ctx.sessionID, args.nodeID, args.branch)
         if (!result.success)
-          return { title: "Fork failed", metadata: { count: 0, branches: [] as string[] }, output: `Error: ${result.error}` }
+          return {
+            title: "Fork failed",
+            metadata: { count: 0, branches: [] as string[] },
+            output: `Error: ${result.error}`,
+          }
         return {
           title: `Forked: ${args.branch}`,
           metadata: { count: 0, branches: [args.branch] },
@@ -91,7 +119,11 @@ Branches allow exploring alternative edit paths without losing the original.`,
       }
 
       default:
-        return { title: "Error", metadata: { count: 0, branches: [] as string[] }, output: `Unknown operation: ${args.operation}` }
+        return {
+          title: "Error",
+          metadata: { count: 0, branches: [] as string[] },
+          output: `Unknown operation: ${args.operation}`,
+        }
     }
   },
 })

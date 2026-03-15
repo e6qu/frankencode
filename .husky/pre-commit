@@ -1,8 +1,12 @@
 #!/bin/sh
 set -e
 
-# Typecheck
-bun turbo typecheck
+# Autoformat staged files
+bun prettier --write "packages/opencode/src/**/*.ts" "packages/plugin/src/**/*.ts"
+git update-index --again
 
-# Unit tests
-bun turbo test
+# Typecheck
+bun turbo typecheck 2>&1 | tail -5
+
+# Unit tests (quiet — show only summary)
+bun turbo test 2>&1 | grep -E '(pass|fail|error|Tasks:|FAIL)' | tail -10

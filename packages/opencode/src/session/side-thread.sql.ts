@@ -13,9 +13,15 @@ export const SideThreadTable = sqliteTable(
       .references(() => ProjectTable.id, { onDelete: "cascade" }),
     title: text().notNull(),
     description: text().notNull(),
-    status: text().notNull().$default(() => "parked"),
-    priority: text().notNull().$default(() => "medium"),
-    category: text().notNull().$default(() => "other"),
+    status: text()
+      .notNull()
+      .$default(() => "parked"),
+    priority: text()
+      .notNull()
+      .$default(() => "medium"),
+    category: text()
+      .notNull()
+      .$default(() => "other"),
     source_session_id: text(),
     source_part_ids: text({ mode: "json" }).$type<string[]>(),
     cas_refs: text({ mode: "json" }).$type<string[]>(),

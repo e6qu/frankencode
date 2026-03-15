@@ -30,14 +30,8 @@ export namespace SideThread {
   export type Info = z.infer<typeof Info>
 
   export const Event = {
-    Created: BusEvent.define(
-      "side-thread.created",
-      z.object({ thread: Info }),
-    ),
-    Updated: BusEvent.define(
-      "side-thread.updated",
-      z.object({ thread: Info }),
-    ),
+    Created: BusEvent.define("side-thread.created", z.object({ thread: Info })),
+    Updated: BusEvent.define("side-thread.updated", z.object({ thread: Info })),
   }
 
   function rowToInfo(row: typeof SideThreadTable.$inferSelect): Info {
@@ -116,27 +110,17 @@ export namespace SideThread {
   }
 
   export function get(id: string): Info | null {
-    const row = Database.use((db) =>
-      db.select().from(SideThreadTable).where(eq(SideThreadTable.id, id)).get(),
-    )
+    const row = Database.use((db) => db.select().from(SideThreadTable).where(eq(SideThreadTable.id, id)).get())
     return row ? rowToInfo(row) : null
   }
 
-  export function list(input: {
-    projectID: string
-    status?: Info["status"] | "all"
-  }): Info[] {
+  export function list(input: { projectID: string; status?: Info["status"] | "all" }): Info[] {
     const rows = Database.use((db) => {
       if (input.status && input.status !== "all") {
         return db
           .select()
           .from(SideThreadTable)
-          .where(
-            and(
-              eq(SideThreadTable.project_id, input.projectID as any),
-              eq(SideThreadTable.status, input.status),
-            ),
-          )
+          .where(and(eq(SideThreadTable.project_id, input.projectID as any), eq(SideThreadTable.status, input.status)))
           .all()
       }
       return db

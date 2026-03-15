@@ -59,9 +59,7 @@ export namespace CAS {
    * Retrieve content by hash. Returns null if not found.
    */
   export function get(h: string): Entry | null {
-    return (
-      Database.use((db) => db.select().from(CASObjectTable).where(eq(CASObjectTable.hash, h)).get()) ?? null
-    )
+    return Database.use((db) => db.select().from(CASObjectTable).where(eq(CASObjectTable.hash, h)).get()) ?? null
   }
 
   /**
@@ -69,11 +67,7 @@ export namespace CAS {
    */
   export function exists(h: string): boolean {
     return !!Database.use((db) =>
-      db
-        .select({ hash: CASObjectTable.hash })
-        .from(CASObjectTable)
-        .where(eq(CASObjectTable.hash, h))
-        .get(),
+      db.select({ hash: CASObjectTable.hash }).from(CASObjectTable).where(eq(CASObjectTable.hash, h)).get(),
     )
   }
 
@@ -81,8 +75,6 @@ export namespace CAS {
    * List all CAS entries for a session.
    */
   export function listBySession(sessionID: string): Entry[] {
-    return Database.use((db) =>
-      db.select().from(CASObjectTable).where(eq(CASObjectTable.session_id, sessionID)).all(),
-    )
+    return Database.use((db) => db.select().from(CASObjectTable).where(eq(CASObjectTable.session_id, sessionID)).all())
   }
 }

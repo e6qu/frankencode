@@ -20,18 +20,42 @@ export namespace ContextEdit {
   const PROTECTED_RECENT_TURNS = 2
   const PROTECTED_TOOLS = ["skill"]
 
-  async function pluginGuard(op: string, input: { sessionID: string; partID?: string; messageID?: string; agent: string }): Promise<EditResult | null> {
-    const result = await Plugin.trigger("context.edit.before", {
-      operation: op, sessionID: input.sessionID, partID: input.partID, messageID: input.messageID, agent: input.agent,
-    }, { allow: true })
+  async function pluginGuard(
+    op: string,
+    input: { sessionID: string; partID?: string; messageID?: string; agent: string },
+  ): Promise<EditResult | null> {
+    const result = await Plugin.trigger(
+      "context.edit.before",
+      {
+        operation: op,
+        sessionID: input.sessionID,
+        partID: input.partID,
+        messageID: input.messageID,
+        agent: input.agent,
+      },
+      { allow: true },
+    )
     if (!result.allow) return { success: false, error: (result as any).reason ?? "Blocked by plugin" }
     return null
   }
 
-  async function pluginNotify(op: string, input: { sessionID: string; partID?: string; messageID?: string; agent: string }, success: boolean) {
-    await Plugin.trigger("context.edit.after", {
-      operation: op, sessionID: input.sessionID, partID: input.partID, messageID: input.messageID, agent: input.agent, success,
-    }, {})
+  async function pluginNotify(
+    op: string,
+    input: { sessionID: string; partID?: string; messageID?: string; agent: string },
+    success: boolean,
+  ) {
+    await Plugin.trigger(
+      "context.edit.after",
+      {
+        operation: op,
+        sessionID: input.sessionID,
+        partID: input.partID,
+        messageID: input.messageID,
+        agent: input.agent,
+        success,
+      },
+      {},
+    )
   }
 
   // ── Types ──────────────────────────────────────────────
@@ -103,10 +127,7 @@ export namespace ContextEdit {
 
   function validateBudget(messages: MessageV2.WithParts[]): string | null {
     const totalParts = messages.reduce((n, m) => n + m.parts.length, 0)
-    const hiddenParts = messages.reduce(
-      (n, m) => n + m.parts.filter((p) => p.edit?.hidden).length,
-      0,
-    )
+    const hiddenParts = messages.reduce((n, m) => n + m.parts.filter((p) => p.edit?.hidden).length, 0)
     if (totalParts > 0 && (hiddenParts + 1) / totalParts > MAX_HIDDEN_RATIO)
       return `Cannot hide more than ${MAX_HIDDEN_RATIO * 100}% of all parts`
     return null
@@ -118,10 +139,7 @@ export namespace ContextEdit {
     return idx >= messages.length - PROTECTED_RECENT_TURNS * 2
   }
 
-  function findPart(
-    msg: MessageV2.WithParts,
-    partID: string,
-  ): MessageV2.Part | undefined {
+  function findPart(msg: MessageV2.WithParts, partID: string): MessageV2.Part | undefined {
     return msg.parts.find((p) => p.id === partID)
   }
 

@@ -19,6 +19,7 @@ import type {
   ConfigProvidersResponses,
   ConfigUpdateErrors,
   ConfigUpdateResponses,
+  EditMeta,
   EventSubscribeResponses,
   EventTuiCommandExecute,
   EventTuiPromptAppend,
@@ -2028,6 +2029,7 @@ export class Session2 extends HeyApiClient {
       variant?: string
       parts?: Array<{
         id?: string
+        edit?: EditMeta
         type: "file"
         mime: string
         filename?: string

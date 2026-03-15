@@ -870,7 +870,13 @@ export namespace MessageV2 {
       db.select().from(PartTable).where(eq(PartTable.message_id, message_id)).orderBy(PartTable.id).all(),
     )
     return rows.map(
-      (row) => ({ ...row.data, id: row.id, sessionID: row.session_id, messageID: row.message_id }) as unknown as MessageV2.Part,
+      (row) =>
+        ({
+          ...row.data,
+          id: row.id,
+          sessionID: row.session_id,
+          messageID: row.message_id,
+        }) as unknown as MessageV2.Part,
     )
   })
 

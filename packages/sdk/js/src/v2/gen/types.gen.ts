@@ -360,10 +360,22 @@ export type EventMessageRemoved = {
   }
 }
 
+export type EditMeta = {
+  hidden: boolean
+  casHash?: string
+  supersededBy?: string
+  replacementOf?: string
+  annotation?: string
+  editedAt: number
+  editedBy: string
+  version?: string
+}
+
 export type TextPart = {
   id: string
   sessionID: string
   messageID: string
+  edit?: EditMeta
   type: "text"
   text: string
   synthetic?: boolean
@@ -381,6 +393,7 @@ export type SubtaskPart = {
   id: string
   sessionID: string
   messageID: string
+  edit?: EditMeta
   type: "subtask"
   prompt: string
   description: string
@@ -396,6 +409,7 @@ export type ReasoningPart = {
   id: string
   sessionID: string
   messageID: string
+  edit?: EditMeta
   type: "reasoning"
   text: string
   metadata?: {
@@ -452,6 +466,7 @@ export type FilePart = {
   id: string
   sessionID: string
   messageID: string
+  edit?: EditMeta
   type: "file"
   mime: string
   filename?: string
@@ -520,6 +535,7 @@ export type ToolPart = {
   id: string
   sessionID: string
   messageID: string
+  edit?: EditMeta
   type: "tool"
   callID: string
   tool: string
@@ -533,6 +549,7 @@ export type StepStartPart = {
   id: string
   sessionID: string
   messageID: string
+  edit?: EditMeta
   type: "step-start"
   snapshot?: string
 }
@@ -541,6 +558,7 @@ export type StepFinishPart = {
   id: string
   sessionID: string
   messageID: string
+  edit?: EditMeta
   type: "step-finish"
   reason: string
   snapshot?: string
@@ -561,6 +579,7 @@ export type SnapshotPart = {
   id: string
   sessionID: string
   messageID: string
+  edit?: EditMeta
   type: "snapshot"
   snapshot: string
 }
@@ -569,6 +588,7 @@ export type PatchPart = {
   id: string
   sessionID: string
   messageID: string
+  edit?: EditMeta
   type: "patch"
   hash: string
   files: Array<string>
@@ -578,6 +598,7 @@ export type AgentPart = {
   id: string
   sessionID: string
   messageID: string
+  edit?: EditMeta
   type: "agent"
   name: string
   source?: {
@@ -591,6 +612,7 @@ export type RetryPart = {
   id: string
   sessionID: string
   messageID: string
+  edit?: EditMeta
   type: "retry"
   attempt: number
   error: ApiError
@@ -603,6 +625,7 @@ export type CompactionPart = {
   id: string
   sessionID: string
   messageID: string
+  edit?: EditMeta
   type: "compaction"
   auto: boolean
   overflow?: boolean
@@ -713,6 +736,113 @@ export type EventTodoUpdated = {
   properties: {
     sessionID: string
     todos: Array<Todo>
+  }
+}
+
+export type EventEditGraphCommitted = {
+  type: "edit.graph.committed"
+  properties: {
+    sessionID: string
+    nodeID: string
+    operation: string
+  }
+}
+
+export type EventEditGraphCheckedOut = {
+  type: "edit.graph.checked-out"
+  properties: {
+    sessionID: string
+    nodeID: string
+  }
+}
+
+export type EventEditGraphForked = {
+  type: "edit.graph.forked"
+  properties: {
+    sessionID: string
+    nodeID: string
+    branch: string
+  }
+}
+
+export type EventContextEditHidden = {
+  type: "context.edit.hidden"
+  properties: {
+    sessionID: string
+    partID: string
+    casHash: string
+    agent: string
+  }
+}
+
+export type EventContextEditUnhidden = {
+  type: "context.edit.unhidden"
+  properties: {
+    sessionID: string
+    partID: string
+    agent: string
+  }
+}
+
+export type EventContextEditReplaced = {
+  type: "context.edit.replaced"
+  properties: {
+    sessionID: string
+    oldPartID: string
+    newPartID: string
+    casHash: string
+    agent: string
+  }
+}
+
+export type EventContextEditAnnotated = {
+  type: "context.edit.annotated"
+  properties: {
+    sessionID: string
+    partID: string
+    annotation: string
+    agent: string
+  }
+}
+
+export type EventContextEditExternalized = {
+  type: "context.edit.externalized"
+  properties: {
+    sessionID: string
+    partID: string
+    casHash: string
+    agent: string
+  }
+}
+
+export type SideThread = {
+  id: string
+  projectID: string
+  title: string
+  description: string
+  status: "parked" | "investigating" | "resolved" | "deferred"
+  priority: "low" | "medium" | "high" | "critical"
+  category: "bug" | "tech-debt" | "security" | "performance" | "test" | "other"
+  sourceSessionID?: string
+  sourcePartIDs?: Array<string>
+  casRefs?: Array<string>
+  relatedFiles?: Array<string>
+  createdBy: string
+  timeCreated: number
+  timeUpdated: number
+}
+
+export type EventSideThreadCreated = {
+  type: "side-thread.created"
+  properties: {
+    thread: SideThread
+  }
+}
+
+export type EventSideThreadUpdated = {
+  type: "side-thread.updated"
+  properties: {
+    thread: SideThread
   }
 }
 
@@ -982,6 +1112,16 @@ export type Event =
   | EventSessionCompacted
   | EventFileWatcherUpdated
   | EventTodoUpdated
+  | EventEditGraphCommitted
+  | EventEditGraphCheckedOut
+  | EventEditGraphForked
+  | EventContextEditHidden
+  | EventContextEditUnhidden
+  | EventContextEditReplaced
+  | EventContextEditAnnotated
+  | EventContextEditExternalized
+  | EventSideThreadCreated
+  | EventSideThreadUpdated
   | EventTuiPromptAppend
   | EventTuiCommandExecute
   | EventTuiToastShow
@@ -1717,6 +1857,7 @@ export type McpResource = {
 
 export type TextPartInput = {
   id?: string
+  edit?: EditMeta
   type: "text"
   text: string
   synthetic?: boolean
@@ -1732,6 +1873,7 @@ export type TextPartInput = {
 
 export type FilePartInput = {
   id?: string
+  edit?: EditMeta
   type: "file"
   mime: string
   filename?: string
@@ -1741,6 +1883,7 @@ export type FilePartInput = {
 
 export type AgentPartInput = {
   id?: string
+  edit?: EditMeta
   type: "agent"
   name: string
   source?: {
@@ -1752,6 +1895,7 @@ export type AgentPartInput = {
 
 export type SubtaskPartInput = {
   id?: string
+  edit?: EditMeta
   type: "subtask"
   prompt: string
   description: string
@@ -3528,6 +3672,7 @@ export type SessionCommandData = {
     variant?: string
     parts?: Array<{
       id?: string
+      edit?: EditMeta
       type: "file"
       mime: string
       filename?: string

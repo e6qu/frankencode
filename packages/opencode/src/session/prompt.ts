@@ -680,7 +680,9 @@ export namespace SessionPrompt {
           if (threads.length > 5) parts.push(`  ...and ${threads.length - 5} more`)
         }
         if (parts.length > 0) {
-          parts.push(`\nStay focused on the objective. If you find unrelated issues, note them briefly. The focus agent will park them.`)
+          parts.push(
+            `\nStay focused on the objective. If you find unrelated issues, note them briefly. The focus agent will park them.`,
+          )
           system.push(`## Focus Status\n${parts.join("\n")}`)
         }
       }
@@ -748,10 +750,7 @@ export namespace SessionPrompt {
           const focusAgent = await Agent.get("focus")
           if (focusAgent) {
             const objective = await Objective.extract(sessionID, msgs)
-            const focusPrompt = [
-              focusAgent.prompt ?? "",
-              objective ? `\n## Current Objective\n${objective}` : "",
-            ]
+            const focusPrompt = [focusAgent.prompt ?? "", objective ? `\n## Current Objective\n${objective}` : ""]
               .filter(Boolean)
               .join("\n")
             const focusMsg = (await Session.updateMessage({
@@ -791,10 +790,7 @@ export namespace SessionPrompt {
               abort,
               sessionID,
               system: [focusPrompt],
-              messages: MessageV2.toModelMessages(
-                MessageV2.filterEdited(msgs),
-                model,
-              ),
+              messages: MessageV2.toModelMessages(MessageV2.filterEdited(msgs), model),
               tools: focusTools,
               model,
             })
