@@ -9,6 +9,21 @@
     "edit": {
       "packages/opencode/migration/*": "deny",
     },
+    "context_edit": {
+      "*": "allow",
+    },
+    "context_deref": {
+      "*": "allow",
+    },
+    "context_history": {
+      "*": "allow",
+    },
+    "thread_park": {
+      "*": "allow",
+    },
+    "thread_list": {
+      "*": "allow",
+    },
   },
   "mcp": {},
   "tools": {
