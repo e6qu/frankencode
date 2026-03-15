@@ -117,6 +117,28 @@ const table = sqliteTable("session", {
 })
 ```
 
+## Context Editing
+
+Use `context_edit` to keep the conversation context clean and accurate:
+
+- **Hide** stale tool results (file reads from before an edit, outdated grep output).
+- **Replace** incorrect statements with corrections.
+- **Externalize** verbose tool output into CAS, leaving a compact summary inline. Use `context_deref` to retrieve the full content later if needed.
+- **Annotate** parts with notes for future reference.
+- Do not hide errors the user should see. Do not edit user messages. Do not edit the last 2 turns.
+
+Use `thread_park` to defer off-topic findings:
+
+- When you discover a bug, security issue, or tech debt unrelated to the current task, park it as a side thread instead of chasing it.
+- Include a clear title, description, priority, category, and related files.
+- Use `thread_list` to check existing threads before parking duplicates.
+
+Use `context_history` to navigate the edit DAG:
+
+- `log` to review what was edited and when.
+- `checkout` to restore a previous version if an edit was wrong.
+- `fork` to explore alternative edit paths.
+
 ## Testing
 
 - Avoid mocks as much as possible
