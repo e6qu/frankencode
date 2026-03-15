@@ -1,11 +1,11 @@
 import { Session } from "@/session"
 import { MessageV2 } from "@/session/message-v2"
+import { SessionID, MessageID, PartID } from "@/session/schema"
 import { CAS } from "@/cas"
 import { EditGraph } from "@/cas/graph"
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Database } from "@/storage/db"
-import { Identifier } from "@/id/id"
 import { Plugin } from "@/plugin"
 import { Log } from "@/util/log"
 import z from "zod"
@@ -20,24 +20,18 @@ export namespace ContextEdit {
   const PROTECTED_RECENT_TURNS = 2
   const PROTECTED_TOOLS = ["skill"]
 
-  // ── Plugin Hooks ───────────────────────────────────────
-
   async function pluginGuard(op: string, input: { sessionID: string; partID?: string; messageID?: string; agent: string }): Promise<EditResult | null> {
-    const result = await Plugin.trigger(
-      "context.edit.before",
-      { operation: op, sessionID: input.sessionID, partID: input.partID, messageID: input.messageID, agent: input.agent },
-      { allow: true, reason: undefined as string | undefined },
-    )
-    if (!result.allow) return { success: false, error: result.reason ?? "Blocked by plugin" }
+    const result = await Plugin.trigger("context.edit.before", {
+      operation: op, sessionID: input.sessionID, partID: input.partID, messageID: input.messageID, agent: input.agent,
+    }, { allow: true })
+    if (!result.allow) return { success: false, error: (result as any).reason ?? "Blocked by plugin" }
     return null
   }
 
   async function pluginNotify(op: string, input: { sessionID: string; partID?: string; messageID?: string; agent: string }, success: boolean) {
-    await Plugin.trigger(
-      "context.edit.after",
-      { operation: op, sessionID: input.sessionID, partID: input.partID, messageID: input.messageID, agent: input.agent, success },
-      {},
-    )
+    await Plugin.trigger("context.edit.after", {
+      operation: op, sessionID: input.sessionID, partID: input.partID, messageID: input.messageID, agent: input.agent, success,
+    }, {})
   }
 
   // ── Types ──────────────────────────────────────────────
@@ -153,15 +147,15 @@ export namespace ContextEdit {
     if (blocked) return blocked
 
     const msg = await MessageV2.get({
-      sessionID: input.sessionID,
-      messageID: input.messageID,
+      sessionID: SessionID.make(input.sessionID),
+      messageID: MessageID.make(input.messageID),
     })
     if (!msg) return { success: false, error: "Message not found" }
 
     const ownerErr = validateOwnership(input.agent, msg.info)
     if (ownerErr) return { success: false, error: ownerErr }
 
-    const messages = await Session.messages({ sessionID: input.sessionID })
+    const messages = await Session.messages({ sessionID: SessionID.make(input.sessionID) })
     if (isProtectedMessage(messages, input.messageID))
       return { success: false, error: "Cannot edit recent messages (last 2 turns are protected)" }
 
@@ -225,8 +219,8 @@ export namespace ContextEdit {
     agent: string
   }): Promise<EditResult> {
     const msg = await MessageV2.get({
-      sessionID: input.sessionID,
-      messageID: input.messageID,
+      sessionID: SessionID.make(input.sessionID),
+      messageID: MessageID.make(input.messageID),
     })
     if (!msg) return { success: false, error: "Message not found" }
 
@@ -262,15 +256,15 @@ export namespace ContextEdit {
     if (blocked) return blocked
 
     const msg = await MessageV2.get({
-      sessionID: input.sessionID,
-      messageID: input.messageID,
+      sessionID: SessionID.make(input.sessionID),
+      messageID: MessageID.make(input.messageID),
     })
     if (!msg) return { success: false, error: "Message not found" }
 
     const ownerErr = validateOwnership(input.agent, msg.info)
     if (ownerErr) return { success: false, error: ownerErr }
 
-    const messages = await Session.messages({ sessionID: input.sessionID })
+    const messages = await Session.messages({ sessionID: SessionID.make(input.sessionID) })
     if (isProtectedMessage(messages, input.messageID))
       return { success: false, error: "Cannot edit recent messages (last 2 turns are protected)" }
 
@@ -278,7 +272,7 @@ export namespace ContextEdit {
     if (!part) return { success: false, error: "Part not found" }
 
     const content = getPartContent(part)
-    const newPartID = Identifier.ascending("part")
+    const newPartID = PartID.ascending()
     let casHash: string
 
     Database.transaction(() => {
@@ -350,8 +344,8 @@ export namespace ContextEdit {
     annotation: string
   }): Promise<EditResult> {
     const msg = await MessageV2.get({
-      sessionID: input.sessionID,
-      messageID: input.messageID,
+      sessionID: SessionID.make(input.sessionID),
+      messageID: MessageID.make(input.messageID),
     })
     if (!msg) return { success: false, error: "Message not found" }
 
@@ -401,15 +395,15 @@ export namespace ContextEdit {
     if (blocked) return blocked
 
     const msg = await MessageV2.get({
-      sessionID: input.sessionID,
-      messageID: input.messageID,
+      sessionID: SessionID.make(input.sessionID),
+      messageID: MessageID.make(input.messageID),
     })
     if (!msg) return { success: false, error: "Message not found" }
 
     const ownerErr = validateOwnership(input.agent, msg.info)
     if (ownerErr) return { success: false, error: ownerErr }
 
-    const messages = await Session.messages({ sessionID: input.sessionID })
+    const messages = await Session.messages({ sessionID: SessionID.make(input.sessionID) })
     if (isProtectedMessage(messages, input.messageID))
       return { success: false, error: "Cannot edit recent messages (last 2 turns are protected)" }
 
@@ -472,7 +466,7 @@ export namespace ContextEdit {
         }
       } else {
         // For other part types, hide and create a text replacement
-        const newPartID = Identifier.ascending("part")
+        const newPartID = PartID.ascending()
         Session.updatePart({
           ...part,
           edit: {
