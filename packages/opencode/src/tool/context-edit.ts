@@ -105,6 +105,8 @@ Constraints: own messages only (unless focus agent), not last 2 turns, max 10/tu
       .describe("Lifecycle hint (for mark operation)"),
     afterTurns: z
       .number()
+      .int()
+      .min(1)
       .optional()
       .describe("Turns before auto-action (for mark; default 3 for discardable, 5 for ephemeral)"),
     reason: z.string().optional().describe("Why this part was marked (for mark)"),

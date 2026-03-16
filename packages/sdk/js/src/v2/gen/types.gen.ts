@@ -377,7 +377,7 @@ export type LifecycleMeta = {
   reason?: string
   setAt: number
   setBy: string
-  turnWhenSet: number
+  turnWhenSet?: number
 }
 
 export type TextPart = {

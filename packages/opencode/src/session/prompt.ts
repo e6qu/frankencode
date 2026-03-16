@@ -302,6 +302,7 @@ export namespace SessionPrompt {
       log.info("loop", { step, sessionID })
       if (abort.aborted) break
       let msgs = await MessageV2.filterCompacted(MessageV2.stream(sessionID))
+      msgs = MessageV2.filterEphemeral(msgs)
       msgs = MessageV2.filterEdited(msgs)
       const currentTurn = msgs.filter((m) => m.info.role === "user").length
       msgs = ContextEdit.sweep(msgs, currentTurn)
@@ -1920,19 +1921,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     })) as MessageV2.WithParts
 
     if (command.ephemeral) {
-      const msgs: MessageV2.WithParts[] = []
-      for await (const m of MessageV2.stream(input.sessionID)) msgs.push(m)
-      const turn = msgs.filter((m) => m.info.role === "user").length
       const lifecycle: MessageV2.LifecycleMeta = {
         hint: "ephemeral",
-        afterTurns: 0,
         reason: "Ephemeral command output",
         setAt: Date.now(),
         setBy: "system",
-        turnWhenSet: turn,
       }
 
-      // Mark the user's command input parts as ephemeral too
+      // Mark the user's command input parts as ephemeral
+      const msgs: MessageV2.WithParts[] = []
+      for await (const m of MessageV2.stream(input.sessionID)) msgs.push(m)
       const parentID = (result.info as MessageV2.Assistant).parentID
       const userMsg = msgs.find((m) => m.info.id === parentID)
       if (userMsg) {

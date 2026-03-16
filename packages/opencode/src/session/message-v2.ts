@@ -8,9 +8,6 @@ import { Snapshot } from "@/snapshot"
 import { fn } from "@/util/fn"
 import { Database, NotFoundError, and, desc, eq, inArray, lt, or } from "@/storage/db"
 import { MessageTable, PartTable, SessionTable } from "./session.sql"
-import { ProviderTransform } from "@/provider/transform"
-import { STATUS_CODES } from "http"
-import { Storage } from "@/storage/storage"
 import { ProviderError } from "@/provider/error"
 import { iife } from "@/util/iife"
 import { type SystemError } from "bun"
@@ -85,7 +82,7 @@ export namespace MessageV2 {
       reason: z.string().optional(),
       setAt: z.number(),
       setBy: z.string(),
-      turnWhenSet: z.number(),
+      turnWhenSet: z.number().optional(),
     })
     .optional()
     .meta({ ref: "LifecycleMeta" })
@@ -937,6 +934,24 @@ export namespace MessageV2 {
     }
     result.reverse()
     return result
+  }
+
+  export function filterEphemeral(messages: WithParts[]): WithParts[] {
+    const ephemeralMsgIDs = new Set<string>()
+    // Collect message IDs where every part is ephemeral
+    for (const msg of messages) {
+      if (msg.parts.length > 0 && msg.parts.every((p) => p.lifecycle?.hint === "ephemeral")) {
+        ephemeralMsgIDs.add(msg.info.id)
+      }
+    }
+    if (ephemeralMsgIDs.size === 0) return messages
+    // Also drop the paired assistant response (or user prompt) for ephemeral messages
+    for (const msg of messages) {
+      if (msg.info.role === "assistant" && "parentID" in msg.info && ephemeralMsgIDs.has(msg.info.parentID)) {
+        ephemeralMsgIDs.add(msg.info.id)
+      }
+    }
+    return messages.filter((m) => !ephemeralMsgIDs.has(m.info.id))
   }
 
   export function filterEdited(messages: WithParts[]): WithParts[] {
