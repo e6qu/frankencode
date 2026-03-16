@@ -40,8 +40,8 @@ export namespace Todo {
           })),
         )
         .run()
+      Database.effect(() => Bus.publish(Event.Updated, input))
     })
-    Bus.publish(Event.Updated, input)
   }
 
   export function get(sessionID: SessionID) {

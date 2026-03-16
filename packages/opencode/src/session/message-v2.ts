@@ -399,6 +399,12 @@ export namespace MessageV2 {
     system: z.string().optional(),
     tools: z.record(z.string(), z.boolean()).optional(),
     variant: z.string().optional(),
+    /**
+     * The session objective at the time this message was created.
+     * Used for context cleanup classification. Older messages retain
+     * their original objective, creating an objective timeline.
+     */
+    objective: z.string().optional(),
   }).meta({
     ref: "UserMessage",
   })
@@ -949,7 +955,26 @@ export namespace MessageV2 {
     const result: WithParts[] = []
     for (const msg of messages) {
       const parts = msg.parts.filter((part) => !part.edit?.hidden && !part.edit?.supersededBy)
-      if (parts.length > 0) result.push(parts === msg.parts ? msg : { ...msg, parts })
+      if (parts.length > 0) {
+        result.push(parts === msg.parts ? msg : { ...msg, parts })
+      } else if (msg.parts.length > 0) {
+        // All parts were filtered out — keep message with synthetic placeholder
+        // to preserve user/assistant alternation required by model APIs
+        const firstPart = msg.parts[0]
+        result.push({
+          ...msg,
+          parts: [
+            {
+              id: firstPart.id,
+              sessionID: firstPart.sessionID,
+              messageID: firstPart.messageID,
+              type: "text",
+              text: "[Content edited out]",
+              synthetic: true,
+            } as TextPart,
+          ],
+        })
+      }
     }
     return result
   }

@@ -1,0 +1,1 @@
+List the side threads for this project using the thread_list tool. Show the thread ID, status, priority, category, and title for each.

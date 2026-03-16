@@ -91,8 +91,12 @@ export namespace SessionCompaction {
     if (pruned > PRUNE_MINIMUM) {
       for (const part of toPrune) {
         if (part.state.status === "completed") {
-          part.state.time.compacted = Date.now()
-          await Session.updatePart(part)
+          try {
+            part.state.time.compacted = Date.now()
+            await Session.updatePart(part)
+          } catch (e) {
+            log.error("failed to prune part", { partID: part.id, error: e })
+          }
         }
       }
       log.info("pruned", { count: toPrune.length })

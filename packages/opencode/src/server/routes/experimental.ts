@@ -267,5 +267,218 @@ export const ExperimentalRoutes = lazy(() =>
       async (c) => {
         return c.json(await MCP.resources())
       },
+    )
+    .post(
+      "/context/history",
+      describeRoute({
+        summary: "Get context edit history",
+        description: "Get the linear edit history for a session (readonly tool)",
+        operationId: "context.history",
+        responses: {
+          200: {
+            description: "Edit history",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    sessionID: z.string(),
+                    count: z.number(),
+                    nodes: z.array(
+                      z.object({
+                        id: z.string(),
+                        parentID: z.string().nullable(),
+                        partID: z.string(),
+                        operation: z.string(),
+                        casHash: z.string().nullable(),
+                        agent: z.string(),
+                        timeCreated: z.number(),
+                      }),
+                    ),
+                  }),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      validator(
+        "json",
+        z.object({
+          sessionID: z.string(),
+        }),
+      ),
+      async (c) => {
+        const { sessionID } = c.req.valid("json")
+        const { EditGraph } = await import("../../cas/graph")
+        const nodes = EditGraph.getLog(sessionID)
+        return c.json({
+          sessionID,
+          count: nodes.length,
+          nodes: nodes.map((n) => ({
+            id: n.id,
+            parentID: n.parent_id,
+            partID: n.part_id,
+            operation: n.operation,
+            casHash: n.cas_hash,
+            agent: n.agent,
+            timeCreated: n.time_created,
+          })),
+        })
+      },
+    )
+    .post(
+      "/context/tree",
+      describeRoute({
+        summary: "Get context edit tree",
+        description: "Get the full edit DAG with branches for a session (readonly tool)",
+        operationId: "context.tree",
+        responses: {
+          200: {
+            description: "Edit tree",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    sessionID: z.string(),
+                    head: z.string().nullable(),
+                    branches: z.record(z.string(), z.string()),
+                    count: z.number(),
+                    nodes: z.array(
+                      z.object({
+                        id: z.string(),
+                        parentID: z.string().nullable(),
+                        partID: z.string(),
+                        operation: z.string(),
+                        casHash: z.string().nullable(),
+                        agent: z.string(),
+                        timeCreated: z.number(),
+                      }),
+                    ),
+                  }),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      validator(
+        "json",
+        z.object({
+          sessionID: z.string(),
+        }),
+      ),
+      async (c) => {
+        const { sessionID } = c.req.valid("json")
+        const { EditGraph } = await import("../../cas/graph")
+        const { nodes, head, branches } = EditGraph.tree(sessionID)
+        return c.json({
+          sessionID,
+          head,
+          branches,
+          count: nodes.length,
+          nodes: nodes.map((n) => ({
+            id: n.id,
+            parentID: n.parent_id,
+            partID: n.part_id,
+            operation: n.operation,
+            casHash: n.cas_hash,
+            agent: n.agent,
+            timeCreated: n.time_created,
+          })),
+        })
+      },
+    )
+    .post(
+      "/context/threads",
+      describeRoute({
+        summary: "List side threads",
+        description: "List side threads for the current project (readonly tool)",
+        operationId: "context.threads",
+        responses: {
+          200: {
+            description: "Side threads",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    projectID: z.string(),
+                    threads: z.array(z.any()),
+                    total: z.number(),
+                    hasMore: z.boolean(),
+                  }),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      validator(
+        "json",
+        z.object({
+          status: z.enum(["parked", "investigating", "resolved", "deferred", "all"]).default("all"),
+          limit: z.number().min(1).max(100).default(20),
+          offset: z.number().min(0).default(0),
+        }),
+      ),
+      async (c) => {
+        const { status, limit, offset } = c.req.valid("json")
+        const { SideThread } = await import("../../session/side-thread")
+        const result = SideThread.list({
+          projectID: Instance.project.id,
+          status: status as any,
+          limit,
+          offset,
+        })
+        return c.json({
+          projectID: Instance.project.id,
+          ...result,
+        })
+      },
+    )
+    .post(
+      "/context/deref",
+      describeRoute({
+        summary: "Retrieve CAS content",
+        description: "Retrieve externalized content from CAS by hash (readonly tool)",
+        operationId: "context.deref",
+        responses: {
+          200: {
+            description: "CAS content",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    hash: z.string(),
+                    content: z.string(),
+                    timeCreated: z.number(),
+                  }),
+                ),
+              },
+            },
+          },
+          404: {
+            description: "CAS entry not found",
+          },
+        },
+      }),
+      validator(
+        "json",
+        z.object({
+          hash: z.string(),
+        }),
+      ),
+      async (c) => {
+        const { hash } = c.req.valid("json")
+        const { CAS } = await import("../../cas")
+        const entry = CAS.get(hash)
+        if (!entry) {
+          return c.json({ error: "CAS entry not found" }, 404)
+        }
+        return c.json({
+          hash,
+          content: entry.content,
+          timeCreated: entry.time_created,
+        })
+      },
     ),
 )

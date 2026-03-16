@@ -72,8 +72,11 @@ Optionally specify mainTopics to override objective detection.`,
       sessionID: session.id,
       parts: [{ type: "text", text: prompt }],
       agent: "classifier",
-      model: (msgs[0]?.info as MessageV2.User).model,
+      model: (msgs.find((m) => m.info.role === "user")?.info as MessageV2.User | undefined)?.model,
     })
+
+    // Delete the temporary classifier session to avoid orphan sessions
+    await Session.remove(session.id)
 
     const text = result.parts.findLast((p) => p.type === "text" && "text" in p)
     const raw = text && "text" in text ? (text as MessageV2.TextPart).text : ""

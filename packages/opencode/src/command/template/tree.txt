@@ -1,0 +1,1 @@
+Show the full edit DAG with branches for this session using the context_history tool with operation "tree". Display the node relationships and branch names clearly.

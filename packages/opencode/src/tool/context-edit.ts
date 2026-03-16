@@ -7,6 +7,11 @@ function resolvePart(
   messages: MessageV2.WithParts[],
   target: { partID?: string; messageID?: string; toolName?: string; query?: string; nthFromEnd?: number },
 ): { partID: string; messageID: string } | string {
+  // Validate nthFromEnd
+  if (target.nthFromEnd !== undefined && target.nthFromEnd < 1) {
+    return "nthFromEnd must be >= 1"
+  }
+
   if (target.partID && target.messageID) return { partID: target.partID, messageID: target.messageID }
 
   const candidates: { partID: string; messageID: string; tool?: string; content: string }[] = []
@@ -139,6 +144,12 @@ Constraints: own messages only (unless focus agent), not last 2 turns, max 10/tu
       case "externalize":
         if (!args.summary)
           return { title: "Error", metadata: { operation: args.operation }, output: "summary is required" }
+        if (args.summary.length > 500)
+          return {
+            title: "Error",
+            metadata: { operation: args.operation },
+            output: `summary must be <= 500 characters (got ${args.summary.length})`,
+          }
         result = await ContextEdit.externalize({ ...base, summary: args.summary })
         break
       case "mark":

@@ -36,6 +36,7 @@ import { ThreadParkTool } from "./thread-park"
 import { ThreadListTool } from "./thread-list"
 import { ClassifierThreadsTool } from "./classifier-threads"
 import { DistillThreadsTool } from "./distill-threads"
+import { ObjectiveSetTool } from "./objective-set"
 import { Glob } from "../util/glob"
 import { pathToFileURL } from "url"
 
@@ -132,6 +133,7 @@ export namespace ToolRegistry {
       ThreadListTool,
       ClassifierThreadsTool,
       DistillThreadsTool,
+      ObjectiveSetTool,
       ...(Flag.OPENCODE_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
       ...(Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE && Flag.OPENCODE_CLIENT === "cli" ? [PlanExitTool] : []),

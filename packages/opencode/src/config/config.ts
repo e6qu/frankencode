@@ -697,6 +697,7 @@ export namespace Config {
     agent: z.string().optional(),
     model: ModelId.optional(),
     subtask: z.boolean().optional(),
+    ephemeral: z.boolean().optional().describe("Mark command output as ephemeral (auto-externalized)"),
   })
   export type Command = z.infer<typeof Command>
 

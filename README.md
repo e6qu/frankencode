@@ -140,14 +140,31 @@ Per-project settings go in `.opencode/opencode.jsonc` at the project root. See [
 | `classifier_threads` | Classify messages by topic (main/side/mixed)                     |
 | `distill_threads`    | Classify + park side threads in one step                         |
 
-## Commands
+## TUI Commands
 
-| Command                  | Action                                                         |
-| ------------------------ | -------------------------------------------------------------- |
-| `/focus`                 | Classify messages, externalize stale output, park side threads |
-| `/focus-rewrite-history` | Rewrite conversation history (asks for confirmation first)     |
-| `/btw <question>`        | Side conversation — answers without polluting the main thread  |
-| `/reset-context`         | Restore all edited parts to originals from CAS                 |
+| Command                  | Action                                                            |
+| ------------------------ | ----------------------------------------------------------------- |
+| `/init`                  | Create or update AGENTS.md for the project                        |
+| `/review`                | Review changes (commit, branch, or PR — defaults to uncommitted)  |
+| `/objective`             | Set or update the session objective (used for context cleanup)    |
+| `/focus`                 | Classify messages, externalize stale output, park side threads    |
+| `/focus-rewrite-history` | Rewrite conversation history (asks for confirmation first)        |
+| `/btw <question>`        | Side conversation — answers without polluting the main thread     |
+| `/reset-context`         | Restore all edited parts to originals from CAS                    |
+| `/threads`               | List side threads (output auto-externalized)                      |
+| `/history`               | Show edit history (output auto-externalized)                      |
+| `/tree`                  | Show edit DAG with branches (output auto-externalized)            |
+| `/deref <hash>`          | Retrieve externalized content from CAS (output auto-externalized) |
+| `/classify`              | Classify messages by topic (output auto-externalized)             |
+
+## CLI Commands (Readonly)
+
+| Command                     | Action                                         |
+| --------------------------- | ---------------------------------------------- |
+| `context history [session]` | Show linear edit history for a session         |
+| `context tree [session]`    | Show full edit DAG with branches for a session |
+| `context threads`           | List side threads for the current project      |
+| `context deref <hash>`      | Retrieve externalized content from CAS by hash |
 
 ---
 

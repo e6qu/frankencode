@@ -213,14 +213,14 @@ export const BashTool = Tool.define("bash", async () => {
 
       const abortHandler = () => {
         aborted = true
-        void kill()
+        void kill().catch(() => {})
       }
 
       ctx.abort.addEventListener("abort", abortHandler, { once: true })
 
       const timeoutTimer = setTimeout(() => {
         timedOut = true
-        void kill()
+        void kill().catch(() => {})
       }, timeout + 100)
 
       await new Promise<void>((resolve, reject) => {

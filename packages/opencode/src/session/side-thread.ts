@@ -1,6 +1,6 @@
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
-import { Database, eq, and } from "@/storage/db"
+import { Database, eq, and, desc, sql } from "@/storage/db"
 import { SideThreadTable } from "./side-thread.sql"
 import { Identifier } from "@/id/id"
 import { Log } from "@/util/log"
@@ -65,7 +65,7 @@ export namespace SideThread {
     relatedFiles?: string[]
     createdBy: string
   }): Info {
-    const id = "thr_" + Identifier.ascending("part").slice(4) // thr_ prefix
+    const id = Identifier.ascending("thread")
     const now = Date.now()
 
     Database.use((db) => {
@@ -114,22 +114,64 @@ export namespace SideThread {
     return row ? rowToInfo(row) : null
   }
 
-  export function list(input: { projectID: string; status?: Info["status"] | "all" }): Info[] {
+  export interface ListOptions {
+    projectID: string
+    status?: Info["status"] | "all"
+    limit?: number
+    offset?: number
+  }
+
+  export interface ListResult {
+    threads: Info[]
+    total: number
+    hasMore: boolean
+  }
+
+  export function list(options: ListOptions): ListResult {
+    const limit = options.limit ?? 50
+    const offset = options.offset ?? 0
+
     const rows = Database.use((db) => {
-      if (input.status && input.status !== "all") {
+      if (options.status && options.status !== "all") {
         return db
           .select()
           .from(SideThreadTable)
-          .where(and(eq(SideThreadTable.project_id, input.projectID as any), eq(SideThreadTable.status, input.status)))
+          .where(
+            and(eq(SideThreadTable.project_id, options.projectID as any), eq(SideThreadTable.status, options.status)),
+          )
+          .orderBy(desc(SideThreadTable.time_updated))
+          .limit(limit + 1)
+          .offset(offset)
           .all()
       }
       return db
         .select()
         .from(SideThreadTable)
-        .where(eq(SideThreadTable.project_id, input.projectID as any))
+        .where(eq(SideThreadTable.project_id, options.projectID as any))
+        .orderBy(desc(SideThreadTable.time_updated))
+        .limit(limit + 1)
+        .offset(offset)
         .all()
     })
-    return rows.map(rowToInfo)
+
+    // Get total count (for pagination UI) — must match the same status filter as the rows query
+    const countWhere =
+      options.status && options.status !== "all"
+        ? and(eq(SideThreadTable.project_id, options.projectID as any), eq(SideThreadTable.status, options.status))
+        : eq(SideThreadTable.project_id, options.projectID as any)
+    const countRow = Database.use((db) =>
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(SideThreadTable)
+        .where(countWhere)
+        .get(),
+    )
+    const total = countRow?.count ?? rows.length
+
+    const hasMore = rows.length > limit
+    const threads = (hasMore ? rows.slice(0, limit) : rows).map(rowToInfo)
+
+    return { threads, total, hasMore }
   }
 
   export function update(

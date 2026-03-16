@@ -666,7 +666,11 @@ export namespace Session {
     try {
       const session = await get(sessionID)
       for (const child of await children(sessionID)) {
-        await remove(child.id)
+        try {
+          await remove(child.id)
+        } catch (e) {
+          log.error("failed to remove child session", { childID: child.id, error: e })
+        }
       }
       await unshare(sessionID).catch(() => {})
       // CASCADE delete handles messages and parts automatically
