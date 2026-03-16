@@ -52,6 +52,7 @@ import { useCommandDialog } from "@tui/component/dialog-command"
 import type { DialogContext } from "@tui/ui/dialog"
 import { useKeybind } from "@tui/context/keybind"
 import { Header } from "./header"
+import { contextCommands } from "./context-commands"
 import { parsePatch } from "diff"
 import { useDialog } from "../../ui/dialog"
 import { TodoItem } from "../../component/todo-item"
@@ -976,6 +977,7 @@ export function Session() {
         dialog.clear()
       }),
     },
+    ...contextCommands(toast),
   ])
 
   const revertInfo = createMemo(() => session()?.revert)

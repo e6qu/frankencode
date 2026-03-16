@@ -1,6 +1,7 @@
 import { createHash } from "crypto"
-import { Database, eq } from "@/storage/db"
+import { Database, eq, and, lt, isNull, not, inArray, sql } from "@/storage/db"
 import { CASObjectTable } from "./cas.sql"
+import { SessionTable } from "@/session/session.sql"
 import { Token } from "@/util/token"
 import { Log } from "@/util/log"
 
@@ -34,6 +35,7 @@ export namespace CAS {
       sessionID?: string
       messageID?: string
       partID?: string
+      tokens?: number
     },
   ): string {
     const h = hash(content)
@@ -43,12 +45,20 @@ export namespace CAS {
           hash: h,
           content,
           content_type: meta.contentType,
-          tokens: Token.estimate(content),
+          tokens: meta.tokens ?? Token.estimate(content),
           session_id: meta.sessionID ?? null,
           message_id: meta.messageID ?? null,
           part_id: meta.partID ?? null,
         })
-        .onConflictDoNothing()
+        .onConflictDoUpdate({
+          target: CASObjectTable.hash,
+          set: {
+            session_id: meta.sessionID ?? null,
+            message_id: meta.messageID ?? null,
+            part_id: meta.partID ?? null,
+            content_type: meta.contentType,
+          },
+        })
         .run()
     })
     log.info("stored", { hash: h.slice(0, 12), contentType: meta.contentType })
@@ -76,5 +86,92 @@ export namespace CAS {
    */
   export function listBySession(sessionID: string): Entry[] {
     return Database.use((db) => db.select().from(CASObjectTable).where(eq(CASObjectTable.session_id, sessionID)).all())
+  }
+
+  /**
+   * Delete all CAS entries for a session. Called when a session is deleted.
+   * Returns the number of entries deleted.
+   */
+  export function deleteBySession(sessionID: string): number {
+    const entries = Database.use((db) =>
+      db
+        .select({ hash: CASObjectTable.hash })
+        .from(CASObjectTable)
+        .where(eq(CASObjectTable.session_id, sessionID))
+        .all(),
+    )
+    if (entries.length === 0) return 0
+
+    Database.use((db) => db.delete(CASObjectTable).where(eq(CASObjectTable.session_id, sessionID)).run())
+    log.info("deleted by session", { sessionID: sessionID.slice(0, 12), count: entries.length })
+    return entries.length
+  }
+
+  /**
+   * Delete CAS entries where the session no longer exists and the entry is older than cutoff.
+   * Returns the number of entries deleted.
+   */
+  export function deleteOrphans(olderThanDays: number = 30): number {
+    const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000
+    let totalDeleted = 0
+
+    // 1. Delete entries with null session_id (older than cutoff)
+    const nullSessionEntries = Database.use((db) =>
+      db
+        .select({ hash: CASObjectTable.hash })
+        .from(CASObjectTable)
+        .where(and(isNull(CASObjectTable.session_id), lt(CASObjectTable.time_created, cutoff)))
+        .all(),
+    )
+    if (nullSessionEntries.length > 0) {
+      const hashes = nullSessionEntries.map((e) => e.hash)
+      Database.use((db) => db.delete(CASObjectTable).where(inArray(CASObjectTable.hash, hashes)).run())
+      totalDeleted += nullSessionEntries.length
+      log.info("deleted orphans (null session)", { count: nullSessionEntries.length, olderThanDays })
+    }
+
+    // 2. Delete entries referencing non-existent sessions (older than cutoff)
+    // Get all entries with session_id older than cutoff
+    const entriesWithSession = Database.use((db) =>
+      db
+        .select({ hash: CASObjectTable.hash, session_id: CASObjectTable.session_id })
+        .from(CASObjectTable)
+        .where(and(not(isNull(CASObjectTable.session_id)), lt(CASObjectTable.time_created, cutoff)))
+        .all(),
+    )
+
+    if (entriesWithSession.length === 0) return totalDeleted
+
+    // Get all existing session IDs
+    const existingSessions = new Set(
+      Database.use((db) => db.select({ id: SessionTable.id }).from(SessionTable).all()).map((s) => s.id as string),
+    )
+
+    // Find entries with non-existent sessions
+    const orphans = entriesWithSession.filter((e) => !existingSessions.has(e.session_id!))
+    if (orphans.length > 0) {
+      const hashes = orphans.map((e) => e.hash)
+      // Delete in batches of 100 to avoid SQL parameter limits
+      const batchSize = 100
+      for (let i = 0; i < hashes.length; i += batchSize) {
+        const batch = hashes.slice(i, i + batchSize)
+        Database.use((db) => db.delete(CASObjectTable).where(inArray(CASObjectTable.hash, batch)).run())
+      }
+      totalDeleted += orphans.length
+      log.info("deleted orphans (missing session)", { count: orphans.length, olderThanDays })
+    }
+
+    return totalDeleted
+  }
+
+  /**
+   * Run garbage collection. Should be called periodically (e.g., on app start).
+   */
+  export async function runGC(options?: { olderThanDays?: number }): Promise<{ deleted: number }> {
+    const olderThanDays = options?.olderThanDays ?? 30
+    log.info("gc starting", { olderThanDays })
+    const deleted = deleteOrphans(olderThanDays)
+    log.info("gc complete", { deleted })
+    return { deleted }
   }
 }

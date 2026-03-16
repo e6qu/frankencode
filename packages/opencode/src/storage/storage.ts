@@ -143,8 +143,13 @@ export namespace Storage {
     for (let index = migration; index < MIGRATIONS.length; index++) {
       log.info("running migration", { index })
       const migration = MIGRATIONS[index]
-      await migration(dir).catch(() => log.error("failed to run migration", { index }))
-      await Filesystem.write(path.join(dir, "migration"), (index + 1).toString())
+      try {
+        await migration(dir)
+        await Filesystem.write(path.join(dir, "migration"), (index + 1).toString())
+      } catch (e) {
+        log.error("failed to run migration", { index, error: e })
+        throw e
+      }
     }
     return {
       dir,

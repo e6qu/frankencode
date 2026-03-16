@@ -1002,7 +1002,7 @@ export namespace SessionPrompt {
     // Get current objective for message metadata
     const currentObjective = await Objective.get(input.sessionID)
 
-    const info: MessageV2.Info = {
+    const info: MessageV2.User = {
       id: input.messageID ?? MessageID.ascending(),
       role: "user",
       sessionID: input.sessionID,

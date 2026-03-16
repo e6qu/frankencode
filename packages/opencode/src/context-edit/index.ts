@@ -8,6 +8,7 @@ import { Bus } from "@/bus"
 import { Database } from "@/storage/db"
 import { Plugin } from "@/plugin"
 import { Log } from "@/util/log"
+import { Token } from "@/util/token"
 import z from "zod"
 
 export namespace ContextEdit {
@@ -34,9 +35,9 @@ export namespace ContextEdit {
         messageID: input.messageID,
         agent: input.agent,
       },
-      { allow: true },
+      { allow: true, reason: undefined },
     )
-    if (!result.allow) return { success: false, error: (result as any).reason ?? "Blocked by plugin" }
+    if (!result.allow) return { success: false, error: result.reason ?? "Blocked by plugin" }
     return null
   }
 
@@ -187,15 +188,15 @@ export namespace ContextEdit {
     const budgetErr = validateBudget(messages)
     if (budgetErr) return { success: false, error: budgetErr }
 
-    const content = getPartContent(part)
     let casHash: string
 
     Database.transaction(() => {
-      casHash = CAS.store(content, {
+      casHash = CAS.store(JSON.stringify(part), {
         contentType: part.type === "tool" ? "tool-output" : part.type,
         sessionID: input.sessionID,
         messageID: input.messageID,
         partID: input.partID,
+        tokens: Token.estimate(getPartContent(part)),
       })
 
       const version = EditGraph.commit({
@@ -238,6 +239,9 @@ export namespace ContextEdit {
     messageID: string
     agent: string
   }): Promise<EditResult> {
+    const blocked = await pluginGuard("unhide", input)
+    if (blocked) return blocked
+
     const msg = await MessageV2.get({
       sessionID: SessionID.make(input.sessionID),
       messageID: MessageID.make(input.messageID),
@@ -248,20 +252,23 @@ export namespace ContextEdit {
     if (!part) return { success: false, error: "Part not found" }
     if (!part.edit?.hidden) return { success: false, error: "Part is not hidden" }
 
-    Session.updatePart({
-      ...part,
-      edit: undefined,
+    Database.transaction(() => {
+      Session.updatePart({
+        ...part,
+        edit: undefined,
+      })
+
+      Database.effect(() =>
+        Bus.publish(Event.PartUnhidden, {
+          sessionID: input.sessionID,
+          partID: input.partID,
+          agent: input.agent,
+        }),
+      )
     })
 
-    Database.effect(() =>
-      Bus.publish(Event.PartUnhidden, {
-        sessionID: input.sessionID,
-        partID: input.partID,
-        agent: input.agent,
-      }),
-    )
-
     log.info("unhidden", { partID: input.partID })
+    await pluginNotify("unhide", input, true)
     return { success: true }
   }
 
@@ -291,16 +298,16 @@ export namespace ContextEdit {
     const part = findPart(msg, input.partID)
     if (!part) return { success: false, error: "Part not found" }
 
-    const content = getPartContent(part)
     const newPartID = PartID.ascending()
     let casHash: string
 
     Database.transaction(() => {
-      casHash = CAS.store(content, {
+      casHash = CAS.store(JSON.stringify(part), {
         contentType: part.type === "tool" ? "tool-output" : part.type,
         sessionID: input.sessionID,
         messageID: input.messageID,
         partID: input.partID,
+        tokens: Token.estimate(getPartContent(part)),
       })
 
       const version = EditGraph.commit({
@@ -363,6 +370,9 @@ export namespace ContextEdit {
     agent: string
     annotation: string
   }): Promise<EditResult> {
+    const blocked = await pluginGuard("annotate", input)
+    if (blocked) return blocked
+
     const msg = await MessageV2.get({
       sessionID: SessionID.make(input.sessionID),
       messageID: MessageID.make(input.messageID),
@@ -372,35 +382,38 @@ export namespace ContextEdit {
     const part = findPart(msg, input.partID)
     if (!part) return { success: false, error: "Part not found" }
 
-    const version = EditGraph.commit({
-      sessionID: input.sessionID,
-      partID: input.partID,
-      operation: "annotate",
-      agent: input.agent,
-    })
-
-    Session.updatePart({
-      ...part,
-      edit: {
-        ...(part.edit ?? { hidden: false, editedAt: 0, editedBy: "" }),
-        hidden: part.edit?.hidden ?? false,
-        annotation: input.annotation,
-        editedAt: Date.now(),
-        editedBy: input.agent,
-        version,
-      },
-    })
-
-    Database.effect(() =>
-      Bus.publish(Event.PartAnnotated, {
+    Database.transaction(() => {
+      const version = EditGraph.commit({
         sessionID: input.sessionID,
         partID: input.partID,
-        annotation: input.annotation,
+        operation: "annotate",
         agent: input.agent,
-      }),
-    )
+      })
+
+      Session.updatePart({
+        ...part,
+        edit: {
+          ...(part.edit ?? { hidden: false, editedAt: 0, editedBy: "" }),
+          hidden: part.edit?.hidden ?? false,
+          annotation: input.annotation,
+          editedAt: Date.now(),
+          editedBy: input.agent,
+          version,
+        },
+      })
+
+      Database.effect(() =>
+        Bus.publish(Event.PartAnnotated, {
+          sessionID: input.sessionID,
+          partID: input.partID,
+          annotation: input.annotation,
+          agent: input.agent,
+        }),
+      )
+    })
 
     log.info("annotated", { partID: input.partID })
+    await pluginNotify("annotate", input, true)
     return { success: true }
   }
 
@@ -430,15 +443,15 @@ export namespace ContextEdit {
     const part = findPart(msg, input.partID)
     if (!part) return { success: false, error: "Part not found" }
 
-    const content = getPartContent(part)
     let casHash: string
 
     Database.transaction(() => {
-      casHash = CAS.store(content, {
+      casHash = CAS.store(JSON.stringify(part), {
         contentType: part.type === "tool" ? "tool-output" : part.type,
         sessionID: input.sessionID,
         messageID: input.messageID,
         partID: input.partID,
+        tokens: Token.estimate(getPartContent(part)),
       })
 
       const version = EditGraph.commit({
@@ -567,6 +580,8 @@ export namespace ContextEdit {
   /**
    * Deterministic sweeper: processes lifecycle markers without LLM calls.
    * Call from the prompt loop after filterEdited().
+   *
+   * Note: Sweeper actions ARE tracked in the EditGraph, making them reversible via checkout.
    */
   export function sweep(messages: MessageV2.WithParts[], currentTurn: number): MessageV2.WithParts[] {
     let changed = false
@@ -581,44 +596,80 @@ export namespace ContextEdit {
         const elapsed = currentTurn - part.lifecycle.turnWhenSet
         if (elapsed < turns) continue
 
-        if (part.lifecycle.hint === "discardable") {
-          const content = getPartContent(part)
-          const casHash = CAS.store(content, {
-            contentType: part.type === "tool" ? "tool-output" : part.type,
-            sessionID: msg.info.sessionID,
-            partID: part.id,
-          })
-          Session.updatePart({
-            ...part,
-            edit: {
-              hidden: true,
+        const lifecycle = part.lifecycle
+        if (lifecycle.hint === "discardable") {
+          Database.transaction(() => {
+            const casHash = CAS.store(JSON.stringify(part), {
+              contentType: part.type === "tool" ? "tool-output" : part.type,
+              sessionID: msg.info.sessionID,
+              partID: part.id,
+              tokens: Token.estimate(getPartContent(part)),
+            })
+
+            // Track in EditGraph for reversibility
+            const version = EditGraph.commit({
+              sessionID: msg.info.sessionID,
+              partID: part.id,
+              operation: "sweep-discard",
               casHash,
-              editedAt: Date.now(),
-              editedBy: "sweeper",
-            },
+              agent: "sweeper",
+            })
+
+            Session.updatePart({
+              ...part,
+              edit: {
+                hidden: true,
+                casHash,
+                editedAt: Date.now(),
+                editedBy: "sweeper",
+                version,
+              },
+            })
+            log.info("swept discardable", {
+              partID: part.id.slice(0, 12),
+              reason: lifecycle.reason,
+              casHash: casHash.slice(0, 12),
+            })
           })
           changed = true
-        } else if (part.lifecycle.hint === "ephemeral") {
-          const content = getPartContent(part)
-          const casHash = CAS.store(content, {
-            contentType: part.type === "tool" ? "tool-output" : part.type,
-            sessionID: msg.info.sessionID,
-            partID: part.id,
+        } else if (lifecycle.hint === "ephemeral") {
+          Database.transaction(() => {
+            const casHash = CAS.store(JSON.stringify(part), {
+              contentType: part.type === "tool" ? "tool-output" : part.type,
+              sessionID: msg.info.sessionID,
+              partID: part.id,
+              tokens: Token.estimate(getPartContent(part)),
+            })
+
+            // Track in EditGraph for reversibility
+            const version = EditGraph.commit({
+              sessionID: msg.info.sessionID,
+              partID: part.id,
+              operation: "sweep-externalize",
+              casHash,
+              agent: "sweeper",
+            })
+
+            const summary = lifecycle.reason ?? "Auto-externalized ephemeral content"
+            const summaryText = `[Externalized: ${summary}. Use context_deref("${casHash}") to retrieve.]`
+            if (part.type === "text") {
+              Session.updatePart({
+                ...part,
+                text: summaryText,
+                edit: { hidden: false, casHash, editedAt: Date.now(), editedBy: "sweeper", version },
+              })
+            } else {
+              Session.updatePart({
+                ...part,
+                edit: { hidden: true, casHash, editedAt: Date.now(), editedBy: "sweeper", version },
+              })
+            }
+            log.info("swept ephemeral", {
+              partID: part.id.slice(0, 12),
+              reason: lifecycle.reason,
+              casHash: casHash.slice(0, 12),
+            })
           })
-          const summary = part.lifecycle.reason ?? "Auto-externalized ephemeral content"
-          const summaryText = `[Externalized: ${summary}. Use context_deref("${casHash}") to retrieve.]`
-          if (part.type === "text") {
-            Session.updatePart({
-              ...part,
-              text: summaryText,
-              edit: { hidden: false, casHash, editedAt: Date.now(), editedBy: "sweeper" },
-            })
-          } else {
-            Session.updatePart({
-              ...part,
-              edit: { hidden: true, casHash, editedAt: Date.now(), editedBy: "sweeper" },
-            })
-          }
           changed = true
         }
       }
@@ -626,28 +677,43 @@ export namespace ContextEdit {
     return changed ? MessageV2.filterEdited(messages) : messages
   }
 
-  export async function reset(sessionID: string): Promise<{ restored: number; removed: number; errors: string[] }> {
+  export interface ResetResult {
+    restored: number
+    removed: number
+    failed: number
+    errors: Array<{ partID: string; reason: string }>
+  }
+
+  export async function reset(sessionID: string): Promise<ResetResult> {
     const messages = await Session.messages({ sessionID: SessionID.make(sessionID) })
     let restored = 0
     let removed = 0
-    const errors: string[] = []
+    let failed = 0
+    const errors: Array<{ partID: string; reason: string }> = []
 
     for (const msg of messages) {
       for (const part of msg.parts) {
         if (!part.edit) continue
 
+        // Replacement parts get removed (they were created by replace/externalize)
         if (part.edit.replacementOf) {
           Session.updatePart({ ...part, edit: undefined })
           removed++
           continue
         }
 
+        // Original parts get restored from CAS
         if (part.edit.casHash) {
           const entry = CAS.get(part.edit.casHash)
           if (!entry) {
-            errors.push(`CAS entry not found: ${part.edit.casHash.slice(0, 12)} for part ${part.id.slice(0, 12)}`)
+            failed++
+            errors.push({
+              partID: part.id,
+              reason: `CAS entry not found: ${part.edit.casHash.slice(0, 12)}...`,
+            })
             continue
           }
+
           try {
             const original = JSON.parse(entry.content)
             Session.updatePart({
@@ -659,18 +725,22 @@ export namespace ContextEdit {
               lifecycle: undefined,
             })
             restored++
-          } catch {
-            Session.updatePart({ ...part, edit: undefined, lifecycle: undefined })
-            restored++
+          } catch (e) {
+            failed++
+            errors.push({
+              partID: part.id,
+              reason: `Failed to parse CAS content: ${e instanceof Error ? e.message : String(e)}`,
+            })
           }
         } else {
+          // Parts with edits but no CAS (e.g., just annotated) get cleared
           Session.updatePart({ ...part, edit: undefined, lifecycle: undefined })
           restored++
         }
       }
     }
 
-    log.info("reset", { sessionID: sessionID.slice(0, 12), restored, removed })
-    return { restored, removed, errors }
+    log.info("reset", { sessionID: sessionID.slice(0, 12), restored, removed, failed })
+    return { restored, removed, failed, errors }
   }
 }

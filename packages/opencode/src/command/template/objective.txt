@@ -1,0 +1,12 @@
+Set or update the session objective. The objective is a short description of what the conversation is trying to achieve.
+
+This helps:
+- The focus agent classify messages as on-topic or off-topic
+- Context cleanup decide what to keep vs externalize
+- Create a timeline of how the conversation's goal evolved
+
+Previous objective: Check the current objective using the objective_set tool with no arguments.
+
+New objective: $ARGUMENTS
+
+If the user provides a new objective, confirm with them and then use the objective_set tool to update it.

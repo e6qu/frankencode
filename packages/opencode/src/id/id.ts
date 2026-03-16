@@ -12,6 +12,7 @@ export namespace Identifier {
     pty: "pty",
     tool: "tool",
     workspace: "wrk",
+    thread: "thr",
   } as const
 
   export function schema(prefix: keyof typeof prefixes) {
@@ -45,10 +46,18 @@ export namespace Identifier {
 
   function randomBase62(length: number): string {
     const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    const MAX_UNBIASED = 248 // 62 * 4 = 248, largest multiple of 62 that fits in a byte
     let result = ""
-    const bytes = randomBytes(length)
-    for (let i = 0; i < length; i++) {
-      result += chars[bytes[i] % 62]
+    let bytes = randomBytes(length)
+    let byteIdx = 0
+    while (result.length < length) {
+      if (byteIdx >= bytes.length) {
+        bytes = randomBytes(length - result.length)
+        byteIdx = 0
+      }
+      const b = bytes[byteIdx++]
+      if (b >= MAX_UNBIASED) continue
+      result += chars[b % 62]
     }
     return result
   }
