@@ -16,7 +16,6 @@ export namespace ContextEdit {
 
   // ── Constants ──────────────────────────────────────────
 
-  const MAX_EDITS_PER_TURN = 10
   const MAX_HIDDEN_RATIO = 0.7
   const PROTECTED_RECENT_TURNS = 2
   const PROTECTED_TOOLS = ["skill"]
@@ -589,11 +588,14 @@ export namespace ContextEdit {
       for (const part of msg.parts) {
         if (!part.lifecycle) continue
         if (part.lifecycle.hint === "pinned") continue
+        if (part.lifecycle.hint === "ephemeral") continue // ephemeral parts are filtered upstream
         if (part.edit?.hidden) continue
 
         const turns = part.lifecycle.afterTurns
         if (turns == null) continue
-        const elapsed = currentTurn - part.lifecycle.turnWhenSet
+        const turnWhenSet = part.lifecycle.turnWhenSet
+        if (turnWhenSet == null) continue
+        const elapsed = currentTurn - turnWhenSet
         if (elapsed < turns) continue
 
         const lifecycle = part.lifecycle
@@ -626,45 +628,6 @@ export namespace ContextEdit {
               },
             })
             log.info("swept discardable", {
-              partID: part.id.slice(0, 12),
-              reason: lifecycle.reason,
-              casHash: casHash.slice(0, 12),
-            })
-          })
-          changed = true
-        } else if (lifecycle.hint === "ephemeral") {
-          Database.transaction(() => {
-            const casHash = CAS.store(JSON.stringify(part), {
-              contentType: part.type === "tool" ? "tool-output" : part.type,
-              sessionID: msg.info.sessionID,
-              partID: part.id,
-              tokens: Token.estimate(getPartContent(part)),
-            })
-
-            // Track in EditGraph for reversibility
-            const version = EditGraph.commit({
-              sessionID: msg.info.sessionID,
-              partID: part.id,
-              operation: "sweep-externalize",
-              casHash,
-              agent: "sweeper",
-            })
-
-            const summary = lifecycle.reason ?? "Auto-externalized ephemeral content"
-            const summaryText = `[Externalized: ${summary}. Use context_deref("${casHash}") to retrieve.]`
-            if (part.type === "text") {
-              Session.updatePart({
-                ...part,
-                text: summaryText,
-                edit: { hidden: false, casHash, editedAt: Date.now(), editedBy: "sweeper", version },
-              })
-            } else {
-              Session.updatePart({
-                ...part,
-                edit: { hidden: true, casHash, editedAt: Date.now(), editedBy: "sweeper", version },
-              })
-            }
-            log.info("swept ephemeral", {
               partID: part.id.slice(0, 12),
               reason: lifecycle.reason,
               casHash: casHash.slice(0, 12),
