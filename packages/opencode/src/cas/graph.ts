@@ -311,6 +311,24 @@ export namespace EditGraph {
     )
   }
 
+  export function deleteBySession(sessionID: string): number {
+    const nodes = Database.use((db) =>
+      db
+        .select({ id: EditGraphNodeTable.id })
+        .from(EditGraphNodeTable)
+        .where(eq(EditGraphNodeTable.session_id, sessionID))
+        .all(),
+    )
+    Database.use((db) => {
+      db.delete(EditGraphHeadTable).where(eq(EditGraphHeadTable.session_id, sessionID)).run()
+      db.delete(EditGraphNodeTable).where(eq(EditGraphNodeTable.session_id, sessionID)).run()
+    })
+    if (nodes.length > 0) {
+      log.info("deleted by session", { sessionID: sessionID.slice(0, 12), nodes: nodes.length })
+    }
+    return nodes.length
+  }
+
   function buildPathToRoot(nodeID: string, nodeMap?: Map<string, Node>): Node[] {
     const path: Node[] = []
     let currentID: string | null = nodeID

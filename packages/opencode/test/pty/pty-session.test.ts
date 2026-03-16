@@ -6,13 +6,27 @@ import type { PtyID } from "../../src/pty/schema"
 import { tmpdir } from "../fixture/fixture"
 import { setTimeout as sleep } from "node:timers/promises"
 
-const wait = async (fn: () => boolean, ms = 2000) => {
-  const end = Date.now() + ms
-  while (Date.now() < end) {
-    if (fn()) return
-    await sleep(25)
-  }
-  throw new Error("timeout waiting for pty events")
+/**
+ * Returns a promise that resolves once `predicate` returns true.
+ * The predicate is re-evaluated every time a Bus event fires,
+ * so there is no arbitrary polling interval — it reacts immediately.
+ * Falls back to a 5 s hard timeout to avoid hanging the suite.
+ */
+function waitForBus(predicate: () => boolean, ms = 5000): Promise<void> {
+  if (predicate()) return Promise.resolve()
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      off()
+      reject(new Error("timeout waiting for pty events"))
+    }, ms)
+    const off = Bus.subscribeAll(() => {
+      if (predicate()) {
+        clearTimeout(timer)
+        off()
+        resolve()
+      }
+    })
+  })
 }
 
 const pick = (log: Array<{ type: "created" | "exited" | "deleted"; id: PtyID }>, id: PtyID) => {
@@ -40,10 +54,10 @@ describe("pty", () => {
           const info = await Pty.create({ command: "/bin/ls", title: "ls" })
           id = info.id
 
-          await wait(() => pick(log, id!).includes("exited"))
+          await waitForBus(() => pick(log, id!).includes("exited"))
 
           await Pty.remove(id)
-          await wait(() => pick(log, id!).length >= 3)
+          await waitForBus(() => pick(log, id!).length >= 3)
           expect(pick(log, id!)).toEqual(["created", "exited", "deleted"])
         } finally {
           off.forEach((x) => x())
@@ -76,7 +90,7 @@ describe("pty", () => {
           await sleep(100)
 
           await Pty.remove(id)
-          await wait(() => pick(log, id!).length >= 3)
+          await waitForBus(() => pick(log, id!).length >= 3)
           expect(pick(log, id!)).toEqual(["created", "exited", "deleted"])
         } finally {
           off.forEach((x) => x())

@@ -1913,16 +1913,29 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     if (command.ephemeral) {
       const forked = await Session.fork({ sessionID: input.sessionID })
-      const forkedResult = await prompt({
-        sessionID: forked.id,
-        messageID: MessageID.ascending(),
-        model: userModel,
-        agent: userAgent,
-        parts,
-        variant: input.variant,
-      })
-      await Session.remove(forked.id)
-      return forkedResult
+      try {
+        const forkedResult = await prompt({
+          sessionID: forked.id,
+          messageID: MessageID.ascending(),
+          model: userModel,
+          agent: userAgent,
+          parts,
+          variant: input.variant,
+        })
+
+        Bus.publish(Command.Event.Executed, {
+          name: input.command,
+          sessionID: input.sessionID,
+          arguments: input.arguments,
+          messageID: forkedResult.info.id,
+        })
+
+        // forkedResult IDs reference the now-deleted fork — intentional,
+        // ephemeral results are transient and not meant to be dereferenced later
+        return forkedResult
+      } finally {
+        await Session.remove(forked.id)
+      }
     }
 
     const result = (await prompt({

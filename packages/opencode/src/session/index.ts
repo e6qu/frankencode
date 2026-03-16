@@ -20,6 +20,8 @@ import { Instance } from "../project/instance"
 import { SessionPrompt } from "./prompt"
 import { fn } from "@/util/fn"
 import { Command } from "../command"
+import { CAS } from "../cas"
+import { EditGraph } from "../cas/graph"
 import { Snapshot } from "@/snapshot"
 import { WorkspaceContext } from "../control-plane/workspace-context"
 import { ProjectID } from "../project/schema"
@@ -673,6 +675,8 @@ export namespace Session {
         }
       }
       await unshare(sessionID).catch(() => {})
+      CAS.deleteBySession(sessionID)
+      EditGraph.deleteBySession(sessionID)
       // CASCADE delete handles messages and parts automatically
       Database.use((db) => {
         db.delete(SessionTable).where(eq(SessionTable.id, sessionID)).run()
