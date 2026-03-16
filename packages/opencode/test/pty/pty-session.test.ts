@@ -34,7 +34,7 @@ const pick = (log: Array<{ type: "created" | "exited" | "deleted"; id: PtyID }>,
 }
 
 describe("pty", () => {
-  test("publishes created, exited, deleted in order for /bin/ls + remove", async () => {
+  test("publishes created, exited, deleted in order for a short-lived process", async () => {
     if (process.platform === "win32") return
 
     await using dir = await tmpdir({ git: true })
@@ -51,7 +51,11 @@ describe("pty", () => {
 
         let id: PtyID | undefined
         try {
-          const info = await Pty.create({ command: "/bin/ls", title: "ls" })
+          const info = await Pty.create({
+            command: "/usr/bin/env",
+            args: ["sh", "-c", "sleep 0.1"],
+            title: "sleep",
+          })
           id = info.id
 
           await waitForBus(() => pick(log, id!).includes("exited"))
