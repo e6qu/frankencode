@@ -19,6 +19,11 @@ import type {
   ConfigProvidersResponses,
   ConfigUpdateErrors,
   ConfigUpdateResponses,
+  ContextDerefErrors,
+  ContextDerefResponses,
+  ContextHistoryResponses,
+  ContextThreadsResponses,
+  ContextTreeResponses,
   EditMeta,
   EventSubscribeResponses,
   EventTuiCommandExecute,
@@ -1235,6 +1240,160 @@ export class Worktree extends HeyApiClient {
     )
     return (options?.client ?? this.client).post<WorktreeResetResponses, WorktreeResetErrors, ThrowOnError>({
       url: "/experimental/worktree/reset",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Context extends HeyApiClient {
+  /**
+   * Get context edit history
+   *
+   * Get the linear edit history for a session (readonly tool)
+   */
+  public history<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      sessionID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<ContextHistoryResponses, unknown, ThrowOnError>({
+      url: "/experimental/context/history",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Get context edit tree
+   *
+   * Get the full edit DAG with branches for a session (readonly tool)
+   */
+  public tree<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      sessionID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<ContextTreeResponses, unknown, ThrowOnError>({
+      url: "/experimental/context/tree",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * List side threads
+   *
+   * List side threads for the current project (readonly tool)
+   */
+  public threads<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      status?: "parked" | "investigating" | "resolved" | "deferred" | "all"
+      limit?: number
+      offset?: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "status" },
+            { in: "body", key: "limit" },
+            { in: "body", key: "offset" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<ContextThreadsResponses, unknown, ThrowOnError>({
+      url: "/experimental/context/threads",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Retrieve CAS content
+   *
+   * Retrieve externalized content from CAS by hash (readonly tool)
+   */
+  public deref<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      hash?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "hash" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<ContextDerefResponses, ContextDerefErrors, ThrowOnError>({
+      url: "/experimental/context/deref",
       ...options,
       ...params,
       headers: {
@@ -3944,6 +4103,11 @@ export class OpencodeClient extends HeyApiClient {
   private _worktree?: Worktree
   get worktree(): Worktree {
     return (this._worktree ??= new Worktree({ client: this.client }))
+  }
+
+  private _context?: Context
+  get context(): Context {
+    return (this._context ??= new Context({ client: this.client }))
   }
 
   private _session?: Session2

@@ -238,6 +238,7 @@ export type UserMessage = {
     [key: string]: boolean
   }
   variant?: string
+  objective?: string
 }
 
 export type ProviderAuthError = {
@@ -1485,6 +1486,10 @@ export type Config = {
       agent?: string
       model?: string
       subtask?: boolean
+      /**
+       * Mark command output as ephemeral (auto-externalized)
+       */
+      ephemeral?: boolean
     }
   }
   /**
@@ -2038,6 +2043,7 @@ export type Command = {
   source?: "command" | "mcp" | "skill"
   template: string
   subtask?: boolean
+  ephemeral?: boolean
   hints: Array<string>
 }
 
@@ -2893,6 +2899,136 @@ export type ExperimentalResourceListResponses = {
 
 export type ExperimentalResourceListResponse =
   ExperimentalResourceListResponses[keyof ExperimentalResourceListResponses]
+
+export type ContextHistoryData = {
+  body?: {
+    sessionID: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/context/history"
+}
+
+export type ContextHistoryResponses = {
+  /**
+   * Edit history
+   */
+  200: {
+    sessionID: string
+    count: number
+    nodes: Array<{
+      id: string
+      parentID: string | null
+      partID: string
+      operation: string
+      casHash: string | null
+      agent: string
+      timeCreated: number
+    }>
+  }
+}
+
+export type ContextHistoryResponse = ContextHistoryResponses[keyof ContextHistoryResponses]
+
+export type ContextTreeData = {
+  body?: {
+    sessionID: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/context/tree"
+}
+
+export type ContextTreeResponses = {
+  /**
+   * Edit tree
+   */
+  200: {
+    sessionID: string
+    head: string | null
+    branches: {
+      [key: string]: string
+    }
+    count: number
+    nodes: Array<{
+      id: string
+      parentID: string | null
+      partID: string
+      operation: string
+      casHash: string | null
+      agent: string
+      timeCreated: number
+    }>
+  }
+}
+
+export type ContextTreeResponse = ContextTreeResponses[keyof ContextTreeResponses]
+
+export type ContextThreadsData = {
+  body?: {
+    status?: "parked" | "investigating" | "resolved" | "deferred" | "all"
+    limit?: number
+    offset?: number
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/context/threads"
+}
+
+export type ContextThreadsResponses = {
+  /**
+   * Side threads
+   */
+  200: {
+    projectID: string
+    threads: Array<unknown>
+    total: number
+    hasMore: boolean
+  }
+}
+
+export type ContextThreadsResponse = ContextThreadsResponses[keyof ContextThreadsResponses]
+
+export type ContextDerefData = {
+  body?: {
+    hash: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/context/deref"
+}
+
+export type ContextDerefErrors = {
+  /**
+   * CAS entry not found
+   */
+  404: unknown
+}
+
+export type ContextDerefResponses = {
+  /**
+   * CAS content
+   */
+  200: {
+    hash: string
+    content: string
+    timeCreated: number
+  }
+}
+
+export type ContextDerefResponse = ContextDerefResponses[keyof ContextDerefResponses]
 
 export type SessionListData = {
   body?: never
