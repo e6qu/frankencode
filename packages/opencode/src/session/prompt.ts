@@ -1923,19 +1923,28 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const msgs: MessageV2.WithParts[] = []
       for await (const m of MessageV2.stream(input.sessionID)) msgs.push(m)
       const turn = msgs.filter((m) => m.info.role === "user").length
+      const lifecycle: MessageV2.LifecycleMeta = {
+        hint: "ephemeral",
+        afterTurns: 0,
+        reason: "Ephemeral command output",
+        setAt: Date.now(),
+        setBy: "system",
+        turnWhenSet: turn,
+      }
+
+      // Mark the user's command input parts as ephemeral too
+      const parentID = (result.info as MessageV2.Assistant).parentID
+      const userMsg = msgs.find((m) => m.info.id === parentID)
+      if (userMsg) {
+        for (const part of userMsg.parts) {
+          Session.updatePart({ ...part, lifecycle })
+        }
+      }
+
+      // Mark the assistant's output parts as ephemeral
       for (const part of result.parts) {
         if (part.type === "tool" || part.type === "text") {
-          Session.updatePart({
-            ...part,
-            lifecycle: {
-              hint: "ephemeral",
-              afterTurns: 0,
-              reason: "Ephemeral command output",
-              setAt: Date.now(),
-              setBy: "system",
-              turnWhenSet: turn,
-            },
-          })
+          Session.updatePart({ ...part, lifecycle })
         }
       }
     }

@@ -592,7 +592,7 @@ export namespace ContextEdit {
         if (part.edit?.hidden) continue
 
         const turns = part.lifecycle.afterTurns
-        if (!turns) continue
+        if (turns == null) continue
         const elapsed = currentTurn - part.lifecycle.turnWhenSet
         if (elapsed < turns) continue
 
