@@ -543,14 +543,17 @@ export namespace Server {
               })
             }, 10_000)
 
-            await new Promise<void>((resolve) => {
-              stream.onAbort(() => {
-                clearInterval(heartbeat)
-                unsub()
-                resolve()
-                log.info("event disconnected")
+            try {
+              await new Promise<void>((resolve) => {
+                stream.onAbort(() => {
+                  resolve()
+                  log.info("event disconnected")
+                })
               })
-            })
+            } finally {
+              clearInterval(heartbeat)
+              unsub()
+            }
           })
         },
       )
