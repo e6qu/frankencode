@@ -1911,6 +1911,33 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       { parts },
     )
 
+    if (command.ephemeral) {
+      const forked = await Session.fork({ sessionID: input.sessionID })
+      try {
+        const forkedResult = await prompt({
+          sessionID: forked.id,
+          messageID: MessageID.ascending(),
+          model: userModel,
+          agent: userAgent,
+          parts,
+          variant: input.variant,
+        })
+
+        Bus.publish(Command.Event.Executed, {
+          name: input.command,
+          sessionID: input.sessionID,
+          arguments: input.arguments,
+          messageID: forkedResult.info.id,
+        })
+
+        // forkedResult IDs reference the now-deleted fork — intentional,
+        // ephemeral results are transient and not meant to be dereferenced later
+        return forkedResult
+      } finally {
+        await Session.remove(forked.id)
+      }
+    }
+
     const result = (await prompt({
       sessionID: input.sessionID,
       messageID: input.messageID,
@@ -1919,33 +1946,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       parts,
       variant: input.variant,
     })) as MessageV2.WithParts
-
-    if (command.ephemeral) {
-      const lifecycle: MessageV2.LifecycleMeta = {
-        hint: "ephemeral",
-        reason: "Ephemeral command output",
-        setAt: Date.now(),
-        setBy: "system",
-      }
-
-      // Mark the user's command input parts as ephemeral
-      const msgs: MessageV2.WithParts[] = []
-      for await (const m of MessageV2.stream(input.sessionID)) msgs.push(m)
-      const parentID = (result.info as MessageV2.Assistant).parentID
-      const userMsg = msgs.find((m) => m.info.id === parentID)
-      if (userMsg) {
-        for (const part of userMsg.parts) {
-          Session.updatePart({ ...part, lifecycle })
-        }
-      }
-
-      // Mark the assistant's output parts as ephemeral
-      for (const part of result.parts) {
-        if (part.type === "tool" || part.type === "text") {
-          Session.updatePart({ ...part, lifecycle })
-        }
-      }
-    }
 
     Bus.publish(Command.Event.Executed, {
       name: input.command,

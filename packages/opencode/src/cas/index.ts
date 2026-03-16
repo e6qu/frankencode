@@ -50,15 +50,7 @@ export namespace CAS {
           message_id: meta.messageID ?? null,
           part_id: meta.partID ?? null,
         })
-        .onConflictDoUpdate({
-          target: CASObjectTable.hash,
-          set: {
-            session_id: meta.sessionID ?? null,
-            message_id: meta.messageID ?? null,
-            part_id: meta.partID ?? null,
-            content_type: meta.contentType,
-          },
-        })
+        .onConflictDoNothing()
         .run()
     })
     log.info("stored", { hash: h.slice(0, 12), contentType: meta.contentType })
