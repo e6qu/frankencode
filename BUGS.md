@@ -13,6 +13,30 @@ CAS entries are never deleted. Over time, the `cas_object` table grows unbounded
 
 Once an objective is cached via `Objective.extract()`, it's never refreshed. The new `objective_set` tool addresses this partially, but the auto-extraction path still returns stale data.
 
+### Fork-Based Ephemeral: No try/finally — Leaked Sessions on Error
+
+**Location:** `src/session/prompt.ts:1914-1926`
+
+If `prompt()` throws during an ephemeral command, `Session.remove(forked.id)` is never called. The forked session (and its messages/parts) persists in the database forever. Needs a try/finally wrapper.
+
+### Fork-Based Ephemeral: Command.Event.Executed Skipped
+
+**Location:** `src/session/prompt.ts:1914-1926` vs `1937-1942`
+
+The ephemeral path returns early and never publishes `Command.Event.Executed`. The subscriber in `project/bootstrap.ts:28-32` depends on this event to call `Project.setInitialized()` after `/init`. Any command that relies on post-execution bus events will silently break when marked ephemeral.
+
+### Fork-Based Ephemeral: Returned Message IDs Point to Deleted Session
+
+**Location:** `src/session/prompt.ts:1924-1925`
+
+`forkedResult` contains message IDs, part IDs, and a session ID that all belong to the forked session which was just deleted by `Session.remove()`. Any caller that persists or dereferences these IDs will hit NotFoundErrors. The invariant that returned message objects reference valid database rows is violated.
+
+### Session.remove() Does Not Clean Up CAS Entries
+
+**Location:** `src/session/index.ts:664-688`, `src/cas/index.ts:92-108`
+
+`Session.remove()` deletes the session row but never calls `CAS.deleteBySession()` (which exists but is unreferenced). This was already a latent issue, but the fork-based ephemeral approach amplifies it — every ephemeral command creates and destroys a session, leaking CAS entries each time.
+
 ## Context Editing System — Design Issues (Resolved)
 
 These architectural concerns were documented during review. All related bugs (#1, #3, #6, #7, #9) have been fixed.
