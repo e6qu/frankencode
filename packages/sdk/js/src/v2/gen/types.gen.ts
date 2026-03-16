@@ -154,6 +154,14 @@ export type EventPermissionReplied = {
   }
 }
 
+export type EventFileWatcherUpdated = {
+  type: "file.watcher.updated"
+  properties: {
+    file: string
+    event: "add" | "change" | "unlink"
+  }
+}
+
 export type EventServerConnected = {
   type: "server.connected"
   properties: {
@@ -730,14 +738,6 @@ export type EventSessionCompacted = {
   }
 }
 
-export type EventFileWatcherUpdated = {
-  type: "file.watcher.updated"
-  properties: {
-    file: string
-    event: "add" | "change" | "unlink"
-  }
-}
-
 export type Todo = {
   /**
    * Brief description of the task
@@ -1119,6 +1119,7 @@ export type Event =
   | EventQuestionRejected
   | EventPermissionAsked
   | EventPermissionReplied
+  | EventFileWatcherUpdated
   | EventServerConnected
   | EventGlobalDisposed
   | EventLspClientDiagnostics
@@ -1132,7 +1133,6 @@ export type Event =
   | EventSessionStatus
   | EventSessionIdle
   | EventSessionCompacted
-  | EventFileWatcherUpdated
   | EventTodoUpdated
   | EventEditGraphCommitted
   | EventEditGraphCheckedOut
