@@ -710,7 +710,6 @@ export namespace SessionPrompt {
             : []),
         ],
         tools,
-        permission: session.permission,
         model,
         toolChoice: format.type === "json_schema" ? "required" : undefined,
       })
@@ -1353,26 +1352,31 @@ export namespace SessionPrompt {
       },
     )
 
-    const infoResult = MessageV2.Info.safeParse(info)
-    if (!infoResult.success) {
-      log.error("info schema validation failed before save", {
+    const parsedInfo = MessageV2.Info.safeParse(info)
+    if (!parsedInfo.success) {
+      log.error("invalid user message before save", {
         sessionID: input.sessionID,
         messageID: info.id,
-        issues: infoResult.error.issues,
+        agent: info.agent,
+        model: info.model,
+        issues: parsedInfo.error.issues,
       })
     }
-    for (const [i, part] of parts.entries()) {
-      const partResult = MessageV2.Part.safeParse(part)
-      if (!partResult.success) {
-        log.error("part schema validation failed before save", {
-          sessionID: input.sessionID,
-          partID: part.id,
-          partType: part.type,
-          index: i,
-          issues: partResult.error.issues,
-        })
-      }
-    }
+
+    parts.forEach((part, index) => {
+      const parsedPart = MessageV2.Part.safeParse(part)
+      if (parsedPart.success) return
+      log.error("invalid user part before save", {
+        sessionID: input.sessionID,
+        messageID: info.id,
+        partID: part.id,
+        partType: part.type,
+        index,
+        issues: parsedPart.error.issues,
+        part,
+      })
+    })
+
     await Session.updateMessage(info)
     for (const part of parts) {
       await Session.updatePart(part)
