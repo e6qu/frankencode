@@ -1,75 +1,76 @@
 # Bugs and Issues
 
-This document covers system-wide issues. For per-package bugs, see:
-- **[packages/opencode/BUGS.md](packages/opencode/BUGS.md)** — canonical bug list (0 open, 19 fixed)
+All bugs tracked here. Do not create per-package bug files.
 
-## Open Issues
+---
 
-### No CAS Garbage Collection
+## Open Design Issues
 
-CAS entries are never deleted. Over time, the `cas_object` table grows unbounded. Orphaned entries accumulate from session deletion, part deletion, and failed operations.
+| Issue | Location | Impact |
+| --- | --- | --- |
+| No CAS garbage collection | `cas/index.ts` | Unbounded `cas_object` growth |
+| Objective extraction never updates | `session/objective.ts` | Stale auto-extracted objectives |
+| `Session.remove()` leaks EditGraph rows | `session/index.ts:665-689` | Orphan `edit_graph_node`/`edit_graph_head` rows |
+| `CAS.store()` overwrites session_id on hash collision | `cas/index.ts:53-61` | Cross-session content deletion |
 
-### Objective Extraction Never Updates
+---
 
-Once an objective is cached via `Objective.extract()`, it's never refreshed. The new `objective_set` tool addresses this partially, but the auto-extraction path still returns stale data.
+## False Positives / Intentional
 
-### Session.remove() Does Not Clean Up EditGraph Rows
+| Issue | Resolution |
+| --- | --- |
+| Fork-based ephemeral: message IDs point to deleted session | **Intentional** — ephemeral results serialized immediately, never dereferenced later |
+| #32 Skill template returns Promise not string | **By design** — type is `Promise<string> | string`, all consumers `await`, `hints: []` for skill commands |
 
-**Location:** `src/session/index.ts:665-689`, `src/cas/cas.sql.ts:19-38`
+---
 
-`Session.remove()` cleans up CAS entries (`CAS.deleteBySession`) but not `edit_graph_node` or `edit_graph_head` rows. These tables have `session_id` columns with no CASCADE foreign key to the session table. Every ephemeral command that triggers a context edit (via `EditGraph.commit()` in `context-edit/index.ts`) leaks orphan rows. Over time this causes unbounded growth in both tables.
+## Previously Fixed (40 bugs)
 
-### CAS.store() Overwrites session_id on Hash Collision
+| #   | Issue | Sev | Fix |
+| --- | --- | --- | --- |
+| 1 | `reset()`/`checkout()` JSON.parse plain text CAS | Crit | `JSON.stringify(part)` in `CAS.store()` |
+| 2 | `withTimeout` timer leak on rejection | Crit | `.finally()` cleanup |
+| 3 | `unhide`/`annotate` missing transaction | Crit | `Database.transaction()` wrapper |
+| 4 | `SideThread.list` total ignores status filter | High | `countWhere` applies filter |
+| 5 | Unsafe cast to `MessageV2.User` in classifier | High | `.find()` + optional chaining |
+| 6 | `sweep()` no transaction wrapping | High | `Database.transaction()` wrapper |
+| 7 | `filterEdited` breaks message alternation | High | Synthetic placeholder preserves structure |
+| 8 | N+1 queries in `getLog`/`buildPathToRoot` | High | `loadAllNodes()` single query |
+| 9 | Missing plugin hooks in `unhide`/`annotate` | High | Added `pluginGuard` + `pluginNotify` |
+| 10 | CAS `onConflictDoNothing` loses metadata | Med | `onConflictDoUpdate` |
+| 11 | `AsyncQueue` no termination | Med | `close()` with CLOSED sentinel |
+| 12 | Template variable bash-style syntax | Med | `$ARGUMENTS` substitution |
+| 13 | `work()` drops `undefined` items | Med | Check `pending.length` not `item` |
+| 14 | Modular bias in random ID generation | Med | Rejection sampling (`MAX_UNBIASED = 248`) |
+| 15 | Ephemeral commands crash (schema validation) | Crit | Replaced sweep with `filterEphemeral()` |
+| 16 | Ephemeral sweep leaks content into LLM turn | High | Filter upstream via `filterEphemeral()` |
+| 17 | `context_edit` accepts invalid `afterTurns` | Med | `.int().min(1)` validation |
+| 18 | Unused imports in message-v2.ts | Low | Removed |
+| 19 | Unused constant `MAX_EDITS_PER_TURN` | Low | Removed |
+| 20 | `focus-rewrite-history` missing tool perms | High | Added `classifier_threads`/`distill_threads` |
+| — | Fork-based ephemeral: leaked sessions on error | High | try/finally around `Session.remove()` |
+| — | Fork-based ephemeral: `Command.Event.Executed` skipped | Med | Added `Bus.publish()` in ephemeral path |
+| — | `Session.remove()` doesn't clean up CAS | High | Added `CAS.deleteBySession()` |
+| — | Duplicate skill name warns but doesn't skip | Low | Added warning log |
+| 21 | Circuit breaker `lastFailure` after throw | High | Move `lastFailure = now` before threshold check |
+| 22 | Circuit breaker never resets on success | Med | Added `recordSuccess()`, called on pass |
+| 23 | Circuit breaker inverted `open` semantics | Low | Renamed `open` → `healthy` |
+| 24 | Default cooldown (1s) effectively zero | Med | Increased to 30000ms |
+| 25 | `scope`/`files`/`criteria` params unused | Med | Removed from schema |
+| 26 | `command.split(" ")` breaks quoted args | Low | Changed to `["bash", "-c", command]` |
+| 27 | Verify config shallow merge loses nested | High | `mergeDeep()` from remeda |
+| 28 | Evaluator has no code context | Crit | Build change summary from parent session messages |
+| 29 | `tools: {}` blocks agent tools | Crit | Removed `tools: {}` from prompt calls |
+| 30 | `parseEvaluation` brittle parsing | Med | Extract `<evaluation>` block first, NaN guard |
+| 31 | Child sessions never cleaned up | Low | try/finally with `Session.remove()` |
+| 32 | Skill template returns Promise | High | By design — added comment, no code change |
+| 33 | `Skill.get()` re-parses every call | Low | Module-level content cache, cleared on state reload |
+| 34 | Scripts: argument injection | Med | Insert `--` separator before user args |
+| 35 | Scripts: tool ID collision | Low | Changed separator to `::` (`script::skill/name`) |
+| 36 | Evaluator agent has bash access | Med | Removed `bash: "allow"` from evaluator permissions |
 
-**Location:** `src/cas/index.ts:53-61`
+---
 
-`CAS.store()` uses `onConflictDoUpdate` keyed on the content hash. When identical content is stored from two different sessions, the CAS entry's `session_id` is silently reassigned to the latest caller. If the original session still references that hash, a later `CAS.deleteBySession()` on the new owner deletes the entry out from under the original session. Content-addressed storage should not have mutable ownership.
+## Notes
 
-### ~~Fork-Based Ephemeral: No try/finally — Leaked Sessions on Error~~ — FIXED
-
-Wrapped in try/finally so `Session.remove()` runs even if `prompt()` throws.
-
-### ~~Fork-Based Ephemeral: Command.Event.Executed Skipped~~ — FIXED
-
-`Bus.publish(Command.Event.Executed, ...)` is now called inside the ephemeral path before returning.
-
-### ~~Fork-Based Ephemeral: Returned Message IDs Point to Deleted Session~~ — INTENTIONAL
-
-Documented as intentional — ephemeral results are serialized immediately and not dereferenced later.
-
-### ~~Session.remove() Does Not Clean Up CAS Entries~~ — FIXED
-
-`CAS.deleteBySession(sessionID)` is now called in `Session.remove()` before the CASCADE delete.
-
-## Context Editing System — Design Issues (Resolved)
-
-These architectural concerns were documented during review. All related bugs (#1, #3, #6, #7, #9) have been fixed.
-
-### ~~Race Condition in EditGraph.commit~~ — RESOLVED
-
-**Location:** `src/cas/graph.ts:89-129`
-
-No longer an issue: `annotate()` and `sweep()` are now wrapped in `Database.transaction()` (bugs #3 and #6 fixed), so concurrent commits are protected by the outer transaction.
-
-### ~~Sweeper + EditGraph Interaction~~ — RESOLVED
-
-The sweeper correctly records operations in the EditGraph and is now wrapped in `Database.transaction()` (bug #6 fixed). The `CAS.store` → `EditGraph.commit` → `Session.updatePart` chain is atomic.
-
-### ~~CAS Content Format Mismatch~~ — RESOLVED
-
-`CAS.store()` now stores `JSON.stringify(part)`, so `reset()` and `checkout()` correctly reconstruct Part objects via `JSON.parse()` (bug #1 fixed).
-
-### ~~Ephemeral sweep-based cleanup~~ — RESOLVED
-
-Ephemeral commands used a sweep-based `afterTurns` cleanup that leaked content into 1 LLM turn and crashed with schema validation errors (`afterTurns: 0` violated `min(1)`). Replaced with true ephemeral filter — messages are dropped from LLM context entirely via `filterEphemeral()`.
-
-## TUI Testing Feasibility
-
-Investigated Playwright for TUI testing. **Not feasible** — the TUI uses OpenTUI+SolidJS (terminal rendering), not a browser.
-
-**Recommended alternatives:**
-- **OpenTUI's `createTestRenderer()`** — headless terminal rendering for integration tests
-- **`@solidjs/testing-library`** — component-level unit tests with Bun's test runner
-- **[Termwright](https://github.com/fcoury/termwright)** — Playwright-inspired API for terminal apps (requires integration work)
-
-Keep Playwright for `packages/app` (web) testing only.
+**TUI Testing:** Playwright not feasible (OpenTUI+SolidJS). Use `createTestRenderer()`, `@solidjs/testing-library`, or Termwright. Keep Playwright for `packages/app` only.

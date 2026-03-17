@@ -27,6 +27,12 @@ export namespace Skill {
   })
   export type Info = z.infer<typeof Info>
 
+  export const Meta = Info.pick({ name: true, description: true, location: true })
+  export type Meta = z.infer<typeof Meta>
+
+  export const Loaded = Info
+  export type Loaded = z.infer<typeof Loaded>
+
   export const InvalidError = NamedError.create(
     "SkillInvalidError",
     z.object({
@@ -52,8 +58,11 @@ export namespace Skill {
   const OPENCODE_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
   const SKILL_PATTERN = "**/SKILL.md"
 
+  const contentCache = new Map<string, string>()
+
   export const state = Instance.state(async () => {
-    const skills: Record<string, Info> = {}
+    contentCache.clear()
+    const skills: Record<string, Meta> = {}
     const dirs = new Set<string>()
 
     const addSkill = async (match: string) => {
@@ -71,7 +80,6 @@ export namespace Skill {
       const parsed = Info.pick({ name: true, description: true }).safeParse(md.data)
       if (!parsed.success) return
 
-      // Warn on duplicate skill names
       if (skills[parsed.data.name]) {
         log.warn("duplicate skill name", {
           name: parsed.data.name,
@@ -86,7 +94,6 @@ export namespace Skill {
         name: parsed.data.name,
         description: parsed.data.description,
         location: match,
-        content: md.content,
       }
     }
 
@@ -178,11 +185,26 @@ export namespace Skill {
     }
   })
 
-  export async function get(name: string) {
+  export async function get(name: string): Promise<Loaded | undefined> {
+    const meta = await state().then((x) => x.skills[name])
+    if (!meta) return undefined
+    const content = await loadContent(meta.location)
+    return { ...meta, content }
+  }
+
+  export async function meta(name: string): Promise<Meta | undefined> {
     return state().then((x) => x.skills[name])
   }
 
-  export async function all() {
+  async function loadContent(location: string): Promise<string> {
+    const cached = contentCache.get(location)
+    if (cached !== undefined) return cached
+    const md = await ConfigMarkdown.parse(location)
+    contentCache.set(location, md.content)
+    return md.content
+  }
+
+  export async function all(): Promise<Meta[]> {
     return state().then((x) => Object.values(x.skills))
   }
 
@@ -190,13 +212,13 @@ export namespace Skill {
     return state().then((x) => x.dirs)
   }
 
-  export async function available(agent?: Agent.Info) {
+  export async function available(agent?: Agent.Info): Promise<Meta[]> {
     const list = await all()
     if (!agent) return list
     return list.filter((skill) => PermissionNext.evaluate("skill", skill.name, agent.permission).action !== "deny")
   }
 
-  export function fmt(list: Info[], opts: { verbose: boolean }) {
+  export function fmt(list: Meta[], opts: { verbose: boolean }) {
     if (list.length === 0) {
       return "No skills are currently available."
     }

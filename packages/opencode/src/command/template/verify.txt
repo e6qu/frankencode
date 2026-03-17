@@ -1,0 +1,3 @@
+Run the verify tool to check tests, lint, and typecheck on recent changes.
+
+$ARGUMENTS

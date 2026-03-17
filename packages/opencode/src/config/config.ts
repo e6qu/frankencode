@@ -1223,6 +1223,57 @@ export namespace Config {
             .describe("Timeout in milliseconds for model context protocol (MCP) requests"),
         })
         .optional(),
+      verification: z
+        .object({
+          commands: z
+            .record(z.string(), z.string())
+            .optional()
+            .describe("Commands to run for verification (test, lint, typecheck)"),
+          autoDetect: z.boolean().optional().default(true).describe("Auto-detect commands from package.json scripts"),
+          maxFixAttempts: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .default(3)
+            .describe("Maximum fix attempts before stopping"),
+          timeout: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .default(120000)
+            .describe("Timeout in milliseconds for each check command"),
+          circuitBreaker: z
+            .object({
+              enabled: z.boolean().optional().default(true).describe("Enable circuit breaker pattern"),
+              maxIterations: z
+                .number()
+                .int()
+                .positive()
+                .optional()
+                .default(5)
+                .describe("Maximum iterations before circuit opens"),
+              cooldownMs: z
+                .number()
+                .int()
+                .positive()
+                .optional()
+                .default(1000)
+                .describe("Cooldown period in milliseconds before trying again"),
+              maxConsecutiveFailures: z
+                .number()
+                .int()
+                .positive()
+                .optional()
+                .default(3)
+                .describe("Maximum consecutive failures before circuit opens"),
+            })
+            .optional()
+            .describe("Circuit breaker configuration to prevent runaway loops"),
+        })
+        .optional()
+        .describe("Verification tool configuration for automated code checks"),
     })
     .strict()
     .meta({
