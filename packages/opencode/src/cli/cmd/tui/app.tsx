@@ -15,6 +15,7 @@ import { LocalProvider, useLocal } from "@tui/context/local"
 import { DialogModel, useConnected } from "@tui/component/dialog-model"
 import { DialogMcp } from "@tui/component/dialog-mcp"
 import { DialogStatus } from "@tui/component/dialog-status"
+import { DialogCost } from "@tui/component/dialog-cost"
 import { DialogThemeList } from "@tui/component/dialog-theme-list"
 import { DialogHelp } from "./ui/dialog-help"
 import { CommandProvider, useCommandDialog } from "@tui/component/dialog-command"
@@ -539,6 +540,19 @@ function App() {
       },
       onSelect: () => {
         dialog.replace(() => <DialogStatus />)
+      },
+      category: "System",
+    },
+    {
+      title: "View usage & cost",
+      value: "opencode.cost",
+      slash: {
+        name: "cost",
+        aliases: ["usage"],
+      },
+      onSelect: () => {
+        const sessionID = route.data.type === "session" ? route.data.sessionID : undefined
+        dialog.replace(() => <DialogCost sessionID={sessionID ?? ""} />)
       },
       category: "System",
     },

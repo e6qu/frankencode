@@ -19,6 +19,7 @@ import { PermissionID } from "@/permission/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
+import { aggregateSessionStats } from "../../cli/cmd/stats"
 
 const log = Log.create({ service: "server" })
 
@@ -90,6 +91,36 @@ export const SessionRoutes = lazy(() =>
       async (c) => {
         const result = SessionStatus.list()
         return c.json(result)
+      },
+    )
+    .get(
+      "/stats",
+      describeRoute({
+        summary: "Get usage stats",
+        description: "Get aggregated usage and cost statistics across sessions.",
+        operationId: "session.stats",
+        responses: {
+          200: {
+            description: "Usage statistics",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+        },
+      }),
+      validator(
+        "query",
+        z.object({
+          days: z.coerce.number().optional(),
+          project: z.string().optional(),
+        }),
+      ),
+      async (c) => {
+        const query = c.req.valid("query")
+        const stats = await aggregateSessionStats(query.days, query.project)
+        return c.json(stats)
       },
     )
     .get(
