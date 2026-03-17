@@ -16,6 +16,7 @@ import PROMPT_HISTORY from "./template/history.txt"
 import PROMPT_TREE from "./template/tree.txt"
 import PROMPT_DEREF from "./template/deref.txt"
 import PROMPT_CLASSIFY from "./template/classify.txt"
+import PROMPT_VERIFY from "./template/verify.txt"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 
@@ -76,6 +77,7 @@ export namespace Command {
     TREE: "tree",
     DEREF: "deref",
     CLASSIFY: "classify",
+    VERIFY: "verify",
   } as const
 
   const state = Instance.state(async () => {
@@ -200,6 +202,15 @@ export namespace Command {
         },
         hints: hints(PROMPT_CLASSIFY),
       },
+      [Default.VERIFY]: {
+        name: Default.VERIFY,
+        description: "verify changes — run test, lint, typecheck with circuit-breaker",
+        source: "command",
+        get template() {
+          return PROMPT_VERIFY
+        },
+        hints: hints(PROMPT_VERIFY),
+      },
     }
 
     for (const [name, command] of Object.entries(cfg.command ?? {})) {
@@ -244,16 +255,17 @@ export namespace Command {
       }
     }
 
-    // Add skills as invokable commands
     for (const skill of await Skill.all()) {
-      // Skip if a command with this name already exists
       if (result[skill.name]) continue
-      result[skill.name] = {
-        name: skill.name,
+      const skillName = skill.name
+      result[skillName] = {
+        name: skillName,
         description: skill.description,
         source: "skill",
         get template() {
-          return skill.content
+          // Intentionally returns Promise<string> — all consumers (prompt.ts) await the template,
+          // and skill commands have hints: [] so no sync hint extraction is needed.
+          return Skill.get(skillName).then((s) => s?.content ?? "")
         },
         hints: [],
       }

@@ -159,6 +159,12 @@ Use `context_history` to navigate the edit DAG:
 - Pre-commit runs: prettier format, typecheck, tests. All must pass before commit.
 - Commit messages must follow conventional commits (`feat:`, `fix:`, `chore:`, etc).
 
+## Documentation Files
+
+- Log all bugs in root `BUGS.md`, not per-package. Do not create `packages/*/BUGS.md`.
+- Tracking docs (`PLAN.md`, `STATUS.md`, `WHAT_WE_DID.md`, `DO_NEXT.md`, `BUGS.md`) live at repo root.
+- Do not create tracking/status markdown files inside `packages/`.
+
 ## Type Checking
 
 - Always run `bun typecheck` from package directories (e.g., `packages/opencode`), never `tsc` directly.

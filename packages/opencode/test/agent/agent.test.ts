@@ -687,3 +687,42 @@ test("defaultAgent throws when all primary agents are disabled", async () => {
     },
   })
 })
+
+test("evaluator agent denies bash access (#36)", async () => {
+  await using tmp = await tmpdir()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const evaluator = await Agent.get("evaluator")
+      expect(evaluator).toBeDefined()
+      expect(evaluator?.mode).toBe("subagent")
+      expect(evaluator?.hidden).toBe(true)
+      // Evaluator is read-only — bash must be denied
+      expect(evalPerm(evaluator, "bash")).toBe("deny")
+      // But read/grep/glob are allowed
+      expect(evalPerm(evaluator, "read")).toBe("allow")
+      expect(evalPerm(evaluator, "grep")).toBe("allow")
+      expect(evalPerm(evaluator, "glob")).toBe("allow")
+      // Edit/write must be denied
+      expect(evalPerm(evaluator, "edit")).toBe("deny")
+      expect(evalPerm(evaluator, "write")).toBe("deny")
+    },
+  })
+})
+
+test("optimizer agent has bash and edit access", async () => {
+  await using tmp = await tmpdir()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const optimizer = await Agent.get("optimizer")
+      expect(optimizer).toBeDefined()
+      expect(optimizer?.mode).toBe("subagent")
+      // Optimizer needs full edit capabilities
+      expect(evalPerm(optimizer, "bash")).toBe("allow")
+      expect(evalPerm(optimizer, "edit")).toBe("allow")
+      expect(evalPerm(optimizer, "write")).toBe("allow")
+      expect(evalPerm(optimizer, "read")).toBe("allow")
+    },
+  })
+})

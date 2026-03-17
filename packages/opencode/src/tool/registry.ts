@@ -1,4 +1,4 @@
-import { PlanExitTool } from "./plan"
+import { PlanExitTool, PlanEnterTool } from "./plan"
 import { QuestionTool } from "./question"
 import { BashTool } from "./bash"
 import { EditTool } from "./edit"
@@ -37,8 +37,11 @@ import { ThreadListTool } from "./thread-list"
 import { ClassifierThreadsTool } from "./classifier-threads"
 import { DistillThreadsTool } from "./distill-threads"
 import { ObjectiveSetTool } from "./objective-set"
+import { VerifyTool } from "./verify"
+import { RefineTool } from "./refine"
 import { Glob } from "../util/glob"
 import { pathToFileURL } from "url"
+import { Scripts } from "../skill/scripts"
 
 export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
@@ -65,6 +68,11 @@ export namespace ToolRegistry {
       for (const [id, def] of Object.entries(plugin.tool ?? {})) {
         custom.push(fromPlugin(id, def))
       }
+    }
+
+    const scripts = await Scripts.asTools()
+    for (const script of scripts) {
+      custom.push(script)
     }
 
     return { custom }
@@ -134,9 +142,12 @@ export namespace ToolRegistry {
       ClassifierThreadsTool,
       DistillThreadsTool,
       ObjectiveSetTool,
+      VerifyTool,
+      RefineTool,
       ...(Flag.OPENCODE_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
-      ...(Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE && Flag.OPENCODE_CLIENT === "cli" ? [PlanExitTool] : []),
+      PlanExitTool,
+      PlanEnterTool,
       ...custom,
     ]
   }

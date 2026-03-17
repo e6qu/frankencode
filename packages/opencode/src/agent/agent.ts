@@ -17,6 +17,8 @@ import PROMPT_TITLE from "./prompt/title.txt"
 import PROMPT_FOCUS from "./prompt/focus.txt"
 import PROMPT_CLASSIFIER from "./prompt/classifier.txt"
 import PROMPT_REWRITE_HISTORY from "./prompt/rewrite-history.txt"
+import PROMPT_EVALUATOR from "./prompt/evaluator.txt"
+import PROMPT_OPTIMIZER from "./prompt/optimizer.txt"
 import { PermissionNext } from "@/permission/next"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@/global"
@@ -263,10 +265,53 @@ export namespace Agent {
             thread_park: "allow",
             thread_list: "allow",
             question: "allow",
+            classifier_threads: "allow",
+            distill_threads: "allow",
           }),
           user,
         ),
         prompt: PROMPT_REWRITE_HISTORY,
+      },
+      evaluator: {
+        name: "evaluator",
+        mode: "subagent",
+        options: {},
+        native: true,
+        hidden: true,
+        temperature: 0,
+        permission: PermissionNext.merge(
+          defaults,
+          PermissionNext.fromConfig({
+            "*": "deny",
+            read: "allow",
+            grep: "allow",
+            glob: "allow",
+          }),
+          user,
+        ),
+        prompt: PROMPT_EVALUATOR,
+      },
+      optimizer: {
+        name: "optimizer",
+        mode: "subagent",
+        options: {},
+        native: true,
+        hidden: true,
+        temperature: 0.3,
+        permission: PermissionNext.merge(
+          defaults,
+          PermissionNext.fromConfig({
+            "*": "deny",
+            read: "allow",
+            grep: "allow",
+            glob: "allow",
+            edit: "allow",
+            write: "allow",
+            bash: "allow",
+          }),
+          user,
+        ),
+        prompt: PROMPT_OPTIMIZER,
       },
     }
 
