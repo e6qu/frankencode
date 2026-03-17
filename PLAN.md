@@ -57,6 +57,28 @@ These changes form a dependency chain and cannot be cherry-picked individually. 
 | UI: empty sidebar state | App-only, not TUI |
 | Windows /editor fix | Platform-specific |
 
+### D. Frankencode-only features (ours, not in upstream)
+
+These appear as "deletions" in `git diff dev..upstream/dev` because upstream never had them. They are **our additions**, not upstream removals. During rebase, git will try to delete them — we must keep them and resolve conflicts.
+
+| Feature | Files | Rebase action |
+|---------|-------|---------------|
+| CAS (content-addressable store) | `cas/cas.sql.ts`, `cas/index.ts`, `cas/graph.ts` | Keep — new files, no conflict |
+| Context editing | `context-edit/index.ts`, `tool/context-edit.ts`, `tool/context-deref.ts`, `tool/context-history.ts` | Keep — new files |
+| Side threads | `session/side-thread.sql.ts`, `session/side-thread.ts`, `tool/thread-park.ts`, `tool/thread-list.ts` | Keep — new files |
+| Classifier + distill | `tool/classifier-threads.ts`, `tool/distill-threads.ts` | Keep — new files |
+| Objective tracker | `session/objective.ts`, `tool/objective-set.ts` | Keep — new file |
+| Focus/classifier/rewrite agents | `agent/prompt/focus.txt`, `agent/prompt/classifier.txt`, `agent/prompt/rewrite-history.txt` | Keep — new files |
+| Verify + Refine tools | `tool/verify.ts`, `tool/refine.ts`, `skill/scripts.ts` | Keep — new files |
+| Evaluator/optimizer agents | `agent/prompt/evaluator.txt`, `agent/prompt/optimizer.txt` | Keep — new files |
+| Ephemeral commands | `command/template/*.txt` (btw, focus, etc.) | Keep — new files |
+| EditMeta + LifecycleMeta on PartBase | `session/message-v2.ts` | **Conflict** — re-add to upstream's new PartBase shape |
+| filterEdited + filterEphemeral | `session/message-v2.ts`, `session/prompt.ts` | **Conflict** — re-add to upstream's new pipeline |
+| Focus status injection | `session/prompt.ts` | **Conflict** — re-add to upstream's new prompt flow |
+| Agent definitions (focus, classifier, evaluator, etc.) | `agent/agent.ts` | **Low conflict** — upstream didn't change agent defs |
+| Tool registry additions | `tool/registry.ts` | **Low conflict** — additive imports |
+| Skill content cache | `skill/skill.ts` | **High conflict** — must reimplement inside upstream's new `SkillService` |
+
 ---
 
 ### Recommended approach
