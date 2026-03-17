@@ -1,37 +1,58 @@
-# Frankencode Status
+# Frankencode — Project Status
 
-## Session: 2026-03-17
+**Date:** 2026-03-18
+**Upstream:** `anomalyco/opencode` @ `dev`
+**Fork:** `e6qu/frankencode` @ `dev`
 
-### Completed
+## Overview
 
-- ✅ Plan Mode Fixes (removed experimental flag, enabled plan_enter tool)
-- ✅ Fixed `focus-rewrite-history` agent missing tool permissions
-- ✅ Researched 6 months of Claude Blog posts
-- ✅ Designed 4 new features (Verification, Progressive Disclosure, Skills as Scripts, Evaluator-Optimizer)
-- ✅ Verification Tool (`/verify` command with circuit-breaker)
-- ✅ Progressive Disclosure for Skills (lazy load content on demand)
-- ✅ Evaluator-Optimizer (evaluator/optimizer agents + refine tool)
-- ✅ Skills as Scripts (scripts in skill directories become callable tools)
-- ✅ Code review of all new features — found 16 bugs (2 critical, 4 high, 6 medium, 4 low)
+Frankencode is a fork of OpenCode that adds surgical, reversible, agent-driven context editing with content-addressable storage and a conversation history graph. All 4 planned phases are implemented. Currently in hardening/testing phase.
 
-### In Progress
+## Branch Status
 
-- ⬜ Bug fix pass — 16 bugs logged in `BUGS.md` (#21-#36)
+| Branch | Status | PR |
+|--------|--------|----|
+| `dev` | Main development branch | — |
+| `fix/code-review-bugs` | 16 bug fixes + 25 tests | [#12](https://github.com/e6qu/frankencode/pull/12) (merged) |
+| `docs/upstream-sync-notes` | Docs update with upstream analysis | [#13](https://github.com/e6qu/frankencode/pull/13) |
 
-### Blocked
+## Upstream Divergence
 
-- Refine tool (#28, #29) — fundamentally incomplete, evaluator/optimizer have no context about actual changes
+- **10 commits ahead** of upstream (Frankencode features)
+- **~50 commits behind** upstream (Effect refactors, bug fixes, model updates)
 
-### Critical Issues to Resolve Before Merge
+### Upstream changes requiring attention:
 
-1. **Refine tool is non-functional** — evaluator receives no code context, optimizer may have no tools
-2. **Skill template returns Promise** — may inject `"[object Promise]"` into prompts
-3. **Verify circuit breaker has 4 interacting bugs** — lastFailure timing, no success reset, 1s cooldown, shallow config merge
+1. **Effect-ification** — `SkillService`, `FileService`, `FormatService`, `VcsService`, etc. refactored to Effect scoped services
+2. **`instance-state.ts` deleted** — our `Instance.state()` usage needs review
+3. **`skill.ts` rewritten** (333 lines changed) — conflicts with our content cache
+4. **`prompt.ts` changed** (~99 lines) — conflicts with our filterEdited/filterEphemeral pipeline
+5. **`message-v2.ts` changed** (~107 lines) — conflicts with our EditMeta/LifecycleMeta additions
 
-### Next Steps
+## Test Status
 
-1. Fix P0 critical bugs (#28, #29, #32)
-2. Fix P1 high bugs (#21, #27, #36)
-3. Fix P2 medium bugs (#22, #24, #25, #30, #34)
-4. Unit tests for all new features
-5. Integration testing
+- **1401 tests passing**, 0 failures, 8 skipped
+- **25 new regression tests** for bug fixes (verify, refine, scripts, skill cache, agent permissions)
+- **Typecheck:** clean (`bun typecheck`)
+
+## Bug Status
+
+- **0 active bugs**
+- **40 bugs fixed** (tracked in BUGS.md)
+- **4 open design issues** (CAS GC, objective staleness, EditGraph leak, CAS ownership)
+
+## Feature Inventory
+
+| Feature | Status | Files |
+|---------|--------|-------|
+| Content-Addressable Store | Done | `src/cas/` |
+| Context editing (6 operations) | Done | `src/context-edit/`, `src/tool/context-edit.ts` |
+| Edit graph (DAG history) | Done | `src/cas/graph.ts`, `src/tool/context-history.ts` |
+| Side threads | Done | `src/session/side-thread.ts`, `src/tool/thread-*.ts` |
+| Focus agent | Done | `src/agent/agent.ts`, `src/agent/prompt/focus.txt` |
+| Classifier + distill | Done | `src/tool/classifier-threads.ts`, `src/tool/distill-threads.ts` |
+| Ephemeral commands | Done | `src/command/index.ts`, `src/session/prompt.ts` |
+| Verify tool | Done | `src/tool/verify.ts` |
+| Refine tool | Done | `src/tool/refine.ts` |
+| Script discovery | Done | `src/skill/scripts.ts` |
+| /cost command | Done | TUI dialog |

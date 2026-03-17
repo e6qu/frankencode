@@ -104,67 +104,95 @@ Root-level: `PLAN.md`, `WHAT_WE_DID.md`, `DO_NEXT.md`
 
 ### Modified files:
 
-| File                           | Changes                                                            |
-| ------------------------------ | ------------------------------------------------------------------ |
-| `src/session/message-v2.ts`    | +EditMeta +LifecycleMeta on PartBase, +filterEdited()              |
-| `src/session/prompt.ts`        | +filterEdited +sweeper in pipeline, +focus status in system prompt |
-| `src/storage/schema.ts`        | +exports for new tables                                            |
-| `src/tool/registry.ts`         | +10 new tools in BUILTIN array, +removed experimental flag checks  |
-| `src/agent/agent.ts`           | +classifier +focus +focus-rewrite-history agent definitions        |
-| `src/command/index.ts`         | +btw +focus +focus-rewrite-history +reset-context commands         |
-| `packages/plugin/src/index.ts` | +context.edit.before/after hook types                              |
-| `src/tool/plan.ts`             | +uncommented PlanEnterTool, +exported                              |
+| File | Changes |
+|------|---------|
+| `src/session/message-v2.ts` | +EditMeta +LifecycleMeta on PartBase, +filterEdited() |
+| `src/session/prompt.ts` | +filterEdited +sweeper in pipeline, +focus status in system prompt |
+| `src/storage/schema.ts` | +exports for new tables |
+| `src/tool/registry.ts` | +10 new tools in BUILTIN array |
+| `src/agent/agent.ts` | +classifier +focus +focus-rewrite-history agent definitions |
+| `src/command/index.ts` | +btw +focus +focus-rewrite-history +reset-context commands |
+| `packages/plugin/src/index.ts` | +context.edit.before/after hook types |
+| `src/tool/plan.ts` | +uncommented PlanEnterTool, +exported |
 
-### Phase 7-9 New files:
+---
 
-| File                              | Purpose                                       |
-| --------------------------------- | --------------------------------------------- |
-| `src/tool/verify.ts`              | Verification tool with circuit-breaker        |
-| `src/tool/refine.ts`              | Evaluator-optimizer loop tool                 |
-| `src/skill/scripts.ts`            | Skill scripts discovery and tool registration |
-| `src/agent/prompt/evaluator.txt`  | Evaluator agent prompt                        |
-| `src/agent/prompt/optimizer.txt`  | Optimizer agent prompt                        |
-| `src/command/template/verify.txt` | /verify command template                      |
+## Phase 5: Hardening — Ephemeral Commands + Bug Fixes
 
-### Phase 7-9 Modified files:
+### Ephemeral commands (PRs #7, #8)
 
-| File                   | Changes                                       |
-| ---------------------- | --------------------------------------------- |
-| `src/skill/skill.ts`   | +Meta/Loaded types, lazy content loading      |
-| `src/tool/registry.ts` | +VerifyTool, +RefineTool, +Scripts.asTools()  |
-| `src/command/index.ts` | +/verify command, lazy skill template loading |
-| `src/agent/agent.ts`   | +evaluator +optimizer agent definitions       |
+- `/threads`, `/history`, `/tree`, `/deref`, `/classify` — readonly commands that don't pollute context
+- Fork-based ephemeral: fork session → run prompt → extract result → delete session
+- `filterEphemeral()` — drops ephemeral messages from LLM context entirely
+- Fixed schema crash (`afterTurns: 0` violated `min(1)`) and content leak into 1 LLM turn
 
-## Phase 7: Verification Tool + Progressive Disclosure
+### /cost TUI command (PR #11)
 
-- Verification tool (`/verify` command) with circuit-breaker for test/lint/typecheck
-- Progressive disclosure for skills: metadata loaded at startup, content lazy-loaded on demand
-- Added `Meta` and `Loaded` types to skill schema
-- `Skill.get()` now returns full content, `Skill.all()` returns only metadata
+- `/cost` slash command showing session usage (input/output/cache tokens, cost breakdown)
+- TUI dialog with formatted cost metrics
 
-## Phase 8: Evaluator-Optimizer
+### Code review bug fixes (PRs #10, #12)
 
-- Evaluator agent reviews code changes against quality criteria (correctness, completeness, quality, best practices)
-- Optimizer agent improves code based on evaluator feedback
-- Refine tool orchestrates evaluator → optimizer loop until quality threshold (score >= 7) or max iterations
-- Scoring system (1-10) with structured output format
+- Fixed 40 bugs total across the codebase (24 in earlier PRs, 16 in PR #12)
+- Circuit breaker fixes in `verify.ts`: lastFailure timing, success reset, naming, cooldown, config merge, command splitting
+- Refine tool fixes: evaluator context, tool access, parsing robustness, session cleanup
+- Script tool fixes: argument injection prevention, tool ID collision
+- Skill content caching, evaluator permission lockdown
+- 25 regression tests covering all fixed bugs
 
-## Phase 9: Skills as Scripts
+### New files (Phase 5):
 
-- Skills can include `scripts/` directory with executable files (.ts, .js, .py, .sh)
-- Scripts automatically discovered and registered as callable tools
-- Tool naming: `{skill}_{script_name}` (e.g., `agents-sdk_setup`)
-- Scripts executed with appropriate interpreter based on extension
+| File | Purpose |
+|------|---------|
+| `src/tool/verify.ts` | Verify tool (test/lint/typecheck with circuit breaker) |
+| `src/tool/refine.ts` | Refine tool (evaluator-optimizer loop) |
+| `src/skill/scripts.ts` | Script discovery and execution from skills |
+| `src/agent/prompt/evaluator.txt` | Evaluator agent prompt |
+| `src/agent/prompt/optimizer.txt` | Optimizer agent prompt |
+| `src/command/template/verify.txt` | /verify command template |
+| `test/tool/verify.test.ts` | Verify tool tests (circuit breaker, config, commands) |
+| `test/tool/refine.test.ts` | Refine tool tests (parseEvaluation, session cleanup) |
+| `test/tool/scripts.test.ts` | Script tool tests (ID format, arg injection) |
+| `test/skill/skill-cache.test.ts` | Skill content caching tests |
 
-## Phase 10: Code Review
+### Modified files (Phase 5):
 
-- Systematic review of all new code from Phases 6-9
-- Found 16 bugs across 6 files (2 critical, 4 high, 6 medium, 4 low)
-- **Circuit breaker** (verify.ts): 4 interacting bugs — lastFailure unreachable after throw, no reset on success, inverted naming, 1s cooldown ineffective
-- **Refine tool** (refine.ts): evaluator/optimizer receive no code context (no diff, no file paths), `tools: {}` may block tool usage, brittle XML parsing, session leak
-- **Skill progressive disclosure** (skill.ts, command/index.ts): template getter returns Promise not string, content re-parsed on every load
-- **Scripts** (scripts.ts): argument injection risk, tool ID collision with underscored names
-- **Config** (verify.ts): shallow merge loses nested circuitBreaker defaults
-- **Agent permissions** (agent.ts): evaluator has bash access despite being read-only reviewer
-- Logged all bugs in `BUGS.md` (#21-#36)
-- Updated PLAN.md with bug fix pass (Section 5) prioritized by severity
+| File | Changes |
+|------|---------|
+| `src/agent/agent.ts` | +evaluator +optimizer agents, fixed evaluator perms |
+| `src/command/index.ts` | +verify +objective +threads +history +tree +deref +classify commands |
+| `src/config/config.ts` | +verification config schema |
+| `src/session/prompt.ts` | +filterEphemeral in pipeline |
+| `src/skill/skill.ts` | +content cache with state-reload clearing |
+| `test/agent/agent.test.ts` | +evaluator/optimizer permission tests |
+
+---
+
+## Upstream Sync Status (2026-03-18)
+
+**Upstream:** `anomalyco/opencode` (`dev` branch)
+**Our fork:** `e6qu/frankencode` (`dev` branch)
+**Divergence:** 10 commits ahead, ~50 commits behind
+
+### Notable upstream changes since fork:
+
+- **Effect-ification wave:** `SkillService`, `FileService`, `FormatService`, `FileTimeService`, `VcsService`, `FileWatcherService` all refactored to Effect scoped services with `LayerMap`
+- **Instance refactor:** `instance-state.ts` deleted, services moved to Effect layer
+- **Compaction fix:** Message transforms now applied during compaction (#17823)
+- **Context overflow:** `context_length_exceeded` error code now handled (#17748)
+- **Permission fix:** Prompt tool enables preserved with empty agent permissions (#17064)
+- **VCS fix:** HEAD filter bug fixed (#17829)
+- **Zen updates:** Model pricing, Gemini 3 Pro deprecated
+- **Docs:** `tools` config marked deprecated (#17951), snapshot config annotated (#17861)
+
+### Rebase risk assessment:
+
+| Area | Risk | Notes |
+|------|------|-------|
+| `skill/skill.ts` | **High** | Upstream rewrote to Effect service (333 lines changed); we added content cache |
+| `session/prompt.ts` | **High** | Upstream changed ~99 lines; we added filterEdited, filterEphemeral, focus injection |
+| `session/message-v2.ts` | **Medium** | Upstream changed ~107 lines; we added EditMeta, LifecycleMeta, filterEdited |
+| `project/instance.ts` | **Medium** | Upstream refactored Instance; we use `Instance.state()` for skill cache |
+| `agent/agent.ts` | **Low** | Upstream didn't touch agent definitions; our changes are additive |
+| `tool/registry.ts` | **Low** | Upstream removed some tools; we added 9 |
+| New Frankencode files | **None** | CAS, edit graph, context tools — no upstream conflict |

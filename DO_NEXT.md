@@ -1,65 +1,50 @@
 # Frankencode — Do Next
 
-## Completed
+## Implemented
 
-- [x] Plan Mode Fixes (removed experimental flag, enabled plan_enter tool)
-- [x] **Verification tool** implementation
-- [x] Fixed `focus-rewrite-history` agent missing tool permissions
-- [x] Added `verification` config schema to config.ts
-- [x] Fixed TypeScript errors in verify.ts
-- [x] Added VerifyTool to registry
-- [x] Added `/verify` command
-- [x] Typecheck passes
-- [x] All 1384 tests pass
-- [x] Progressive Disclosure for Skills - lazy load content on demand
-- [x] Evaluator-Optimizer - evaluator/optimizer agents + refine tool
-- [x] Skills as Scripts - scripts in skill directories become callable tools
-- [x] Code review — found 16 bugs (#21-#36)
+- [x] CAS (SQLite) + Part Editing (EditMeta, LifecycleMeta, filterEdited, context_edit, context_deref)
+- [x] Conversation Graph (edit_graph DAG, context_history with log/tree/checkout/fork)
+- [x] Focus Agent + Side Threads (side_thread table, thread_park, thread_list, classifier, focus agents)
+- [x] Integration (system prompt injection, plugin hooks, lifecycle sweeper)
+- [x] v2: query/toolName targeting, classifier_threads, distill_threads, /btw, /focus, /reset-context
+- [x] Config-based control (no feature toggles)
+- [x] Documentation (README, docs/context-editing, docs/schema, docs/agents, AGENTS.md)
+- [x] Ephemeral commands (/threads, /history, /tree, /deref, /classify)
+- [x] /cost TUI command with usage dialog
+- [x] Verify tool (test/lint/typecheck with circuit breaker)
+- [x] Refine tool (evaluator-optimizer loop)
+- [x] Script discovery and execution from skills
+- [x] 40 bugs fixed (code review audits + ephemeral fixes)
+- [x] 25 regression tests for bug fixes
 
-## In Progress — Bug Fix Pass
+## Next — Upstream Sync
 
-### P0 — Critical (do first)
+The upstream `anomalyco/opencode` has diverged significantly (~50 commits). Key conflict areas:
 
-- [ ] **#28** Refine tool: pass `git diff` output or changed file paths into evaluator prompt
-- [ ] **#29** Refine tool: verify `tools: {}` behavior — if it blocks tools, pass correct tool set
-- [ ] **#32** Skill template: verify all `template` consumers handle `Promise<string>`
+- [ ] **Rebase onto upstream/dev** — resolve conflicts in `skill.ts` (Effect service rewrite), `prompt.ts`, `message-v2.ts`, `instance.ts`
+- [ ] **Adapt to Effect-ification** — upstream moved to `LayerMap` and scoped services for Skill, File, Format, VCS, FileTime, FileWatcher; our `Instance.state()` usage in `skill.ts` may need to adapt to `SkillService`
+- [ ] **Verify `instance-state.ts` deletion** — upstream deleted this; check if our code depends on it (used by `Skill.state`, `Command.state`)
+- [ ] **Test after rebase** — run full suite, fix any breakage from upstream changes
 
-### P1 — High
+## Next — Testing
 
-- [ ] **#21** Circuit breaker: move `this.lastFailure = now` before the throw
-- [ ] **#27** Verify config: replace shallow spread with deep merge (`mergeDeep` from remeda)
-- [ ] **#36** Evaluator agent: remove `bash: "allow"` from permission set
+- [ ] Unit tests for CAS (store, get, dedup via ON CONFLICT)
+- [ ] Unit tests for filterEdited (hidden parts stripped, empty messages dropped)
+- [ ] Unit tests for EditGraph (commit chain, log walk, checkout restore)
+- [ ] Unit tests for SideThread CRUD
+- [ ] Unit tests for ContextEdit validation (ownership, budget, recency, privileged agents)
+- [ ] Unit tests for lifecycle sweeper (discardable auto-hide, ephemeral auto-externalize)
+- [ ] Test classifier_threads + distill_threads with a real session
+- [ ] Test /btw command (verify it forks, doesn't pollute main thread)
 
-### P2 — Medium
+## Next — Features
 
-- [ ] **#22** Circuit breaker: call `breaker.reset()` after successful check
-- [ ] **#24** Circuit breaker: increase default cooldownMs to 30000+
-- [ ] **#25** Verify tool: implement `scope`/`files` filtering or remove unused params
-- [ ] **#30** Refine parseEvaluation: add fallback parsing for score/passed
-- [ ] **#34** Scripts: add argument validation/sanitization
+- [ ] CAS garbage collection (orphan cleanup, size limits)
+- [ ] TUI rendering of edit indicators (hidden/replaced/annotated parts)
+- [ ] Session.remove() cleanup of EditGraph rows (add CASCADE or explicit delete)
+- [ ] CAS.store() ownership: stop overwriting session_id on hash collision
 
-### P3 — Low (can defer)
+## Next — Design Decisions
 
-- [ ] **#23** Circuit breaker: rename `open` to `closed` or `tripped`
-- [ ] **#26** Verify: use shell-word splitter instead of `split(" ")`
-- [ ] **#31** Refine: add child session cleanup after loop
-- [ ] **#33** Skill.get(): add content caching layer
-- [ ] **#35** Scripts: use `::` separator for tool IDs
-
-## Backlog — Testing
-
-- [ ] Unit tests for VerifyTool (circuit-breaker, config loading, error parsing)
-- [ ] Unit tests for RefineTool (evaluation parsing, iteration loop)
-- [ ] Unit tests for Scripts (discovery, tool generation)
-- [ ] Unit tests for CAS, filterEdited, EditGraph, SideThread CRUD
-- [ ] Test classifier_threads + distill_threads
-- [ ] Test /btw command
-- [ ] CAS garbage collection
-- [ ] TUI rendering of edit indicators
-
-## Backlog — Documentation
-
-- [ ] Document /verify command in user guide
-- [ ] Document refine tool usage patterns
-- [ ] Document skill scripts feature
-- [ ] Update README with new features
+- [ ] Explore: make /btw use Session.fork() for true message-level isolation
+- [ ] Evaluate upstream's `tools` deprecation and migration to permission-only model

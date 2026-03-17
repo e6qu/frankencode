@@ -2,6 +2,7 @@
 - ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
 - The default branch in this repo is `dev`.
 - Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
+- **NEVER commit directly to `dev`.** Always create a feature branch, rebase on `origin/dev`, and open a PR. No exceptions.
 - Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
 
 ## Style Guide
@@ -153,8 +154,12 @@ Use `context_history` to navigate the edit DAG:
 - Test actual implementation, do not duplicate logic into tests
 - Tests cannot run from repo root (guard: `do-not-run-tests-from-root`); run from package dirs like `packages/opencode`.
 
-## Git Hooks
+## Git Workflow
 
+- **NEVER commit or push directly to `dev`.** Always work on a feature/fix/docs branch and create a PR.
+- All changes go through PRs — no exceptions, not even "quick fixes" or docs-only changes.
+- **Always rebase on `origin/dev` before creating a PR.** Run `git fetch origin && git rebase origin/dev` on your branch first. No exceptions.
+- When creating a PR with `gh pr create`, always target the `origin` repo explicitly: `gh pr create --repo e6qu/frankencode --base dev`.
 - NEVER bypass pre-commit hooks. No `HUSKY=0`, no `--no-verify`. Fix the issue instead.
 - Pre-commit runs: prettier format, typecheck, tests. All must pass before commit.
 - Commit messages must follow conventional commits (`feat:`, `fix:`, `chore:`, etc).
