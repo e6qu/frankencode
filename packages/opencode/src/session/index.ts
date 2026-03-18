@@ -298,7 +298,7 @@ export namespace Session {
         .get()
       if (!row) throw new NotFoundError({ message: `Session not found: ${sessionID}` })
       const info = fromRow(row)
-      Database.effect(() => Bus.publish(Event.Updated, { info }))
+      Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
     })
   })
 
@@ -331,9 +331,13 @@ export namespace Session {
     Database.use((db) => {
       db.insert(SessionTable).values(toRow(result)).run()
       Database.effect(() =>
-        Bus.publish(Event.Created, {
-          info: result,
-        }),
+        Bus.publish(
+          Event.Created,
+          {
+            info: result,
+          },
+          result.directory,
+        ),
       )
     })
     const cfg = await Config.get()
@@ -341,9 +345,13 @@ export namespace Session {
       share(result.id).catch(() => {
         // Silently ignore sharing errors during session creation
       })
-    Bus.publish(Event.Updated, {
-      info: result,
-    })
+    Bus.publish(
+      Event.Updated,
+      {
+        info: result,
+      },
+      result.directory,
+    )
     return result
   }
 
@@ -371,7 +379,7 @@ export namespace Session {
       const row = db.update(SessionTable).set({ share_url: share.url }).where(eq(SessionTable.id, id)).returning().get()
       if (!row) throw new NotFoundError({ message: `Session not found: ${id}` })
       const info = fromRow(row)
-      Database.effect(() => Bus.publish(Event.Updated, { info }))
+      Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
     })
     return share
   })
@@ -384,7 +392,7 @@ export namespace Session {
       const row = db.update(SessionTable).set({ share_url: null }).where(eq(SessionTable.id, id)).returning().get()
       if (!row) throw new NotFoundError({ message: `Session not found: ${id}` })
       const info = fromRow(row)
-      Database.effect(() => Bus.publish(Event.Updated, { info }))
+      Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
     })
   })
 
@@ -403,7 +411,7 @@ export namespace Session {
           .get()
         if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
         const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
+        Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
         return info
       })
     },
@@ -424,7 +432,7 @@ export namespace Session {
           .get()
         if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
         const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
+        Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
         return info
       })
     },
@@ -445,7 +453,7 @@ export namespace Session {
           .get()
         if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
         const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
+        Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
         return info
       })
     },
@@ -473,7 +481,7 @@ export namespace Session {
           .get()
         if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
         const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
+        Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
         return info
       })
     },
@@ -492,7 +500,7 @@ export namespace Session {
         .get()
       if (!row) throw new NotFoundError({ message: `Session not found: ${sessionID}` })
       const info = fromRow(row)
-      Database.effect(() => Bus.publish(Event.Updated, { info }))
+      Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
       return info
     })
   })
@@ -517,7 +525,7 @@ export namespace Session {
           .get()
         if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
         const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
+        Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
         return info
       })
     },
@@ -689,9 +697,13 @@ export namespace Session {
       Database.use((db) => {
         db.delete(SessionTable).where(eq(SessionTable.id, sessionID)).run()
         Database.effect(() =>
-          Bus.publish(Event.Deleted, {
-            info: session,
-          }),
+          Bus.publish(
+            Event.Deleted,
+            {
+              info: session,
+            },
+            session.directory,
+          ),
         )
       })
     } catch (e) {
