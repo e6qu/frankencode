@@ -3,7 +3,7 @@ import { disposeInstance } from "@/effect/instance-registry"
 import { Filesystem } from "@/util/filesystem"
 import { iife } from "@/util/iife"
 import { Log } from "@/util/log"
-import { Context } from "../util/context"
+import { InstanceALS } from "./instance-als"
 import { Project } from "./project"
 
 interface Context {
@@ -11,7 +11,6 @@ interface Context {
   worktree: string
   project: Project.Info
 }
-const context = Context.create<Context>("instance")
 const cache = new Map<string, Promise<Context>>()
 
 const disposal = {
@@ -44,7 +43,7 @@ function boot(input: { directory: string; init?: () => Promise<any>; project?: P
             worktree: sandbox,
             project,
           }))
-    await context.provide(ctx, async () => {
+    await InstanceALS.run(ctx, async () => {
       await input.init?.()
     })
     return ctx
@@ -75,42 +74,27 @@ export const Instance = {
       )
     }
     const ctx = await existing
-    return context.provide(ctx, async () => {
+    return InstanceALS.run(ctx, async () => {
       return input.fn()
     })
   },
   get current() {
-    return context.use()
+    return InstanceALS.current
   },
   get directory() {
-    return context.use().directory
+    return InstanceALS.directory
   },
   get worktree() {
-    return context.use().worktree
+    return InstanceALS.worktree
   },
   get project() {
-    return context.use().project
+    return InstanceALS.project
   },
-  /**
-   * Check if a path is within the project boundary.
-   * Returns true if path is inside Instance.directory OR Instance.worktree.
-   * Paths within the worktree but outside the working directory should not trigger external_directory permission.
-   */
   containsPath(filepath: string) {
-    if (Filesystem.contains(Instance.directory, filepath)) return true
-    // Non-git projects set worktree to "/" which would match ANY absolute path.
-    // Skip worktree check in this case to preserve external_directory permissions.
-    if (Instance.worktree === "/") return false
-    return Filesystem.contains(Instance.worktree, filepath)
+    return InstanceALS.containsPath(filepath)
   },
-  /**
-   * Captures the current instance ALS context and returns a wrapper that
-   * restores it when called. Use this for callbacks that fire outside the
-   * instance async context (native addons, event emitters, timers, etc.).
-   */
   bind<F extends (...args: any[]) => any>(fn: F): F {
-    const ctx = context.use()
-    return ((...args: any[]) => context.provide(ctx, () => fn(...args))) as F
+    return InstanceALS.bind(fn)
   },
   async reload(input: { directory: string; init?: () => Promise<any>; project?: Project.Info; worktree?: string }) {
     const directory = Filesystem.resolve(input.directory)
@@ -149,7 +133,7 @@ export const Instance = {
 
         if (cache.get(key) !== value) continue
 
-        await context.provide(ctx, async () => {
+        await InstanceALS.run(ctx, async () => {
           await Instance.dispose()
         })
       }
