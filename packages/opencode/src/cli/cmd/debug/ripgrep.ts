@@ -20,7 +20,8 @@ const TreeCommand = cmd({
     }),
   async handler(args) {
     await bootstrap(process.cwd(), async () => {
-      process.stdout.write((await Ripgrep.tree({ cwd: Instance.directory, limit: args.limit })) + EOL)
+      const directory = Instance.directory
+      process.stdout.write((await Ripgrep.tree({ cwd: directory, limit: args.limit })) + EOL)
     })
   },
 })
@@ -44,9 +45,10 @@ const FilesCommand = cmd({
       }),
   async handler(args) {
     await bootstrap(process.cwd(), async () => {
+      const directory = Instance.directory
       const files: string[] = []
       for await (const file of Ripgrep.files({
-        cwd: Instance.directory,
+        cwd: directory,
         glob: args.glob ? [args.glob] : undefined,
       })) {
         files.push(file)

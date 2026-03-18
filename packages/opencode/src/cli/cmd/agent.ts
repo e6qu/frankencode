@@ -72,6 +72,7 @@ const AgentCreateCommand = cmd({
         }
 
         const project = Instance.project
+        const worktree = Instance.worktree
 
         // Determine scope/path
         let targetPath: string
@@ -86,7 +87,7 @@ const AgentCreateCommand = cmd({
                 {
                   label: "Current project",
                   value: "project" as const,
-                  hint: Instance.worktree,
+                  hint: worktree,
                 },
                 {
                   label: "Global",
@@ -98,10 +99,7 @@ const AgentCreateCommand = cmd({
             if (prompts.isCancel(scopeResult)) throw new UI.CancelledError()
             scope = scopeResult
           }
-          targetPath = path.join(
-            scope === "global" ? Global.Path.config : path.join(Instance.worktree, ".opencode"),
-            "agent",
-          )
+          targetPath = path.join(scope === "global" ? Global.Path.config : path.join(worktree, ".opencode"), "agent")
         }
 
         // Get description

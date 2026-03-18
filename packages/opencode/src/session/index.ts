@@ -228,9 +228,12 @@ export namespace Session {
       })
       .optional(),
     async (input) => {
+      const directory = Instance.directory
+      const projectID = Instance.project.id
       return createNext({
         parentID: input?.parentID,
-        directory: Instance.directory,
+        directory,
+        projectID,
         title: input?.title,
         permission: input?.permission,
         workspaceID: input?.workspaceID,
@@ -247,8 +250,11 @@ export namespace Session {
       const original = await get(input.sessionID)
       if (!original) throw new Error("session not found")
       const title = getForkedTitle(original.title)
+      const directory = Instance.directory
+      const projectID = Instance.project.id
       const session = await createNext({
-        directory: Instance.directory,
+        directory,
+        projectID,
         workspaceID: original.workspaceID,
         title,
       })
@@ -303,12 +309,14 @@ export namespace Session {
     workspaceID?: WorkspaceID
     directory: string
     permission?: PermissionNext.Ruleset
+    projectID?: ProjectID
   }) {
+    const projectID = input.projectID ?? Instance.project.id
     const result: Info = {
       id: SessionID.descending(input.id),
       slug: Slug.create(),
       version: Installation.VERSION,
-      projectID: Instance.project.id,
+      projectID,
       directory: input.directory,
       workspaceID: input.workspaceID,
       parentID: input.parentID,
@@ -339,10 +347,10 @@ export namespace Session {
     return result
   }
 
-  export function plan(input: { slug: string; time: { created: number } }) {
-    const base = Instance.project.vcs
-      ? path.join(Instance.worktree, ".opencode", "plans")
-      : path.join(Global.Path.data, "plans")
+  export function plan(input: { slug: string; time: { created: number }; worktree?: string; vcs?: string }) {
+    const vcs = input.vcs ?? Instance.project.vcs
+    const worktree = input.worktree ?? Instance.worktree
+    const base = vcs ? path.join(worktree, ".opencode", "plans") : path.join(Global.Path.data, "plans")
     return path.join(base, [input.time.created, input.slug].join("-") + ".md")
   }
 
@@ -546,8 +554,9 @@ export namespace Session {
     start?: number
     search?: string
     limit?: number
+    project?: { id: ProjectID }
   }) {
-    const project = Instance.project
+    const project = input?.project ?? Instance.project
     const conditions = [eq(SessionTable.project_id, project.id)]
 
     if (WorkspaceContext.workspaceID) {
@@ -664,7 +673,6 @@ export namespace Session {
   })
 
   export const remove = fn(SessionID.zod, async (sessionID) => {
-    const project = Instance.project
     try {
       const session = await get(sessionID)
       for (const child of await children(sessionID)) {

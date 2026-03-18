@@ -33,9 +33,10 @@ export const FileRoutes = lazy(() =>
         }),
       ),
       async (c) => {
+        const directory = Instance.directory
         const pattern = c.req.valid("query").pattern
         const result = await Ripgrep.search({
-          cwd: Instance.directory,
+          cwd: directory,
           pattern,
           limit: 10,
         })

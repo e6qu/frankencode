@@ -192,8 +192,9 @@ const ContextThreadsCommand = cmd({
       }),
   handler: async (args) => {
     await bootstrap(process.cwd(), async () => {
+      const projectID = Instance.project.id
       const result = SideThread.list({
-        projectID: Instance.project.id,
+        projectID,
         status: args.status as any,
         limit: args.limit,
       })
@@ -202,7 +203,7 @@ const ContextThreadsCommand = cmd({
         console.log(
           JSON.stringify(
             {
-              projectID: Instance.project.id,
+              projectID,
               ...result,
             },
             null,
@@ -217,7 +218,7 @@ const ContextThreadsCommand = cmd({
         return
       }
 
-      UI.println(`Side threads for project ${Instance.project.id}`)
+      UI.println(`Side threads for project ${projectID}`)
       UI.println("")
       for (const t of result.threads) {
         const files = t.relatedFiles?.length ? `\n  Files: ${t.relatedFiles.join(", ")}` : ""

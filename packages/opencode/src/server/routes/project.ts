@@ -51,7 +51,8 @@ export const ProjectRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        return c.json(Instance.project)
+        const project = Instance.project
+        return c.json(project)
       },
     )
     .post(

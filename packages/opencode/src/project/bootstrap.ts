@@ -27,7 +27,9 @@ function ensureTruncateCleanup() {
 }
 
 export async function InstanceBootstrap() {
-  Log.Default.info("bootstrapping", { directory: Instance.directory })
+  const directory = Instance.directory
+  const projectID = Instance.project.id
+  Log.Default.info("bootstrapping", { directory })
   await Plugin.init()
   ShareNext.init()
   await Format.init()
@@ -40,7 +42,7 @@ export async function InstanceBootstrap() {
 
   Bus.subscribe(Command.Event.Executed, async (payload) => {
     if (payload.properties.name === Command.Default.INIT) {
-      await Project.setInitialized(Instance.project.id)
+      await Project.setInitialized(projectID)
     }
   })
 }

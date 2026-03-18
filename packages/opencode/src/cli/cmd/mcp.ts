@@ -426,10 +426,11 @@ export const McpAddCommand = cmd({
         prompts.intro("Add MCP server")
 
         const project = Instance.project
+        const worktree = Instance.worktree
 
         // Resolve config paths eagerly for hints
         const [projectConfigPath, globalConfigPath] = await Promise.all([
-          resolveConfigPath(Instance.worktree),
+          resolveConfigPath(worktree),
           resolveConfigPath(Global.Path.config, true),
         ])
 

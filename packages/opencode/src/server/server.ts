@@ -304,12 +304,14 @@ export namespace Server {
           },
         }),
         async (c) => {
+          const directory = Instance.directory
+          const worktree = Instance.worktree
           return c.json({
             home: Global.Path.home,
             state: Global.Path.state,
             config: Global.Path.config,
-            worktree: Instance.worktree,
-            directory: Instance.directory,
+            worktree,
+            directory,
           })
         },
       )

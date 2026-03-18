@@ -133,7 +133,8 @@ export const ExperimentalRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        const sandboxes = await Project.sandboxes(Instance.project.id)
+        const projectID = Instance.project.id
+        const sandboxes = await Project.sandboxes(projectID)
         return c.json(sandboxes)
       },
     )
@@ -159,7 +160,8 @@ export const ExperimentalRoutes = lazy(() =>
       async (c) => {
         const body = c.req.valid("json")
         await Worktree.remove(body)
-        await Project.removeSandbox(Instance.project.id, body.directory)
+        const projectID = Instance.project.id
+        await Project.removeSandbox(projectID, body.directory)
         return c.json(true)
       },
     )
@@ -423,14 +425,15 @@ export const ExperimentalRoutes = lazy(() =>
       async (c) => {
         const { status, limit, offset } = c.req.valid("json")
         const { SideThread } = await import("../../session/side-thread")
+        const projectID = Instance.project.id
         const result = SideThread.list({
-          projectID: Instance.project.id,
+          projectID,
           status: status as any,
           limit,
           offset,
         })
         return c.json({
-          projectID: Instance.project.id,
+          projectID,
           ...result,
         })
       },

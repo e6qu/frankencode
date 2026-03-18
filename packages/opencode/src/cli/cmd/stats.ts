@@ -84,7 +84,8 @@ export const StatsCommand = cmd({
 })
 
 async function getCurrentProject(): Promise<Project.Info> {
-  return Instance.project
+  const project = Instance.project
+  return project
 }
 
 async function getAllSessions(): Promise<Session.Info[]> {

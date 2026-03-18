@@ -153,9 +153,10 @@ export const ImportCommand = cmd({
         return
       }
 
+      const projectID = Instance.project.id
       const info = Session.Info.parse({
         ...exportData.info,
-        projectID: Instance.project.id,
+        projectID,
       })
       const row = Session.toRow(info)
       Database.use((db) =>

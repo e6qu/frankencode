@@ -18,6 +18,7 @@ export const PrCommand = cmd({
       directory: process.cwd(),
       async fn() {
         const project = Instance.project
+        const worktree = Instance.worktree
         if (project.vcs !== "git") {
           UI.error("Could not find git repository. Please run this command from a git repository.")
           process.exit(1)
@@ -67,10 +68,10 @@ export const PrCommand = cmd({
               const remoteName = forkOwner
 
               // Check if remote already exists
-              const remotes = (await git(["remote"], { cwd: Instance.worktree })).text().trim()
+              const remotes = (await git(["remote"], { cwd: worktree })).text().trim()
               if (!remotes.split("\n").includes(remoteName)) {
                 await git(["remote", "add", remoteName, `https://github.com/${forkOwner}/${forkName}.git`], {
-                  cwd: Instance.worktree,
+                  cwd: worktree,
                 })
                 UI.println(`Added fork remote: ${remoteName}`)
               }
@@ -78,7 +79,7 @@ export const PrCommand = cmd({
               // Set upstream to the fork so pushes go there
               const headRefName = prInfo.headRefName
               await git(["branch", `--set-upstream-to=${remoteName}/${headRefName}`, localBranchName], {
-                cwd: Instance.worktree,
+                cwd: worktree,
               })
             }
 

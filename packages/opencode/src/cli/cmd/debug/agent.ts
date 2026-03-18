@@ -112,6 +112,8 @@ function parseToolParams(input?: string) {
 }
 
 async function createToolContext(agent: Agent.Info) {
+  const directory = Instance.directory
+  const worktree = Instance.worktree
   const session = await Session.create({ title: `Debug tool run (${agent.name})` })
   const messageID = MessageID.ascending()
   const model = agent.model ?? (await Provider.defaultModel())
@@ -129,8 +131,8 @@ async function createToolContext(agent: Agent.Info) {
     mode: "debug",
     agent: agent.name,
     path: {
-      cwd: Instance.directory,
-      root: Instance.worktree,
+      cwd: directory,
+      root: worktree,
     },
     cost: 0,
     tokens: {
@@ -152,6 +154,10 @@ async function createToolContext(agent: Agent.Info) {
     messageID,
     callID: PartID.ascending(),
     agent: agent.name,
+    directory,
+    worktree,
+    projectID: session.projectID,
+    containsPath: (filepath: string) => filepath.startsWith(worktree) || filepath.startsWith(directory),
     abort: new AbortController().signal,
     messages: [],
     metadata: () => {},

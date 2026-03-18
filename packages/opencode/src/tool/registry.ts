@@ -52,8 +52,8 @@ registerDisposer(async (directory) => {
 export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
 
-  function state() {
-    const dir = Instance.directory
+  function state(directory?: string) {
+    const dir = directory ?? Instance.directory
     let s = toolRegistryStates.get(dir)
     if (!s) {
       s = initRegistry()
@@ -198,7 +198,9 @@ export namespace ToolRegistry {
         })
         .map(async (t) => {
           using _ = log.time(t.id)
-          const tool = await t.init({ agent, directory: Instance.directory, worktree: Instance.worktree })
+          const dir = Instance.directory
+          const wt = Instance.worktree
+          const tool = await t.init({ agent, directory: dir, worktree: wt })
           const output = {
             description: tool.description,
             parameters: tool.parameters,

@@ -33,9 +33,10 @@ export const WorkspaceRoutes = lazy(() =>
         }),
       ),
       async (c) => {
+        const projectID = Instance.project.id
         const body = c.req.valid("json")
         const workspace = await Workspace.create({
-          projectID: Instance.project.id,
+          projectID,
           ...body,
         })
         return c.json(workspace)
@@ -59,7 +60,8 @@ export const WorkspaceRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        return c.json(Workspace.list(Instance.project))
+        const project = Instance.project
+        return c.json(Workspace.list(project))
       },
     )
     .delete(
