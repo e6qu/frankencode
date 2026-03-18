@@ -144,6 +144,7 @@ import type {
   SessionShareResponses,
   SessionShellErrors,
   SessionShellResponses,
+  SessionStatsResponses,
   SessionStatusErrors,
   SessionStatusResponses,
   SessionSummarizeErrors,
@@ -1512,6 +1513,40 @@ export class Session2 extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<SessionStatusResponses, SessionStatusErrors, ThrowOnError>({
       url: "/session/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get usage stats
+   *
+   * Get aggregated usage and cost statistics across sessions.
+   */
+  public stats<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      days?: number
+      project?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "days" },
+            { in: "query", key: "project" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<SessionStatsResponses, unknown, ThrowOnError>({
+      url: "/session/stats",
       ...options,
       ...params,
     })

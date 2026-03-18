@@ -1670,6 +1670,50 @@ export type Config = {
      */
     mcp_timeout?: number
   }
+  /**
+   * Verification tool configuration for automated code checks
+   */
+  verification?: {
+    /**
+     * Commands to run for verification (test, lint, typecheck)
+     */
+    commands?: {
+      [key: string]: string
+    }
+    /**
+     * Auto-detect commands from package.json scripts
+     */
+    autoDetect?: boolean
+    /**
+     * Maximum fix attempts before stopping
+     */
+    maxFixAttempts?: number
+    /**
+     * Timeout in milliseconds for each check command
+     */
+    timeout?: number
+    /**
+     * Circuit breaker configuration to prevent runaway loops
+     */
+    circuitBreaker?: {
+      /**
+       * Enable circuit breaker pattern
+       */
+      enabled?: boolean
+      /**
+       * Maximum iterations before circuit opens
+       */
+      maxIterations?: number
+      /**
+       * Cooldown period in milliseconds before trying again
+       */
+      cooldownMs?: number
+      /**
+       * Maximum consecutive failures before circuit opens
+       */
+      maxConsecutiveFailures?: number
+    }
+  }
 }
 
 export type BadRequestError = {
@@ -3133,6 +3177,25 @@ export type SessionStatusResponses = {
 }
 
 export type SessionStatusResponse = SessionStatusResponses[keyof SessionStatusResponses]
+
+export type SessionStatsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    days?: number
+    project?: string
+  }
+  url: "/session/stats"
+}
+
+export type SessionStatsResponses = {
+  /**
+   * Usage statistics
+   */
+  200: unknown
+}
 
 export type SessionDeleteData = {
   body?: never
