@@ -17,16 +17,31 @@
 - [x] 40 bugs fixed (code review audits + ephemeral fixes)
 - [x] 25 regression tests for bug fixes
 
-## Next — Upstream Sync
+## Next — Upstream Bug Backports (Phase 1)
 
-The upstream `anomalyco/opencode` has diverged significantly (~50 commits). Key conflict areas:
+Cherry-pickable fixes from upstream that don't depend on the Effect refactor. See `PLAN.md` for full analysis.
 
-- [ ] **Rebase onto upstream/dev** — resolve conflicts in `skill.ts` (Effect service rewrite), `prompt.ts`, `message-v2.ts`, `instance.ts`
-- [ ] **Adapt to Effect-ification** — upstream moved to `LayerMap` and scoped services for Skill, File, Format, VCS, FileTime, FileWatcher; our `Instance.state()` usage in `skill.ts` may need to adapt to `SkillService`
-- [ ] **Verify `instance-state.ts` deletion** — upstream deleted this; check if our code depends on it (used by `Skill.state`, `Command.state`)
-- [ ] **Test after rebase** — run full suite, fix any breakage from upstream changes
+- [ ] **B1** — `context_length_exceeded` error code detection in `provider/error.ts` (#17748)
+- [ ] **B2** — Apply message transforms during compaction in `session/compaction.ts` (#17823)
+- [ ] **B3** — Preserve prompt tool enables with empty agent permissions (#17064)
+- [ ] **B4** — Prompt schema validation debug logs (#17812)
+- [ ] **B5** — Better ZodError logging in `util/fn.ts`
+- [ ] **B6** — Wrap question option descriptions instead of truncating (#17782)
+- [ ] **B7** — Check for selected text in dialog escape handler (#16779)
+- [ ] **B8** — VCS HEAD filter bug fix (#17829)
+- [ ] **B9** — VCS watcher if-statement fix (#17673)
 
-## Next — Testing
+## Next — Upstream Full Rebase (Phase 2)
+
+After backports are merged, rebase onto `upstream/dev` to pick up the Effect-ification wave.
+
+- [ ] **Rebase onto upstream/dev** — resolve conflicts in `skill.ts`, `prompt.ts`, `message-v2.ts`, `instance.ts`
+- [ ] **Adapt `Instance.state()` calls** — upstream deleted `instance-state.ts`; our CAS, EditGraph, SideThread, Objective, Skill cache, Command state all use it
+- [ ] **Wrap event handlers with `Instance.bind()`** — upstream requires this for ALS context in callbacks
+- [ ] **Reimplement skill content cache** — upstream rewrote `skill.ts` to `SkillService` (Effect)
+- [ ] **Test after rebase** — run full suite, fix breakage
+
+## Backlog — Testing
 
 - [ ] Unit tests for CAS (store, get, dedup via ON CONFLICT)
 - [ ] Unit tests for filterEdited (hidden parts stripped, empty messages dropped)
@@ -37,14 +52,14 @@ The upstream `anomalyco/opencode` has diverged significantly (~50 commits). Key 
 - [ ] Test classifier_threads + distill_threads with a real session
 - [ ] Test /btw command (verify it forks, doesn't pollute main thread)
 
-## Next — Features
+## Backlog — Features
 
 - [ ] CAS garbage collection (orphan cleanup, size limits)
 - [ ] TUI rendering of edit indicators (hidden/replaced/annotated parts)
 - [ ] Session.remove() cleanup of EditGraph rows (add CASCADE or explicit delete)
 - [ ] CAS.store() ownership: stop overwriting session_id on hash collision
 
-## Next — Design Decisions
+## Backlog — Design Decisions
 
 - [ ] Explore: make /btw use Session.fork() for true message-level isolation
 - [ ] Evaluate upstream's `tools` deprecation and migration to permission-only model
