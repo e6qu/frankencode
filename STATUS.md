@@ -6,52 +6,56 @@
 
 ## Overview
 
-Frankencode is a fork of OpenCode that adds surgical, reversible, agent-driven context editing with content-addressable storage and a conversation history graph. All 4 planned feature phases are implemented. Upstream sync is complete. Effect-ification of all 16 `Instance.state()` modules is complete.
+Frankencode is a fork of OpenCode that adds surgical, reversible, agent-driven context editing with content-addressable storage and a conversation history graph. All 4 planned feature phases are implemented. Upstream sync is complete. Effect-ification is in progress — stages B1-B8 complete (inner modules parameterized), B9-B10 remain.
 
 ## Branch Status
 
 | Branch | Status | PR |
 |--------|--------|----|
 | `dev` | Main development branch | — |
+| `effect/complete-effectification` | Effect-ification B2-B8 complete, B9-B10 in progress | Pending PR to `dev` |
 | `fix/code-review-bugs` | 16 bug fixes + 25 tests | [#12](https://github.com/e6qu/frankencode/pull/12) (merged) |
 | `fix/upstream-backports-p1` | Phase 1: 9 upstream bug fixes (B1-B9) | [#16](https://github.com/e6qu/frankencode/pull/16) (merged) |
 | `fix/upstream-backports-p2` | Phase 2: 6 upstream bug fixes (B10-B16) | [#17](https://github.com/e6qu/frankencode/pull/17) (merged) |
 | `fix/upstream-backports-p3` | Phase 3: 6 upstream app fixes (B17-B22) | [#18](https://github.com/e6qu/frankencode/pull/18) (merged) |
 | `fix/upstream-backports-p4` | Phase 4: rebase onto upstream/dev (Effect integration) | [#19](https://github.com/e6qu/frankencode/pull/19) (merged) |
-| `refactor/effectify-trivial` | Effect-ification of all 16 Instance.state() modules | In progress |
-
-## Upstream Sync
-
-- **Fully synced** with `upstream/dev` as of Phase 4 rebase
-- **17 commits ahead** of upstream (Frankencode features only)
-- 2 new upstream commits since sync: TruncateService effectification (#17957) — minor, next routine sync
+| `refactor/effectify-trivial` | B1: 16 Instance.state() modules → module-level state maps | [#20](https://github.com/e6qu/frankencode/pull/20) (merged) |
 
 ## Effect-ification Status
 
-### Already effectified (upstream, integrated in Phase 4):
-FileService, FileTimeService, FileWatcherService, VcsService, SkillService, FormatService, QuestionService, PermissionService, ProviderAuthService, SnapshotService
+### Goal: Eliminate Instance ALS entirely
 
-### Converted from `Instance.state()` (this branch):
-All 16 modules converted. `Instance.state()` method and `State` module deleted. `Scheduler` module deleted (replaced by inline timer in bootstrap).
+The `Instance` singleton uses AsyncLocalStorage (ALS) for per-directory context. The Effect runtime already has a per-directory `LayerMap` with 24+ services. We're threading explicit parameters through all modules to replace ALS reads.
 
-Modules with Effect services registered in `instances.ts`:
-- EnvService, BusService, SessionStatusService, InstructionService
+### Progress: B1-B8 complete (172 Instance.* refs remain from 221)
 
-Modules using `registerDisposer` for lifecycle (can't be in `instances.ts` due to circular deps):
-- Config, TuiConfig, Plugin, ToolRegistry, Provider, Agent, Command, Prompt, PTY, LSP, MCP
+| Stage | Name | Files | Status |
+|-------|------|-------|--------|
+| B1 | Instance.state() elimination | 16 modules | **Done** (PR #20) |
+| B2 | Tool layer migration | 31 files | **Done** |
+| B3 | Leaf state-map modules + agent | 9 files | **Done** |
+| B4 | Instance.bind() elimination | 5 files | **Done** |
+| B5 | Formatter parameter threading | 2 files | **Done** |
+| B6 | LSP module | 3 files | **Done** |
+| B7 | Session leaf helpers | 5 files | **Done** |
+| B8 | Worktree + Config modules | 4 files | **Done** |
+| B9 | Server + CLI entry points | ~18 files | Not started |
+| B10 | ALS elimination (final) | ~15 files | Not started |
 
-### Fork modules (no `Instance.state()`, may benefit from Effect services):
-- `cas/index.ts` — Database-backed, no caching (OK as-is)
-- `cas/graph.ts` — Complex DAG with atomicity needs
-- `context-edit/index.ts` — Very complex, 709 lines, transaction semantics
-- `session/side-thread.ts` — Simple CRUD (OK as-is)
-- `session/objective.ts` — Trivial KV (OK as-is)
+### Modules fully Instance-free:
+- `skill/scripts.ts`, `format/formatter.ts`, `file/watcher.ts`, `file/index.ts`, `project/vcs.ts`, `format/index.ts`, `lsp/server.ts`, `lsp/client.ts`
+
+### Modules with ALS fallback only (param ?? Instance.x):
+- All B3 leaf modules (env, bus, command, provider, plugin, mcp, pty, agent)
+- Config, TuiConfig, migrate-tui-config
+- Worktree (+ Instance.provide for boot — stays until B10)
+- Session helpers (system, instruction, compaction, status, llm)
+- LSP index (status/getClients/hasClients)
 
 ## Test Status
 
 - **1423 tests passing**, 0 failures, 8 skipped
 - **25 regression tests** for bug fixes
-- **Typecheck:** clean (`bun typecheck`) across all 13 packages
 
 ## Bug Status
 

@@ -2,7 +2,7 @@
 
 > **Frankencode** is a fork of [OpenCode](https://github.com/anomalyco/opencode) (`dev` branch) that adds surgical, reversible, agent-driven context editing with content-addressable storage and a conversation history graph.
 
-**Status (2026-03-18):** All features implemented. 40 bugs fixed. 15 upstream bug fixes backported (Phase 1 + Phase 2). 1401 tests passing. See `STATUS.md` for current state, `DO_NEXT.md` for what's next.
+**Status (2026-03-18):** All features implemented. 40 bugs fixed. Upstream fully synced. Effect-ification B1-B8 complete (172 of 221 Instance refs remain). 1423 tests passing. See `STATUS.md` for current state, `DO_NEXT.md` for what's next.
 
 ---
 
@@ -95,5 +95,9 @@ These appear as "deletions" in `git diff dev..upstream/dev` because upstream nev
 | Bug Fix Pass (16 bugs) | ✅ Complete   |
 | Upstream Bug Backport P1 | ✅ Complete (#16) |
 | Upstream Bug Backport P2 | ✅ Complete (#17) |
-| Upstream Backport P3   | ⬜ Next       |
-| Upstream Full Rebase   | ⬜ After backports |
+| Upstream Backport P3 (app fixes) | ✅ Complete (#18) |
+| Upstream Full Rebase (Phase 4) | ✅ Complete (#19) |
+| Effect-ification B1 (state maps) | ✅ Complete (#20) |
+| Effect-ification B2-B8 | ✅ Complete (on branch) |
+| Effect-ification B9 (server+CLI) | ⬜ Next |
+| Effect-ification B10 (ALS elimination) | ⬜ After B9 |

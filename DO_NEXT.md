@@ -8,7 +8,6 @@
 - [x] Integration (system prompt injection, plugin hooks, lifecycle sweeper)
 - [x] v2: query/toolName targeting, classifier_threads, distill_threads, /btw, /focus, /reset-context
 - [x] Config-based control (no feature toggles)
-- [x] Documentation (README, docs/context-editing, docs/schema, docs/agents, AGENTS.md)
 - [x] Ephemeral commands (/threads, /history, /tree, /deref, /classify)
 - [x] /cost TUI command with usage dialog
 - [x] Verify tool (test/lint/typecheck with circuit breaker)
@@ -16,26 +15,36 @@
 - [x] Script discovery and execution from skills
 - [x] 40 bugs fixed (code review audits + ephemeral fixes)
 - [x] 25 regression tests for bug fixes
-- [x] Upstream backport Phase 1 — 9 bug fixes (B1-B9) in [#16](https://github.com/e6qu/frankencode/pull/16)
-- [x] Upstream backport Phase 2 — 6 bug fixes (B10-B16) in [#17](https://github.com/e6qu/frankencode/pull/17)
+- [x] Upstream backport Phase 1-4 (bug fixes + full rebase)
+- [x] Effect-ification B1: Instance.state() → module-level state maps (PR #20)
+- [x] Effect-ification B2-B8: parameterize all inner modules (tool layer, leaf modules, bind elimination, formatters, LSP, session helpers, worktree, config)
 
-## Next — Upstream Backport Phase 3
+## Next — Effect-ification B9: Server + CLI Entry Points (~18 files)
 
-Remaining cherry-pickable upstream commits. Requires fresh analysis of upstream since last sync.
+After B3-B8, all inner modules accept explicit parameters. Server routes and CLI commands need to capture `Instance.*` values at the top of each handler and pass them down.
 
-- [ ] Re-scan upstream for new commits since Phase 2 analysis
-- [ ] Identify any remaining cherry-pickable fixes
-- [ ] Apply and test
+- [ ] `src/server/server.ts` — capture at route setup
+- [ ] `src/server/routes/*.ts` — project.ts, experimental.ts, workspace.ts, global.ts, file.ts
+- [ ] `src/cli/cmd/*.ts` — mcp.ts, github.ts, agent.ts, pr.ts, context.ts, tui/worker.ts, providers.ts, models.ts, debug/*.ts, tui/attach.ts, tui/thread.ts, stats.ts, import.ts
+- [ ] `src/cli/bootstrap.ts`
+- [ ] `src/project/bootstrap.ts`
+- [ ] `src/control-plane/workspace-server/server.ts`
 
-## Next — Upstream Full Rebase (Phase 4)
+## Next — Effect-ification B10: ALS Elimination (final)
 
-After all backports are merged, rebase onto `upstream/dev` to pick up the Effect-ification wave.
+Remove the Instance ALS entirely:
 
-- [ ] **Rebase onto upstream/dev** — resolve conflicts in `skill.ts`, `prompt.ts`, `message-v2.ts`, `instance.ts`
-- [ ] **Adapt `Instance.state()` calls** — upstream deleted `instance-state.ts`; our CAS, EditGraph, SideThread, Objective, Skill cache, Command state all use it
-- [ ] **Wrap event handlers with `Instance.bind()`** — upstream requires this for ALS context in callbacks
-- [ ] **Reimplement skill content cache** — upstream rewrote `skill.ts` to `SkillService` (Effect)
-- [ ] **Test after rebase** — run full suite, fix breakage
+- [ ] B10a: Parameterize `runPromiseInstance(effect, directory)` in `effect/runtime.ts`
+- [ ] B10b: Convert `effect/instances.ts` — `Instances.get()` takes directory param
+- [ ] B10c: Convert `effect/service-layers.ts` — layer constructors take directory from InstanceContext
+- [ ] B10d: Convert `prompt.ts` construction sites (~18 refs) — read from parameters
+- [ ] B10e: Replace `Instance.provide()` at CLI/server entry points with direct context passing
+- [ ] B10f: Convert remaining test helpers to explicit context
+- [ ] B10g: Delete `Instance` module (`src/project/instance.ts`) and `Context` utility (`src/util/context.ts`)
+
+## Then — PR to dev
+
+- [ ] PR `effect/complete-effectification` → `dev`
 
 ## Backlog — Testing
 
@@ -45,8 +54,6 @@ After all backports are merged, rebase onto `upstream/dev` to pick up the Effect
 - [ ] Unit tests for SideThread CRUD
 - [ ] Unit tests for ContextEdit validation (ownership, budget, recency, privileged agents)
 - [ ] Unit tests for lifecycle sweeper (discardable auto-hide, ephemeral auto-externalize)
-- [ ] Test classifier_threads + distill_threads with a real session
-- [ ] Test /btw command (verify it forks, doesn't pollute main thread)
 
 ## Backlog — Features
 
@@ -54,8 +61,3 @@ After all backports are merged, rebase onto `upstream/dev` to pick up the Effect
 - [ ] TUI rendering of edit indicators (hidden/replaced/annotated parts)
 - [ ] Session.remove() cleanup of EditGraph rows (add CASCADE or explicit delete)
 - [ ] CAS.store() ownership: stop overwriting session_id on hash collision
-
-## Backlog — Design Decisions
-
-- [ ] Explore: make /btw use Session.fork() for true message-level isolation
-- [ ] Evaluate upstream's `tools` deprecation and migration to permission-only model
