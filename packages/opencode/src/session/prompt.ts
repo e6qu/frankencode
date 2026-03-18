@@ -709,6 +709,7 @@ export namespace SessionPrompt {
             : []),
         ],
         tools,
+        permission: session.permission,
         model,
         toolChoice: format.type === "json_schema" ? "required" : undefined,
       })
