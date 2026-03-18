@@ -10,7 +10,6 @@ import z from "zod"
 import type { LSPServer } from "./server"
 import { NamedError } from "@opencode-ai/util/error"
 import { withTimeout } from "../util/timeout"
-import { Instance } from "../project/instance"
 import { Filesystem } from "../util/filesystem"
 
 const DIAGNOSTICS_DEBOUNCE_MS = 150
@@ -39,7 +38,7 @@ export namespace LSPClient {
     ),
   }
 
-  export async function create(input: { serverID: string; server: LSPServer.Handle; root: string }) {
+  export async function create(input: { serverID: string; server: LSPServer.Handle; root: string; directory: string }) {
     const l = log.clone().tag("serverID", input.serverID)
     l.info("starting client")
 
@@ -138,6 +137,7 @@ export namespace LSPClient {
 
     const result = {
       root: input.root,
+      directory: input.directory,
       get serverID() {
         return input.serverID
       },
@@ -146,7 +146,7 @@ export namespace LSPClient {
       },
       notify: {
         async open(input: { path: string }) {
-          input.path = path.isAbsolute(input.path) ? input.path : path.resolve(Instance.directory, input.path)
+          input.path = path.isAbsolute(input.path) ? input.path : path.resolve(result.directory, input.path)
           const text = await Filesystem.readText(input.path)
           const extension = path.extname(input.path)
           const languageId = LANGUAGE_EXTENSIONS[extension] ?? "plaintext"
@@ -208,7 +208,7 @@ export namespace LSPClient {
       },
       async waitForDiagnostics(input: { path: string }) {
         const normalizedPath = Filesystem.normalizePath(
-          path.isAbsolute(input.path) ? input.path : path.resolve(Instance.directory, input.path),
+          path.isAbsolute(input.path) ? input.path : path.resolve(result.directory, input.path),
         )
         log.info("waiting for diagnostics", { path: normalizedPath })
         let unsub: () => void

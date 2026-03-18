@@ -94,9 +94,9 @@ export namespace LSP {
     }
   }
 
-  function state(): Promise<LSPState> {
-    const directory = Instance.directory
-    let existing = stateMap.get(directory)
+  function state(directory?: string): Promise<LSPState> {
+    const dir = directory ?? Instance.directory
+    let existing = stateMap.get(dir)
     if (existing) return existing
     existing = (async () => {
       const clients: LSPClient.Info[] = []
@@ -129,9 +129,9 @@ export namespace LSP {
         servers[name] = {
           ...existing,
           id: name,
-          root: existing?.root ?? (async () => Instance.directory),
+          root: existing?.root ?? (async (_file, directory) => directory),
           extensions: item.extensions ?? existing?.extensions ?? [],
-          spawn: async (root) => {
+          spawn: async (root, _directory, _worktree) => {
             return {
               process: spawn(item.command[0], item.command.slice(1), {
                 cwd: root,
@@ -160,7 +160,7 @@ export namespace LSP {
         spawning: new Map<string, Promise<LSPClient.Info | undefined>>(),
       }
     })()
-    stateMap.set(directory, existing)
+    stateMap.set(dir, existing)
     return existing
   }
 
@@ -199,10 +199,12 @@ export namespace LSP {
     const s = await state()
     const extension = path.parse(file).ext || file
     const result: LSPClient.Info[] = []
+    const directory = Instance.directory
+    const worktree = Instance.worktree
 
     async function schedule(server: LSPServer.Info, root: string, key: string) {
       const handle = await server
-        .spawn(root)
+        .spawn(root, directory, worktree)
         .then((value) => {
           if (!value) s.broken.add(key)
           return value
@@ -220,6 +222,7 @@ export namespace LSP {
         serverID: server.id,
         server: handle,
         root,
+        directory,
       }).catch((err) => {
         s.broken.add(key)
         handle.process.kill()
@@ -245,7 +248,7 @@ export namespace LSP {
     for (const server of Object.values(s.servers)) {
       if (server.extensions.length && !server.extensions.includes(extension)) continue
 
-      const root = await server.root(file)
+      const root = await server.root(file, directory, worktree)
       if (!root) continue
       if (s.broken.has(root + server.id)) continue
 
@@ -285,9 +288,11 @@ export namespace LSP {
   export async function hasClients(file: string) {
     const s = await state()
     const extension = path.parse(file).ext || file
+    const directory = Instance.directory
+    const worktree = Instance.worktree
     for (const server of Object.values(s.servers)) {
       if (server.extensions.length && !server.extensions.includes(extension)) continue
-      const root = await server.root(file)
+      const root = await server.root(file, directory, worktree)
       if (!root) continue
       if (s.broken.has(root + server.id)) continue
       return true
