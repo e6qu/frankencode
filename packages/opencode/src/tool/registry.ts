@@ -15,6 +15,7 @@ import { SkillTool } from "./skill"
 import type { Agent } from "../agent/agent"
 import { Tool } from "./tool"
 import { Instance } from "../project/instance"
+import { registerDisposer } from "@/effect/instance-registry"
 import { Config } from "../config/config"
 import path from "path"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@opencode-ai/plugin"
@@ -43,10 +44,25 @@ import { Glob } from "../util/glob"
 import { pathToFileURL } from "url"
 import { Scripts } from "../skill/scripts"
 
+export const toolRegistryStates = new Map<string, Promise<{ custom: Tool.Info[] }>>()
+registerDisposer(async (directory) => {
+  toolRegistryStates.delete(directory)
+})
+
 export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
 
-  export const state = Instance.state(async () => {
+  function state() {
+    const dir = Instance.directory
+    let s = toolRegistryStates.get(dir)
+    if (!s) {
+      s = initRegistry()
+      toolRegistryStates.set(dir, s)
+    }
+    return s
+  }
+
+  async function initRegistry() {
     const custom = [] as Tool.Info[]
 
     const matches = await Config.directories().then((dirs) =>
@@ -76,7 +92,7 @@ export namespace ToolRegistry {
     }
 
     return { custom }
-  })
+  }
 
   function fromPlugin(id: string, def: ToolDefinition): Tool.Info {
     return {

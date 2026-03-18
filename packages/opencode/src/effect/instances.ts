@@ -1,4 +1,6 @@
 import { Effect, Layer, LayerMap, ServiceMap } from "effect"
+import { BusService } from "@/bus"
+import { EnvService } from "@/env"
 import { FileService } from "@/file"
 import { FileTimeService } from "@/file/time"
 import { FileWatcherService } from "@/file/watcher"
@@ -8,6 +10,8 @@ import { Instance } from "@/project/instance"
 import { VcsService } from "@/project/vcs"
 import { ProviderAuthService } from "@/provider/auth-service"
 import { QuestionService } from "@/question/service"
+import { InstructionService } from "@/session/instruction"
+import { SessionStatusService } from "@/session/status"
 import { SkillService } from "@/skill/skill"
 import { SnapshotService } from "@/snapshot"
 import { InstanceContext } from "./instance-context"
@@ -16,6 +20,8 @@ import { registerDisposer } from "./instance-registry"
 export { InstanceContext } from "./instance-context"
 
 export type InstanceServices =
+  | BusService
+  | EnvService
   | QuestionService
   | PermissionService
   | ProviderAuthService
@@ -26,6 +32,8 @@ export type InstanceServices =
   | FileService
   | SkillService
   | SnapshotService
+  | SessionStatusService
+  | InstructionService
 
 // NOTE: LayerMap only passes the key (directory string) to lookup, but we need
 // the full instance context (directory, worktree, project). We read from the
@@ -36,6 +44,8 @@ export type InstanceServices =
 function lookup(_key: string) {
   const ctx = Layer.sync(InstanceContext, () => InstanceContext.of(Instance.current))
   return Layer.mergeAll(
+    Layer.fresh(BusService.layer),
+    Layer.fresh(EnvService.layer),
     Layer.fresh(QuestionService.layer),
     Layer.fresh(PermissionService.layer),
     Layer.fresh(ProviderAuthService.layer),
@@ -46,6 +56,8 @@ function lookup(_key: string) {
     Layer.fresh(FileService.layer),
     Layer.fresh(SkillService.layer),
     Layer.fresh(SnapshotService.layer),
+    Layer.fresh(SessionStatusService.layer),
+    Layer.fresh(InstructionService.layer),
   ).pipe(Layer.provide(ctx))
 }
 

@@ -13,6 +13,7 @@ import { ModelsDev } from "./models"
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { Instance } from "../project/instance"
+import { registerDisposer } from "@/effect/instance-registry"
 import { Flag } from "../flag/flag"
 import { iife } from "@/util/iife"
 import { Global } from "../global"
@@ -48,6 +49,22 @@ import { Installation } from "../installation"
 import { ModelID, ProviderID } from "./schema"
 
 const DEFAULT_CHUNK_TIMEOUT = 300_000
+
+type ProviderStateResult = {
+  models: Map<string, LanguageModelV2>
+  providers: { [providerID: string]: Provider.Info }
+  sdk: Map<string, SDK>
+  modelLoaders: {
+    [providerID: string]: (sdk: any, modelID: string, options?: Record<string, any>) => Promise<any>
+  }
+  varsLoaders: {
+    [providerID: string]: (options: Record<string, any>) => Record<string, string>
+  }
+}
+export const providerStates = new Map<string, Promise<ProviderStateResult>>()
+registerDisposer(async (directory) => {
+  providerStates.delete(directory)
+})
 
 export namespace Provider {
   const log = Log.create({ service: "provider" })
@@ -824,7 +841,17 @@ export namespace Provider {
     }
   }
 
-  const state = Instance.state(async () => {
+  function state() {
+    const dir = Instance.directory
+    let s = providerStates.get(dir)
+    if (!s) {
+      s = initProvider()
+      providerStates.set(dir, s)
+    }
+    return s
+  }
+
+  async function initProvider() {
     using _ = log.time("state")
     const config = await Config.get()
     const modelsDev = await ModelsDev.get()
@@ -1069,7 +1096,7 @@ export namespace Provider {
       modelLoaders,
       varsLoaders,
     }
-  })
+  }
 
   export async function list() {
     return state().then((state) => state.providers)

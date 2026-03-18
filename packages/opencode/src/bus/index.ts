@@ -3,6 +3,20 @@ import { Log } from "../util/log"
 import { Instance } from "../project/instance"
 import { BusEvent } from "./bus-event"
 import { GlobalBus } from "./global"
+import { Effect, Layer, ServiceMap } from "effect"
+
+type BusSubscription = (event: any) => void
+const states = new Map<string, { subscriptions: Map<any, BusSubscription[]> }>()
+
+function state() {
+  const dir = Instance.directory
+  let s = states.get(dir)
+  if (!s) {
+    s = { subscriptions: new Map() }
+    states.set(dir, s)
+  }
+  return s
+}
 
 export namespace Bus {
   const log = Log.create({ service: "bus" })
@@ -13,29 +27,6 @@ export namespace Bus {
     z.object({
       directory: z.string(),
     }),
-  )
-
-  const state = Instance.state(
-    () => {
-      const subscriptions = new Map<any, Subscription[]>()
-
-      return {
-        subscriptions,
-      }
-    },
-    async (entry) => {
-      const wildcard = entry.subscriptions.get("*")
-      if (!wildcard) return
-      const event = {
-        type: InstanceDisposed.type,
-        properties: {
-          directory: Instance.directory,
-        },
-      }
-      for (const sub of [...wildcard]) {
-        sub(event)
-      }
-    },
   )
 
   export async function publish<Definition extends BusEvent.Definition>(
@@ -103,4 +94,50 @@ export namespace Bus {
       match.splice(index, 1)
     }
   }
+}
+
+export namespace BusService {
+  export interface Service {
+    readonly publish: typeof Bus.publish
+    readonly subscribe: typeof Bus.subscribe
+    readonly once: typeof Bus.once
+    readonly subscribeAll: typeof Bus.subscribeAll
+  }
+}
+
+export class BusService extends ServiceMap.Service<BusService, BusService.Service>()("@opencode/Bus") {
+  static readonly layer = Layer.effect(
+    BusService,
+    Effect.gen(function* () {
+      const dir = Instance.directory
+      let s = states.get(dir)
+      if (!s) {
+        s = { subscriptions: new Map() }
+        states.set(dir, s)
+      }
+      const entry = s
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          // Emit InstanceDisposed to wildcard subscribers before cleanup
+          const wildcard = entry.subscriptions.get("*")
+          if (wildcard) {
+            const event = {
+              type: Bus.InstanceDisposed.type,
+              properties: { directory: dir },
+            }
+            for (const sub of [...wildcard]) {
+              sub(event)
+            }
+          }
+          states.delete(dir)
+        }),
+      )
+      return BusService.of({
+        publish: Bus.publish,
+        subscribe: Bus.subscribe,
+        once: Bus.once,
+        subscribeAll: Bus.subscribeAll,
+      })
+    }),
+  )
 }

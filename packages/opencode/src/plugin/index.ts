@@ -6,12 +6,18 @@ import { createOpencodeClient } from "@opencode-ai/sdk"
 import { Server } from "../server/server"
 import { BunProc } from "../bun"
 import { Instance } from "../project/instance"
+import { registerDisposer } from "@/effect/instance-registry"
 import { Flag } from "../flag/flag"
 import { CodexAuthPlugin } from "./codex"
 import { Session } from "../session"
 import { NamedError } from "@opencode-ai/util/error"
 import { CopilotAuthPlugin } from "./copilot"
 import { gitlabAuthPlugin as GitlabAuthPlugin } from "@gitlab/opencode-gitlab-auth"
+
+export const pluginStates = new Map<string, Promise<{ hooks: Hooks[]; input: PluginInput }>>()
+registerDisposer(async (directory) => {
+  pluginStates.delete(directory)
+})
 
 export namespace Plugin {
   const log = Log.create({ service: "plugin" })
@@ -21,7 +27,17 @@ export namespace Plugin {
   // Built-in plugins that are directly imported (not installed from npm)
   const INTERNAL_PLUGINS: PluginInstance[] = [CodexAuthPlugin, CopilotAuthPlugin, GitlabAuthPlugin]
 
-  const state = Instance.state(async () => {
+  function state() {
+    const dir = Instance.directory
+    let s = pluginStates.get(dir)
+    if (!s) {
+      s = initPlugins()
+      pluginStates.set(dir, s)
+    }
+    return s
+  }
+
+  async function initPlugins() {
     const client = createOpencodeClient({
       baseUrl: "http://localhost:4096",
       directory: Instance.directory,
@@ -107,7 +123,7 @@ export namespace Plugin {
       hooks,
       input,
     }
-  })
+  }
 
   export async function trigger<
     Name extends Exclude<keyof Required<Hooks>, "auth" | "event" | "tool">,

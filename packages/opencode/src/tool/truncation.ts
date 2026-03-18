@@ -4,7 +4,6 @@ import { Global } from "../global"
 import { Identifier } from "../id/id"
 import { PermissionNext } from "../permission/next"
 import type { Agent } from "../agent/agent"
-import { Scheduler } from "../scheduler"
 import { Filesystem } from "../util/filesystem"
 import { Glob } from "../util/glob"
 import { ToolID } from "./schema"
@@ -15,7 +14,6 @@ export namespace Truncate {
   export const DIR = path.join(Global.Path.data, "tool-output")
   export const GLOB = path.join(DIR, "*")
   const RETENTION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
-  const HOUR_MS = 60 * 60 * 1000
 
   export type Result = { content: string; truncated: false } | { content: string; truncated: true; outputPath: string }
 
@@ -23,15 +21,6 @@ export namespace Truncate {
     maxLines?: number
     maxBytes?: number
     direction?: "head" | "tail"
-  }
-
-  export function init() {
-    Scheduler.register({
-      id: "tool.truncation.cleanup",
-      interval: HOUR_MS,
-      run: cleanup,
-      scope: "global",
-    })
   }
 
   export async function cleanup() {

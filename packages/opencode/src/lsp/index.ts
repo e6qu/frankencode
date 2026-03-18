@@ -10,6 +10,24 @@ import { Config } from "../config/config"
 import { spawn } from "child_process"
 import { Instance } from "../project/instance"
 import { Flag } from "@/flag/flag"
+import { registerDisposer } from "@/effect/instance-registry"
+
+interface LSPState {
+  broken: Set<string>
+  servers: Record<string, LSPServer.Info>
+  clients: LSPClient.Info[]
+  spawning: Map<string, Promise<LSPClient.Info | undefined>>
+}
+
+const stateMap = new Map<string, Promise<LSPState>>()
+registerDisposer(async (directory) => {
+  const s = stateMap.get(directory)
+  if (s) {
+    const resolved = await s
+    await Promise.all(resolved.clients.map((client) => client.shutdown()))
+  }
+  stateMap.delete(directory)
+})
 
 export namespace LSP {
   const log = Log.create({ service: "lsp" })
@@ -76,8 +94,11 @@ export namespace LSP {
     }
   }
 
-  const state = Instance.state(
-    async () => {
+  function state(): Promise<LSPState> {
+    const directory = Instance.directory
+    let existing = stateMap.get(directory)
+    if (existing) return existing
+    existing = (async () => {
       const clients: LSPClient.Info[] = []
       const servers: Record<string, LSPServer.Info> = {}
       const cfg = await Config.get()
@@ -138,11 +159,10 @@ export namespace LSP {
         clients,
         spawning: new Map<string, Promise<LSPClient.Info | undefined>>(),
       }
-    },
-    async (state) => {
-      await Promise.all(state.clients.map((client) => client.shutdown()))
-    },
-  )
+    })()
+    stateMap.set(directory, existing)
+    return existing
+  }
 
   export async function init() {
     return state()

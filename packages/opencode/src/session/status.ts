@@ -3,6 +3,19 @@ import { Bus } from "@/bus"
 import { Instance } from "@/project/instance"
 import { SessionID } from "./schema"
 import z from "zod"
+import { Effect, Layer, ServiceMap } from "effect"
+
+const states = new Map<string, Record<string, SessionStatus.Info>>()
+
+function state() {
+  const dir = Instance.directory
+  let s = states.get(dir)
+  if (!s) {
+    s = {}
+    states.set(dir, s)
+  }
+  return s
+}
 
 export namespace SessionStatus {
   export const Info = z
@@ -42,11 +55,6 @@ export namespace SessionStatus {
     ),
   }
 
-  const state = Instance.state(() => {
-    const data: Record<string, Info> = {}
-    return data
-  })
-
   export function get(sessionID: SessionID) {
     return (
       state()[sessionID] ?? {
@@ -74,4 +82,49 @@ export namespace SessionStatus {
     }
     state()[sessionID] = status
   }
+}
+
+export namespace SessionStatusService {
+  export interface Service {
+    readonly get: (sessionID: SessionID) => SessionStatus.Info
+    readonly list: () => Record<string, SessionStatus.Info>
+    readonly set: (sessionID: SessionID, status: SessionStatus.Info) => void
+  }
+}
+
+export class SessionStatusService extends ServiceMap.Service<SessionStatusService, SessionStatusService.Service>()(
+  "@opencode/SessionStatus",
+) {
+  static readonly layer = Layer.effect(
+    SessionStatusService,
+    Effect.gen(function* () {
+      const dir = Instance.directory
+      let data = states.get(dir)
+      if (!data) {
+        data = {}
+        states.set(dir, data)
+      }
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          states.delete(dir)
+        }),
+      )
+      return SessionStatusService.of({
+        get: (sessionID) =>
+          data[sessionID] ?? {
+            type: "idle",
+          },
+        list: () => data,
+        set: (sessionID, status) => {
+          Bus.publish(SessionStatus.Event.Status, { sessionID, status })
+          if (status.type === "idle") {
+            Bus.publish(SessionStatus.Event.Idle, { sessionID })
+            delete data[sessionID]
+            return
+          }
+          data[sessionID] = status
+        },
+      })
+    }),
+  )
 }

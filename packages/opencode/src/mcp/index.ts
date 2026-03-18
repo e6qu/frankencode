@@ -14,6 +14,7 @@ import { Log } from "../util/log"
 import { NamedError } from "@opencode-ai/util/error"
 import z from "zod/v4"
 import { Instance } from "../project/instance"
+import { registerDisposer } from "@/effect/instance-registry"
 import { Installation } from "../installation"
 import { withTimeout } from "@/util/timeout"
 import { McpOAuthProvider } from "./oauth-provider"
@@ -23,6 +24,70 @@ import { BusEvent } from "../bus/bus-event"
 import { Bus } from "@/bus"
 import { TuiEvent } from "@/cli/cmd/tui/event"
 import open from "open"
+
+// Store transports for OAuth servers to allow finishing auth
+type TransportWithAuth = StreamableHTTPClientTransport | SSEClientTransport
+const pendingOAuthTransports = new Map<string, TransportWithAuth>()
+
+async function descendants(pid: number): Promise<number[]> {
+  if (process.platform === "win32") return []
+  const pids: number[] = []
+  const queue = [pid]
+  while (queue.length > 0) {
+    const current = queue.shift()!
+    const proc = Bun.spawn(["pgrep", "-P", String(current)], { stdout: "pipe", stderr: "pipe" })
+    const [code, out] = await Promise.all([proc.exited, new Response(proc.stdout).text()]).catch(
+      () => [-1, ""] as const,
+    )
+    if (code !== 0) continue
+    for (const tok of out.trim().split(/\s+/)) {
+      const cpid = parseInt(tok, 10)
+      if (!isNaN(cpid) && pids.indexOf(cpid) === -1) {
+        pids.push(cpid)
+        queue.push(cpid)
+      }
+    }
+  }
+  return pids
+}
+
+type MCPState = Promise<{
+  status: Record<string, MCP.Status>
+  clients: Record<string, Client>
+}>
+
+const stateMap = new Map<string, MCPState>()
+
+registerDisposer(async (directory) => {
+  const s = stateMap.get(directory)
+  if (s) {
+    const state = await s
+    // The MCP SDK only signals the direct child process on close.
+    // Servers like chrome-devtools-mcp spawn grandchild processes
+    // (e.g. Chrome) that the SDK never reaches, leaving them orphaned.
+    // Kill the full descendant tree first so the server exits promptly
+    // and no processes are left behind.
+    for (const client of Object.values(state.clients)) {
+      const pid = (client.transport as any)?.pid
+      if (typeof pid !== "number") continue
+      for (const dpid of await descendants(pid)) {
+        try {
+          process.kill(dpid, "SIGTERM")
+        } catch {}
+      }
+    }
+
+    await Promise.all(
+      Object.values(state.clients).map((client) =>
+        client.close().catch((error) => {
+          console.error("Failed to close MCP client", error)
+        }),
+      ),
+    )
+    pendingOAuthTransports.clear()
+  }
+  stateMap.delete(directory)
+})
 
 export namespace MCP {
   const log = Log.create({ service: "mcp" })
@@ -147,10 +212,6 @@ export namespace MCP {
     })
   }
 
-  // Store transports for OAuth servers to allow finishing auth
-  type TransportWithAuth = StreamableHTTPClientTransport | SSEClientTransport
-  const pendingOAuthTransports = new Map<string, TransportWithAuth>()
-
   // Prompt cache types
   type PromptInfo = Awaited<ReturnType<MCPClient["listPrompts"]>>["prompts"][number]
 
@@ -160,30 +221,11 @@ export namespace MCP {
     return typeof entry === "object" && entry !== null && "type" in entry
   }
 
-  async function descendants(pid: number): Promise<number[]> {
-    if (process.platform === "win32") return []
-    const pids: number[] = []
-    const queue = [pid]
-    while (queue.length > 0) {
-      const current = queue.shift()!
-      const proc = Bun.spawn(["pgrep", "-P", String(current)], { stdout: "pipe", stderr: "pipe" })
-      const [code, out] = await Promise.all([proc.exited, new Response(proc.stdout).text()]).catch(
-        () => [-1, ""] as const,
-      )
-      if (code !== 0) continue
-      for (const tok of out.trim().split(/\s+/)) {
-        const cpid = parseInt(tok, 10)
-        if (!isNaN(cpid) && pids.indexOf(cpid) === -1) {
-          pids.push(cpid)
-          queue.push(cpid)
-        }
-      }
-    }
-    return pids
-  }
-
-  const state = Instance.state(
-    async () => {
+  function state(): MCPState {
+    const directory = Instance.directory
+    let existing = stateMap.get(directory)
+    if (existing) return existing
+    const promise = (async () => {
       const cfg = await Config.get()
       const config = cfg.mcp ?? {}
       const clients: Record<string, MCPClient> = {}
@@ -216,35 +258,10 @@ export namespace MCP {
         status,
         clients,
       }
-    },
-    async (state) => {
-      // The MCP SDK only signals the direct child process on close.
-      // Servers like chrome-devtools-mcp spawn grandchild processes
-      // (e.g. Chrome) that the SDK never reaches, leaving them orphaned.
-      // Kill the full descendant tree first so the server exits promptly
-      // and no processes are left behind.
-      for (const client of Object.values(state.clients)) {
-        const pid = (client.transport as any)?.pid
-        if (typeof pid !== "number") continue
-        for (const dpid of await descendants(pid)) {
-          try {
-            process.kill(dpid, "SIGTERM")
-          } catch {}
-        }
-      }
-
-      await Promise.all(
-        Object.values(state.clients).map((client) =>
-          client.close().catch((error) => {
-            log.error("Failed to close MCP client", {
-              error,
-            })
-          }),
-        ),
-      )
-      pendingOAuthTransports.clear()
-    },
-  )
+    })()
+    stateMap.set(directory, promise)
+    return promise
+  }
 
   // Helper function to fetch prompts for a specific client
   async function fetchPromptsForClient(clientName: string, client: Client) {

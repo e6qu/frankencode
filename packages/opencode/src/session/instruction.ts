@@ -8,6 +8,7 @@ import { Flag } from "@/flag/flag"
 import { Log } from "../util/log"
 import { Glob } from "../util/glob"
 import type { MessageV2 } from "./message-v2"
+import { Effect, Layer, ServiceMap } from "effect"
 
 const log = Log.create({ service: "instruction" })
 
@@ -42,13 +43,19 @@ async function resolveRelative(instruction: string): Promise<string[]> {
   return Filesystem.globUp(instruction, Flag.OPENCODE_CONFIG_DIR, Flag.OPENCODE_CONFIG_DIR).catch(() => [])
 }
 
-export namespace InstructionPrompt {
-  const state = Instance.state(() => {
-    return {
-      claims: new Map<string, Set<string>>(),
-    }
-  })
+const states = new Map<string, { claims: Map<string, Set<string>> }>()
 
+function state() {
+  const dir = Instance.directory
+  let s = states.get(dir)
+  if (!s) {
+    s = { claims: new Map() }
+    states.set(dir, s)
+  }
+  return s
+}
+
+export namespace InstructionPrompt {
   function isClaimed(messageID: string, filepath: string) {
     const claimed = state().claims.get(messageID)
     if (!claimed) return false
@@ -189,4 +196,36 @@ export namespace InstructionPrompt {
 
     return results
   }
+}
+
+export namespace InstructionService {
+  export interface Service {
+    readonly clear: (messageID: string) => void
+  }
+}
+
+export class InstructionService extends ServiceMap.Service<InstructionService, InstructionService.Service>()(
+  "@opencode/Instruction",
+) {
+  static readonly layer = Layer.effect(
+    InstructionService,
+    Effect.gen(function* () {
+      const dir = Instance.directory
+      let s = states.get(dir)
+      if (!s) {
+        s = { claims: new Map() }
+        states.set(dir, s)
+      }
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          states.delete(dir)
+        }),
+      )
+      return InstructionService.of({
+        clear: (messageID) => {
+          s.claims.delete(messageID)
+        },
+      })
+    }),
+  )
 }
