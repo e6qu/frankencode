@@ -268,7 +268,11 @@ export const LineCommentEditor = (props: LineCommentEditorProps) => {
                   type="button"
                   data-slot="line-comment-action"
                   data-variant="ghost"
-                  on:click={split.onCancel as any}
+                  on:mousedown={(e) => e.preventDefault()}
+                  on:click={(e) => {
+                    e.stopPropagation()
+                    split.onCancel()
+                  }}
                 >
                   {split.cancelLabel ?? i18n.t("ui.common.cancel")}
                 </button>
@@ -277,7 +281,11 @@ export const LineCommentEditor = (props: LineCommentEditorProps) => {
                   data-slot="line-comment-action"
                   data-variant="primary"
                   disabled={text().trim().length === 0}
-                  on:click={submit as any}
+                  on:mousedown={(e) => e.preventDefault()}
+                  on:click={(e) => {
+                    e.stopPropagation()
+                    submit()
+                  }}
                 >
                   {split.submitLabel ?? i18n.t("ui.lineComment.submit")}
                 </button>
