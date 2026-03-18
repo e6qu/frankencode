@@ -206,6 +206,16 @@ export const LineCommentEditor = (props: LineCommentEditorProps) => {
   const [text, setText] = createSignal(split.value)
 
   const focus = () => refs.textarea?.focus()
+  const hold: JSX.EventHandlerUnion<HTMLButtonElement, MouseEvent> = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+  const click =
+    (fn: VoidFunction): JSX.EventHandlerUnion<HTMLButtonElement, MouseEvent> =>
+    (e) => {
+      e.stopPropagation()
+      fn()
+    }
 
   createEffect(() => {
     setText(split.value)
@@ -268,11 +278,8 @@ export const LineCommentEditor = (props: LineCommentEditorProps) => {
                   type="button"
                   data-slot="line-comment-action"
                   data-variant="ghost"
-                  on:mousedown={(e) => e.preventDefault()}
-                  on:click={(e) => {
-                    e.stopPropagation()
-                    split.onCancel()
-                  }}
+                  on:mousedown={hold as any}
+                  on:click={click(split.onCancel) as any}
                 >
                   {split.cancelLabel ?? i18n.t("ui.common.cancel")}
                 </button>
@@ -281,11 +288,8 @@ export const LineCommentEditor = (props: LineCommentEditorProps) => {
                   data-slot="line-comment-action"
                   data-variant="primary"
                   disabled={text().trim().length === 0}
-                  on:mousedown={(e) => e.preventDefault()}
-                  on:click={(e) => {
-                    e.stopPropagation()
-                    submit()
-                  }}
+                  on:mousedown={hold as any}
+                  on:click={click(submit) as any}
                 >
                   {split.submitLabel ?? i18n.t("ui.lineComment.submit")}
                 </button>

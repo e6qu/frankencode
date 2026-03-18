@@ -47,10 +47,25 @@ export type EventProjectUpdated = {
   properties: Project
 }
 
+export type EventFileEdited = {
+  type: "file.edited"
+  properties: {
+    file: string
+  }
+}
+
 export type EventServerInstanceDisposed = {
   type: "server.instance.disposed"
   properties: {
     directory: string
+  }
+}
+
+export type EventFileWatcherUpdated = {
+  type: "file.watcher.updated"
+  properties: {
+    file: string
+    event: "add" | "change" | "unlink"
   }
 }
 
@@ -80,6 +95,13 @@ export type EventPermissionReplied = {
     sessionID: string
     requestID: string
     reply: "once" | "always" | "reject"
+  }
+}
+
+export type EventVcsBranchUpdated = {
+  type: "vcs.branch.updated"
+  properties: {
+    branch?: string
   }
 }
 
@@ -180,13 +202,6 @@ export type EventLspUpdated = {
   type: "lsp.updated"
   properties: {
     [key: string]: unknown
-  }
-}
-
-export type EventFileEdited = {
-  type: "file.edited"
-  properties: {
-    file: string
   }
 }
 
@@ -730,14 +745,6 @@ export type EventSessionCompacted = {
   }
 }
 
-export type EventFileWatcherUpdated = {
-  type: "file.watcher.updated"
-  properties: {
-    file: string
-    event: "add" | "change" | "unlink"
-  }
-}
-
 export type Todo = {
   /**
    * Brief description of the task
@@ -1034,13 +1041,6 @@ export type EventSessionError = {
   }
 }
 
-export type EventVcsBranchUpdated = {
-  type: "vcs.branch.updated"
-  properties: {
-    branch?: string
-  }
-}
-
 export type EventWorkspaceReady = {
   type: "workspace.ready"
   properties: {
@@ -1113,9 +1113,12 @@ export type Event =
   | EventInstallationUpdated
   | EventInstallationUpdateAvailable
   | EventProjectUpdated
+  | EventFileEdited
   | EventServerInstanceDisposed
+  | EventFileWatcherUpdated
   | EventPermissionAsked
   | EventPermissionReplied
+  | EventVcsBranchUpdated
   | EventQuestionAsked
   | EventQuestionReplied
   | EventQuestionRejected
@@ -1123,7 +1126,6 @@ export type Event =
   | EventGlobalDisposed
   | EventLspClientDiagnostics
   | EventLspUpdated
-  | EventFileEdited
   | EventMessageUpdated
   | EventMessageRemoved
   | EventMessagePartUpdated
@@ -1132,7 +1134,6 @@ export type Event =
   | EventSessionStatus
   | EventSessionIdle
   | EventSessionCompacted
-  | EventFileWatcherUpdated
   | EventTodoUpdated
   | EventEditGraphCommitted
   | EventEditGraphCheckedOut
@@ -1156,7 +1157,6 @@ export type Event =
   | EventSessionDeleted
   | EventSessionDiff
   | EventSessionError
-  | EventVcsBranchUpdated
   | EventWorkspaceReady
   | EventWorkspaceFailed
   | EventPtyCreated
@@ -1509,6 +1509,9 @@ export type Config = {
     ignore?: Array<string>
   }
   plugin?: Array<string>
+  /**
+   * Enable or disable snapshot tracking. When false, filesystem snapshots are not recorded and undoing or reverting will not undo/redo file changes. Defaults to true.
+   */
   snapshot?: boolean
   /**
    * Control sharing behavior:'manual' allows manual sharing via commands, 'auto' enables automatic sharing, 'disabled' disables all sharing
@@ -1666,6 +1669,50 @@ export type Config = {
      * Timeout in milliseconds for model context protocol (MCP) requests
      */
     mcp_timeout?: number
+  }
+  /**
+   * Verification tool configuration for automated code checks
+   */
+  verification?: {
+    /**
+     * Commands to run for verification (test, lint, typecheck)
+     */
+    commands?: {
+      [key: string]: string
+    }
+    /**
+     * Auto-detect commands from package.json scripts
+     */
+    autoDetect?: boolean
+    /**
+     * Maximum fix attempts before stopping
+     */
+    maxFixAttempts?: number
+    /**
+     * Timeout in milliseconds for each check command
+     */
+    timeout?: number
+    /**
+     * Circuit breaker configuration to prevent runaway loops
+     */
+    circuitBreaker?: {
+      /**
+       * Enable circuit breaker pattern
+       */
+      enabled?: boolean
+      /**
+       * Maximum iterations before circuit opens
+       */
+      maxIterations?: number
+      /**
+       * Cooldown period in milliseconds before trying again
+       */
+      cooldownMs?: number
+      /**
+       * Maximum consecutive failures before circuit opens
+       */
+      maxConsecutiveFailures?: number
+    }
   }
 }
 
@@ -3130,6 +3177,25 @@ export type SessionStatusResponses = {
 }
 
 export type SessionStatusResponse = SessionStatusResponses[keyof SessionStatusResponses]
+
+export type SessionStatsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    days?: number
+    project?: string
+  }
+  url: "/session/stats"
+}
+
+export type SessionStatsResponses = {
+  /**
+   * Usage statistics
+   */
+  200: unknown
+}
 
 export type SessionDeleteData = {
   body?: never

@@ -17,26 +17,18 @@ Frankencode is a fork of OpenCode that adds surgical, reversible, agent-driven c
 | `docs/upstream-sync-notes` | Docs update with upstream analysis | [#13](https://github.com/e6qu/frankencode/pull/13) |
 | `fix/upstream-backports-p1` | Phase 1: 9 upstream bug fixes (B1-B9) | [#16](https://github.com/e6qu/frankencode/pull/16) (merged) |
 | `fix/upstream-backports-p2` | Phase 2: 6 upstream bug fixes (B10-B16) | [#17](https://github.com/e6qu/frankencode/pull/17) (merged) |
+| `fix/upstream-backports-p3` | Phase 3: 6 upstream app fixes (B17-B22) | [#18](https://github.com/e6qu/frankencode/pull/18) (merged) |
+| `fix/upstream-backports-p4` | Phase 4: rebase onto upstream/dev (Effect integration) | pending |
 
-## Upstream Divergence
+## Upstream Sync
 
-- **10 commits ahead** of upstream (Frankencode features)
-- **~35 commits behind** upstream (Effect refactors, model updates — bug fixes now backported)
-
-### Backported upstream fixes:
-- **Phase 1 (B1-B9):** error detection, compaction transforms, agent permissions, prompt debug, ZodError logging, question wrapping, dialog escape, VCS HEAD filter, VCS watcher
-- **Phase 2 (B10-B16):** snapshot config annotation, Windows editor shell, Copilot Enterprise removal, org label scoping, review comment CSS, test preload plugins
-
-### Upstream changes still requiring attention:
-1. **Effect-ification** — `SkillService`, `FileService`, `FormatService`, `VcsService`, etc. refactored to Effect scoped services
-2. **`instance-state.ts` deleted** — our `Instance.state()` usage needs review
-3. **`skill.ts` rewritten** (333 lines changed) — conflicts with our content cache
-4. **`prompt.ts` changed** (~99 lines) — conflicts with our filterEdited/filterEphemeral pipeline
-5. **`message-v2.ts` changed** (~107 lines) — conflicts with our EditMeta/LifecycleMeta additions
+- **Fully synced** with `upstream/dev` (0 commits behind)
+- **15 commits ahead** of upstream (Frankencode features)
+- Phase 4 rebase integrated all upstream Effect-ification, SnapshotService, model updates, and misc fixes
 
 ## Test Status
 
-- **1401 tests passing**, 0 failures, 8 skipped
+- **1430 tests passing**, 0 failures, 8 skipped
 - **25 new regression tests** for bug fixes (verify, refine, scripts, skill cache, agent permissions)
 - **Typecheck:** clean (`bun typecheck`)
 
