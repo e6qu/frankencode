@@ -97,11 +97,6 @@ interface OrgChoice {
   label: string
 }
 
-const isActiveOrgChoice = (
-  active: Option.Option<{ id: AccountID; active_org_id: OrgID | null }>,
-  choice: { accountID: AccountID; orgID: OrgID },
-) => Option.isSome(active) && active.value.id === choice.accountID && active.value.active_org_id === choice.orgID
-
 const switchEffect = Effect.fn("switch")(function* () {
   const service = yield* AccountService
 
