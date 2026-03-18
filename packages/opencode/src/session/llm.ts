@@ -38,7 +38,6 @@ export namespace LLM {
     messages: ModelMessage[]
     small?: boolean
     tools: Record<string, Tool>
-    permission?: PermissionNext.Ruleset
     retries?: number
     toolChoice?: "auto" | "required" | "none"
   }
