@@ -60,8 +60,8 @@ export namespace Agent {
     })
   export type Info = z.infer<typeof Info>
 
-  function state(): Promise<Record<string, Info>> {
-    const dir = Instance.directory
+  function state(directory?: string): Promise<Record<string, Info>> {
+    const dir = directory ?? Instance.directory
     let s = agentStates.get(dir)
     if (!s) {
       s = initAgents()
@@ -72,6 +72,7 @@ export namespace Agent {
 
   async function initAgents(): Promise<Record<string, Info>> {
     const cfg = await Config.get()
+    const worktree = Instance.worktree
 
     const skillDirs = await Skill.dirs()
     const whitelistedDirs = [Truncate.GLOB, ...skillDirs.map((dir) => path.join(dir, "*"))]
@@ -126,7 +127,7 @@ export namespace Agent {
             edit: {
               "*": "deny",
               [path.join(".opencode", "plans", "*.md")]: "allow",
-              [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
+              [path.relative(worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
             },
           }),
           user,

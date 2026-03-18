@@ -841,8 +841,8 @@ export namespace Provider {
     }
   }
 
-  function state() {
-    const dir = Instance.directory
+  function state(directory?: string) {
+    const dir = directory ?? Instance.directory
     let s = providerStates.get(dir)
     if (!s) {
       s = initProvider()

@@ -114,12 +114,12 @@ export namespace Pty {
     subscribers: Map<unknown, Socket>
   }
 
-  function state() {
-    const directory = Instance.directory
-    let sessions = stateMap.get(directory)
+  function state(directory?: string) {
+    const dir = directory ?? Instance.directory
+    let sessions = stateMap.get(dir)
     if (!sessions) {
       sessions = new Map<PtyID, ActiveSession>()
-      stateMap.set(directory, sessions)
+      stateMap.set(dir, sessions)
     }
     return sessions
   }

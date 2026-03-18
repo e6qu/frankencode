@@ -27,20 +27,20 @@ export namespace Plugin {
   // Built-in plugins that are directly imported (not installed from npm)
   const INTERNAL_PLUGINS: PluginInstance[] = [CodexAuthPlugin, CopilotAuthPlugin, GitlabAuthPlugin]
 
-  function state() {
-    const dir = Instance.directory
+  function state(directory?: string) {
+    const dir = directory ?? Instance.directory
     let s = pluginStates.get(dir)
     if (!s) {
-      s = initPlugins()
+      s = initPlugins(dir)
       pluginStates.set(dir, s)
     }
     return s
   }
 
-  async function initPlugins() {
+  async function initPlugins(dir: string) {
     const client = createOpencodeClient({
       baseUrl: "http://localhost:4096",
-      directory: Instance.directory,
+      directory: dir,
       headers: Flag.OPENCODE_SERVER_PASSWORD
         ? {
             Authorization: `Basic ${Buffer.from(`${Flag.OPENCODE_SERVER_USERNAME ?? "opencode"}:${Flag.OPENCODE_SERVER_PASSWORD}`).toString("base64")}`,
@@ -54,7 +54,7 @@ export namespace Plugin {
       client,
       project: Instance.project,
       worktree: Instance.worktree,
-      directory: Instance.directory,
+      directory: dir,
       get serverUrl(): URL {
         return Server.url ?? new URL("http://localhost:4096")
       },
@@ -129,9 +129,9 @@ export namespace Plugin {
     Name extends Exclude<keyof Required<Hooks>, "auth" | "event" | "tool">,
     Input = Parameters<Required<Hooks>[Name]>[0],
     Output = Parameters<Required<Hooks>[Name]>[1],
-  >(name: Name, input: Input, output: Output): Promise<Output> {
+  >(name: Name, input: Input, output: Output, directory?: string): Promise<Output> {
     if (!name) return output
-    for (const hook of await state().then((x) => x.hooks)) {
+    for (const hook of await state(directory).then((x) => x.hooks)) {
       const fn = hook[name]
       if (!fn) continue
       // @ts-expect-error if you feel adventurous, please fix the typing, make sure to bump the try-counter if you
@@ -142,12 +142,12 @@ export namespace Plugin {
     return output
   }
 
-  export async function list() {
-    return state().then((x) => x.hooks)
+  export async function list(directory?: string) {
+    return state(directory).then((x) => x.hooks)
   }
 
-  export async function init() {
-    const hooks = await state().then((x) => x.hooks)
+  export async function init(directory?: string) {
+    const hooks = await state(directory).then((x) => x.hooks)
     const config = await Config.get()
     for (const hook of hooks) {
       // @ts-expect-error this is because we haven't moved plugin to sdk v2

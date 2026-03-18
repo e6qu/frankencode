@@ -4,12 +4,13 @@ import { Instance } from "../project/instance"
 import { BusEvent } from "./bus-event"
 import { GlobalBus } from "./global"
 import { Effect, Layer, ServiceMap } from "effect"
+import { InstanceContext } from "../effect/instance-context"
 
 type BusSubscription = (event: any) => void
 const states = new Map<string, { subscriptions: Map<any, BusSubscription[]> }>()
 
-function state() {
-  const dir = Instance.directory
+function state(directory?: string) {
+  const dir = directory ?? Instance.directory
   let s = states.get(dir)
   if (!s) {
     s = { subscriptions: new Map() }
@@ -32,7 +33,9 @@ export namespace Bus {
   export async function publish<Definition extends BusEvent.Definition>(
     def: Definition,
     properties: z.output<Definition["properties"]>,
+    directory?: string,
   ) {
+    const dir = directory ?? Instance.directory
     const payload = {
       type: def.type,
       properties,
@@ -42,13 +45,13 @@ export namespace Bus {
     })
     const pending = []
     for (const key of [def.type, "*"]) {
-      const match = state().subscriptions.get(key)
+      const match = state(dir).subscriptions.get(key)
       for (const sub of match ?? []) {
         pending.push(sub(payload))
       }
     }
     GlobalBus.emit("event", {
-      directory: Instance.directory,
+      directory: dir,
       payload,
     })
     return Promise.all(pending)
@@ -57,8 +60,9 @@ export namespace Bus {
   export function subscribe<Definition extends BusEvent.Definition>(
     def: Definition,
     callback: (event: { type: Definition["type"]; properties: z.infer<Definition["properties"]> }) => void,
+    directory?: string,
   ) {
-    return raw(def.type, callback)
+    return raw(def.type, callback, directory)
   }
 
   export function once<Definition extends BusEvent.Definition>(
@@ -67,20 +71,25 @@ export namespace Bus {
       type: Definition["type"]
       properties: z.infer<Definition["properties"]>
     }) => "done" | undefined,
+    directory?: string,
   ) {
-    const unsub = subscribe(def, (event) => {
-      if (callback(event)) unsub()
-    })
+    const unsub = subscribe(
+      def,
+      (event) => {
+        if (callback(event)) unsub()
+      },
+      directory,
+    )
     return unsub
   }
 
-  export function subscribeAll(callback: (event: any) => void) {
-    return raw("*", callback)
+  export function subscribeAll(callback: (event: any) => void, directory?: string) {
+    return raw("*", callback, directory)
   }
 
-  function raw(type: string, callback: (event: any) => void) {
+  function raw(type: string, callback: (event: any) => void, directory?: string) {
     log.info("subscribing", { type })
-    const subscriptions = state().subscriptions
+    const subscriptions = state(directory).subscriptions
     let match = subscriptions.get(type) ?? []
     match.push(callback)
     subscriptions.set(type, match)
@@ -109,7 +118,8 @@ export class BusService extends ServiceMap.Service<BusService, BusService.Servic
   static readonly layer = Layer.effect(
     BusService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const ctx = yield* InstanceContext
+      const dir = ctx.directory
       let s = states.get(dir)
       if (!s) {
         s = { subscriptions: new Map() }

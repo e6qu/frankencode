@@ -221,9 +221,9 @@ export namespace MCP {
     return typeof entry === "object" && entry !== null && "type" in entry
   }
 
-  function state(): MCPState {
-    const directory = Instance.directory
-    let existing = stateMap.get(directory)
+  function state(directory?: string): MCPState {
+    const dir = directory ?? Instance.directory
+    let existing = stateMap.get(dir)
     if (existing) return existing
     const promise = (async () => {
       const cfg = await Config.get()
@@ -244,7 +244,7 @@ export namespace MCP {
             return
           }
 
-          const result = await create(key, mcp).catch(() => undefined)
+          const result = await create(key, mcp, dir).catch(() => undefined)
           if (!result) return
 
           status[key] = result.status
@@ -259,7 +259,7 @@ export namespace MCP {
         clients,
       }
     })()
-    stateMap.set(directory, promise)
+    stateMap.set(dir, promise)
     return promise
   }
 
@@ -342,7 +342,7 @@ export namespace MCP {
     }
   }
 
-  async function create(key: string, mcp: Config.Mcp) {
+  async function create(key: string, mcp: Config.Mcp, directory?: string) {
     if (mcp.enabled === false) {
       log.info("mcp server disabled", { key })
       return {
@@ -467,7 +467,7 @@ export namespace MCP {
 
     if (mcp.type === "local") {
       const [cmd, ...args] = mcp.command
-      const cwd = Instance.directory
+      const cwd = directory ?? Instance.directory
       const transport = new StdioClientTransport({
         stderr: "pipe",
         command: cmd,
