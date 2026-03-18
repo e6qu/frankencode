@@ -2,7 +2,7 @@
 
 > **Frankencode** is a fork of [OpenCode](https://github.com/anomalyco/opencode) (`dev` branch) that adds surgical, reversible, agent-driven context editing with content-addressable storage and a conversation history graph.
 
-**Status (2026-03-18):** All features implemented. 40 bugs fixed. 1401 tests passing. See `STATUS.md` for current state, `DO_NEXT.md` for what's next.
+**Status (2026-03-18):** All features implemented. 40 bugs fixed. 15 upstream bug fixes backported (Phase 1 + Phase 2). 1401 tests passing. See `STATUS.md` for current state, `DO_NEXT.md` for what's next.
 
 ---
 
@@ -10,21 +10,14 @@
 
 Upstream (`anomalyco/opencode`) has diverged by ~50 commits. Two classes of changes:
 
-### A. Backportable Bug Fixes (cherry-pick, no Effect dependency)
+### A. Backportable Bug Fixes — ✅ Complete
 
-These are isolated fixes that can be cherry-picked or manually applied without touching the Effect service infrastructure. **Do these first.**
+**Phase 1 (B1-B9):** Merged in [#16](https://github.com/e6qu/frankencode/pull/16)
+- B1: `context_length_exceeded` error code detection | B2: compaction transforms | B3: agent permissions | B4: prompt debug logs | B5: ZodError logging | B6: question wrapping | B7: dialog escape | B8: VCS HEAD filter | B9: VCS watcher
 
-| # | Commit | Fix | Files | Risk |
-|---|--------|-----|-------|------|
-| B1 | `e718db624` | `context_length_exceeded` error code as context overflow (#17748) | `provider/error.ts` | Low |
-| B2 | `4cb29967f` | Apply message transforms during compaction (#17823) | `session/compaction.ts` | Low |
-| B3 | `c2ca1494e` | Preserve prompt tool enables with empty agent permissions (#17064) | `permission/next.ts`, `session/prompt.ts` | Medium |
-| B4 | `fee3c196c` | Prompt schema validation debug logs (#17812) | `session/prompt.ts` | Low |
-| B5 | — | Better ZodError logging in `fn.ts` | `util/fn.ts` | Low |
-| B6 | `51fcd04a7` | Wrap question option descriptions instead of truncating (#17782) | `question/` | Low |
-| B7 | `a64f604d5` | Check for selected text in dialog escape handler (#16779) | TUI | Low |
-| B8 | `e5cbecf17` | VCS HEAD filter bug fix (#17829) | `project/vcs.ts` | Medium |
-| B9 | `510374207` | VCS watcher if-statement fix (#17673) | `project/vcs.ts` | Low |
+**Phase 2 (B10-B16):** Merged in [#17](https://github.com/e6qu/frankencode/pull/17)
+- B10: snapshot config `.describe()` | B12: Windows editor shell | B13: Copilot Enterprise removal | B14: org label scoping | B16: review comment CSS/events | B11 partial: test preload plugins
+- Skipped: B11 (most — requires Effect FileService), B15 (already fixed)
 
 ### B. Effect-ification (full rebase required)
 
@@ -51,11 +44,8 @@ These changes form a dependency chain and cannot be cherry-picked individually. 
 | Change | Notes |
 |--------|-------|
 | Zen model pricing updates | Auto-synced via model config, not code |
-| GitHub Copilot Enterprise removal | We don't use this |
 | Docs: tools config deprecated | Informational, already use permissions |
-| Docs: snapshot config annotation | No impact |
 | UI: empty sidebar state | App-only, not TUI |
-| Windows /editor fix | Platform-specific |
 
 ### D. Frankencode-only features (ours, not in upstream)
 
@@ -83,9 +73,13 @@ These appear as "deletions" in `git diff dev..upstream/dev` because upstream nev
 
 ### Recommended approach
 
-**Phase 1: Cherry-pick bug fixes (B1-B9)** — Low risk, immediate value. Create a branch, apply each fix manually, run tests.
+**Phase 1: Cherry-pick bug fixes (B1-B9)** — ✅ Complete. Merged in [#16](https://github.com/e6qu/frankencode/pull/16).
 
-**Phase 2: Full rebase onto upstream/dev** — High risk, required for staying in sync. Do this after Phase 1 is merged and validated. Expect conflicts in `skill.ts`, `prompt.ts`, `message-v2.ts`, `instance.ts`. Our additive files (CAS, edit graph, context tools) should merge cleanly.
+**Phase 2: Cherry-pick bug fixes (B10-B16)** — ✅ Complete. Merged in [#17](https://github.com/e6qu/frankencode/pull/17).
+
+**Phase 3: Re-scan upstream** — Check for any new commits since Phase 2 analysis. Cherry-pick remaining applicable fixes.
+
+**Phase 4: Full rebase onto upstream/dev** — High risk, required for staying in sync. Expect conflicts in `skill.ts`, `prompt.ts`, `message-v2.ts`, `instance.ts`. Our additive files (CAS, edit graph, context tools) should merge cleanly.
 
 ---
 
@@ -99,5 +93,7 @@ These appear as "deletions" in `git diff dev..upstream/dev` because upstream nev
 | Skills as Scripts      | ✅ Complete   |
 | Evaluator-Optimizer    | ✅ Complete   |
 | Bug Fix Pass (16 bugs) | ✅ Complete   |
-| Upstream Bug Backport  | ⬜ Next       |
-| Upstream Full Rebase   | ⬜ After backport |
+| Upstream Bug Backport P1 | ✅ Complete (#16) |
+| Upstream Bug Backport P2 | ✅ Complete (#17) |
+| Upstream Backport P3   | ⬜ Next       |
+| Upstream Full Rebase   | ⬜ After backports |

@@ -16,24 +16,20 @@
 - [x] Script discovery and execution from skills
 - [x] 40 bugs fixed (code review audits + ephemeral fixes)
 - [x] 25 regression tests for bug fixes
+- [x] Upstream backport Phase 1 — 9 bug fixes (B1-B9) in [#16](https://github.com/e6qu/frankencode/pull/16)
+- [x] Upstream backport Phase 2 — 6 bug fixes (B10-B16) in [#17](https://github.com/e6qu/frankencode/pull/17)
 
-## Next — Upstream Bug Backports (Phase 1)
+## Next — Upstream Backport Phase 3
 
-Cherry-pickable fixes from upstream that don't depend on the Effect refactor. See `PLAN.md` for full analysis.
+Remaining cherry-pickable upstream commits. Requires fresh analysis of upstream since last sync.
 
-- [ ] **B1** — `context_length_exceeded` error code detection in `provider/error.ts` (#17748)
-- [ ] **B2** — Apply message transforms during compaction in `session/compaction.ts` (#17823)
-- [ ] **B3** — Preserve prompt tool enables with empty agent permissions (#17064)
-- [ ] **B4** — Prompt schema validation debug logs (#17812)
-- [ ] **B5** — Better ZodError logging in `util/fn.ts`
-- [ ] **B6** — Wrap question option descriptions instead of truncating (#17782)
-- [ ] **B7** — Check for selected text in dialog escape handler (#16779)
-- [ ] **B8** — VCS HEAD filter bug fix (#17829)
-- [ ] **B9** — VCS watcher if-statement fix (#17673)
+- [ ] Re-scan upstream for new commits since Phase 2 analysis
+- [ ] Identify any remaining cherry-pickable fixes
+- [ ] Apply and test
 
-## Next — Upstream Full Rebase (Phase 2)
+## Next — Upstream Full Rebase (Phase 4)
 
-After backports are merged, rebase onto `upstream/dev` to pick up the Effect-ification wave.
+After all backports are merged, rebase onto `upstream/dev` to pick up the Effect-ification wave.
 
 - [ ] **Rebase onto upstream/dev** — resolve conflicts in `skill.ts`, `prompt.ts`, `message-v2.ts`, `instance.ts`
 - [ ] **Adapt `Instance.state()` calls** — upstream deleted `instance-state.ts`; our CAS, EditGraph, SideThread, Objective, Skill cache, Command state all use it
