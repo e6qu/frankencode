@@ -709,6 +709,7 @@ export namespace SessionPrompt {
             : []),
         ],
         tools,
+        permission: session.permission,
         model,
         toolChoice: format.type === "json_schema" ? "required" : undefined,
       })
@@ -1351,6 +1352,26 @@ export namespace SessionPrompt {
       },
     )
 
+    const infoResult = MessageV2.Info.safeParse(info)
+    if (!infoResult.success) {
+      log.error("info schema validation failed before save", {
+        sessionID: input.sessionID,
+        messageID: info.id,
+        issues: infoResult.error.issues,
+      })
+    }
+    for (const [i, part] of parts.entries()) {
+      const partResult = MessageV2.Part.safeParse(part)
+      if (!partResult.success) {
+        log.error("part schema validation failed before save", {
+          sessionID: input.sessionID,
+          partID: part.id,
+          partType: part.type,
+          index: i,
+          issues: partResult.error.issues,
+        })
+      }
+    }
     await Session.updateMessage(info)
     for (const part of parts) {
       await Session.updatePart(part)
