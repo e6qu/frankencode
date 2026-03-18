@@ -140,7 +140,8 @@ export namespace Pty {
       args.push("-l")
     }
 
-    const cwd = input.cwd || Instance.directory
+    const directory = Instance.directory
+    const cwd = input.cwd || directory
     const shellEnv = await Plugin.trigger("shell.env", { cwd }, { env: {} })
     const env = {
       ...process.env,
@@ -182,44 +183,40 @@ export namespace Pty {
       subscribers: new Map(),
     }
     state().set(id, session)
-    ptyProcess.onData(
-      Instance.bind((chunk) => {
-        session.cursor += chunk.length
+    ptyProcess.onData((chunk) => {
+      session.cursor += chunk.length
 
-        for (const [key, ws] of session.subscribers.entries()) {
-          if (ws.readyState !== 1) {
-            session.subscribers.delete(key)
-            continue
-          }
-
-          if (ws.data !== key) {
-            session.subscribers.delete(key)
-            continue
-          }
-
-          try {
-            ws.send(chunk)
-          } catch {
-            session.subscribers.delete(key)
-          }
+      for (const [key, ws] of session.subscribers.entries()) {
+        if (ws.readyState !== 1) {
+          session.subscribers.delete(key)
+          continue
         }
 
-        session.buffer += chunk
-        if (session.buffer.length <= BUFFER_LIMIT) return
-        const excess = session.buffer.length - BUFFER_LIMIT
-        session.buffer = session.buffer.slice(excess)
-        session.bufferCursor += excess
-      }),
-    )
-    ptyProcess.onExit(
-      Instance.bind(({ exitCode }) => {
-        if (session.info.status === "exited") return
-        log.info("session exited", { id, exitCode })
-        session.info.status = "exited"
-        Bus.publish(Event.Exited, { id, exitCode })
-        remove(id)
-      }),
-    )
+        if (ws.data !== key) {
+          session.subscribers.delete(key)
+          continue
+        }
+
+        try {
+          ws.send(chunk)
+        } catch {
+          session.subscribers.delete(key)
+        }
+      }
+
+      session.buffer += chunk
+      if (session.buffer.length <= BUFFER_LIMIT) return
+      const excess = session.buffer.length - BUFFER_LIMIT
+      session.buffer = session.buffer.slice(excess)
+      session.bufferCursor += excess
+    })
+    ptyProcess.onExit(({ exitCode }) => {
+      if (session.info.status === "exited") return
+      log.info("session exited", { id, exitCode })
+      session.info.status = "exited"
+      Bus.publish(Event.Exited, { id, exitCode }, directory)
+      remove(id, directory)
+    })
     Bus.publish(Event.Created, { info })
     return info
   }
@@ -237,10 +234,10 @@ export namespace Pty {
     return session.info
   }
 
-  export async function remove(id: PtyID) {
-    const session = state().get(id)
+  export async function remove(id: PtyID, directory?: string) {
+    const session = state(directory).get(id)
     if (!session) return
-    state().delete(id)
+    state(directory).delete(id)
     log.info("removing session", { id })
     try {
       session.process.kill()
@@ -253,7 +250,7 @@ export namespace Pty {
       }
     }
     session.subscribers.clear()
-    Bus.publish(Event.Deleted, { id: session.info.id })
+    Bus.publish(Event.Deleted, { id: session.info.id }, directory)
   }
 
   export function resize(id: PtyID, cols: number, rows: number) {

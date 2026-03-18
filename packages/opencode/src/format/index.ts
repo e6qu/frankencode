@@ -7,7 +7,6 @@ import z from "zod"
 import * as Formatter from "./formatter"
 import { Config } from "../config/config"
 import { mergeDeep } from "remeda"
-import { Instance } from "../project/instance"
 import { Process } from "../util/process"
 import { InstanceContext } from "@/effect/instance-context"
 import { Effect, Layer, ServiceMap } from "effect"
@@ -100,9 +99,10 @@ export class FormatService extends ServiceMap.Service<FormatService, FormatServi
         return result
       }
 
+      const directory = instance.directory
       const unsubscribe = Bus.subscribe(
         File.Event.Edited,
-        Instance.bind(async (payload) => {
+        async (payload) => {
           const file = payload.properties.file
           log.info("formatting", { file })
           const ext = path.extname(file)
@@ -134,7 +134,8 @@ export class FormatService extends ServiceMap.Service<FormatService, FormatServi
               })
             }
           }
-        }),
+        },
+        directory,
       )
 
       yield* Effect.addFinalizer(() => Effect.sync(unsubscribe))

@@ -6,7 +6,6 @@ import fs from "fs"
 import ignore from "ignore"
 import { Log } from "../util/log"
 import { Filesystem } from "../util/filesystem"
-import { Instance } from "../project/instance"
 import { Ripgrep } from "./ripgrep"
 import fuzzysort from "fuzzysort"
 import { Global } from "../global"
@@ -384,6 +383,12 @@ export class FileService extends ServiceMap.Service<FileService, FileService.Ser
 
       const isGlobalHome = instance.directory === Global.Path.home && instance.project.id === "global"
 
+      function containsPath(filepath: string) {
+        if (Filesystem.contains(instance.directory, filepath)) return true
+        if (instance.project.worktree === "/") return false
+        return Filesystem.contains(instance.project.worktree, filepath)
+      }
+
       function kick() {
         if (task) return task
         task = (async () => {
@@ -557,7 +562,7 @@ export class FileService extends ServiceMap.Service<FileService, FileService.Ser
           using _ = log.time("read", { file })
           const full = path.join(instance.directory, file)
 
-          if (!Instance.containsPath(full)) {
+          if (!containsPath(full)) {
             throw new Error(`Access denied: path escapes project directory`)
           }
 
@@ -638,7 +643,7 @@ export class FileService extends ServiceMap.Service<FileService, FileService.Ser
           }
           const resolved = dir ? path.join(instance.directory, dir) : instance.directory
 
-          if (!Instance.containsPath(resolved)) {
+          if (!containsPath(resolved)) {
             throw new Error(`Access denied: path escapes project directory`)
           }
 

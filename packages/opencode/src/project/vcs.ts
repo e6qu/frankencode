@@ -2,7 +2,6 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import z from "zod"
 import { Log } from "@/util/log"
-import { Instance } from "./instance"
 import { InstanceContext } from "@/effect/instance-context"
 import { FileWatcher } from "@/file/watcher"
 import { git } from "@/util/git"
@@ -57,17 +56,19 @@ export class VcsService extends ServiceMap.Service<VcsService, VcsService.Servic
         current = yield* Effect.promise(() => currentBranch())
         log.info("initialized", { branch: current })
 
+        const directory = instance.directory
         const unsubscribe = Bus.subscribe(
           FileWatcher.Event.Updated,
-          Instance.bind(async (evt) => {
+          async (evt) => {
             if (!evt.properties.file.endsWith("HEAD")) return
             const next = await currentBranch()
             if (next !== current) {
               log.info("branch changed", { from: current, to: next })
               current = next
-              Bus.publish(Vcs.Event.BranchUpdated, { branch: next })
+              Bus.publish(Vcs.Event.BranchUpdated, { branch: next }, directory)
             }
-          }),
+          },
+          directory,
         )
 
         yield* Effect.addFinalizer(() => Effect.sync(unsubscribe))
