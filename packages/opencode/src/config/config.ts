@@ -21,6 +21,8 @@ import {
   printParseErrorCode,
 } from "jsonc-parser"
 import { Instance } from "../project/instance"
+import { InstanceLifecycle } from "../project/lifecycle"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { LSPServer } from "../lsp/server"
 import { BunProc } from "@/bun"
@@ -1422,7 +1424,7 @@ export namespace Config {
     const existing = await loadFile(filepath)
     await Filesystem.writeJson(filepath, mergeDeep(existing, config))
     configStates.delete(Instance.directory)
-    await Instance.dispose()
+    await InstanceLifecycle.dispose(InstanceALS.directory)
   }
 
   function globalConfigFile() {
@@ -1513,7 +1515,7 @@ export namespace Config {
 
     global.reset()
 
-    void Instance.disposeAll()
+    void InstanceLifecycle.disposeAll()
       .catch(() => undefined)
       .finally(() => {
         GlobalBus.emit("event", {

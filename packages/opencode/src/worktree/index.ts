@@ -4,6 +4,8 @@ import z from "zod"
 import { NamedError } from "@opencode-ai/util/error"
 import { Global } from "../global"
 import { Instance } from "../project/instance"
+import { InstanceLifecycle } from "../project/lifecycle"
+import { InstanceALS } from "../project/instance-als"
 import { InstanceBootstrap } from "../project/bootstrap"
 import { Project } from "../project/project"
 import { Database, eq } from "../storage/db"
@@ -387,11 +389,7 @@ export namespace Worktree {
           return
         }
 
-        const booted = await Instance.provide({
-          directory: info.directory,
-          init: InstanceBootstrap,
-          fn: () => undefined,
-        })
+        const booted = await InstanceLifecycle.boot(info.directory, InstanceBootstrap)
           .then(() => true)
           .catch((error) => {
             const message = error instanceof Error ? error.message : String(error)

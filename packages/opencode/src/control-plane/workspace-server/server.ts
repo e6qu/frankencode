@@ -1,5 +1,6 @@
 import { Hono } from "hono"
-import { Instance } from "../../project/instance"
+import { InstanceLifecycle } from "../../project/lifecycle"
+import { InstanceALS } from "../../project/instance-als"
 import { InstanceBootstrap } from "../../project/bootstrap"
 import { SessionRoutes } from "../../server/routes/session"
 import { WorkspaceServerRoutes } from "./routes"
@@ -41,12 +42,9 @@ export namespace WorkspaceServer {
         return WorkspaceContext.provide({
           workspaceID: WorkspaceID.make(rawWorkspaceID),
           async fn() {
-            return Instance.provide({
-              directory,
-              init: InstanceBootstrap,
-              async fn() {
-                return next()
-              },
+            const ctx = await InstanceLifecycle.boot(directory, InstanceBootstrap)
+            return InstanceALS.run(ctx, async () => {
+              return next()
             })
           },
         })

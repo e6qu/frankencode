@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { describeRoute, validator } from "hono-openapi"
 import { resolver } from "hono-openapi"
 import { Instance } from "../../project/instance"
+import { InstanceLifecycle } from "../../project/lifecycle"
 import { Project } from "../../project/project"
 import z from "zod"
 import { ProjectID } from "../../project/schema"
@@ -80,7 +81,7 @@ export const ProjectRoutes = lazy(() =>
           project: prev,
         })
         if (next.id === prev.id && next.vcs === prev.vcs && next.worktree === prev.worktree) return c.json(next)
-        await Instance.reload({
+        await InstanceLifecycle.reload({
           directory: dir,
           worktree: dir,
           project: next,

@@ -1,7 +1,8 @@
 import { Installation } from "@/installation"
 import { Server } from "@/server/server"
 import { Log } from "@/util/log"
-import { Instance } from "@/project/instance"
+import { InstanceLifecycle } from "@/project/lifecycle"
+import { InstanceALS } from "@/project/instance-als"
 import { InstanceBootstrap } from "@/project/bootstrap"
 import { Rpc } from "@/util/rpc"
 import { upgrade } from "@/cli/upgrade"
@@ -124,17 +125,14 @@ export const rpc = {
     return { url: server.url.toString() }
   },
   async checkUpgrade(input: { directory: string }) {
-    await Instance.provide({
-      directory: input.directory,
-      init: InstanceBootstrap,
-      fn: async () => {
-        await upgrade().catch(() => {})
-      },
+    const ctx = await InstanceLifecycle.boot(input.directory, InstanceBootstrap)
+    await InstanceALS.run(ctx, async () => {
+      await upgrade().catch(() => {})
     })
   },
   async reload() {
     Config.global.reset()
-    await Instance.disposeAll()
+    await InstanceLifecycle.disposeAll()
   },
   async setWorkspace(input: { workspaceID?: string }) {
     startEventStream({ directory: process.cwd(), workspaceID: input.workspaceID })
@@ -142,7 +140,7 @@ export const rpc = {
   async shutdown() {
     Log.Default.info("worker shutting down")
     if (eventStream.abort) eventStream.abort.abort()
-    await Instance.disposeAll()
+    await InstanceLifecycle.disposeAll()
     if (server) server.stop(true)
   },
 }

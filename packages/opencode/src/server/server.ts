@@ -14,6 +14,8 @@ import { LSP } from "../lsp"
 import { Format } from "../format"
 import { TuiRoutes } from "./routes/tui"
 import { Instance } from "../project/instance"
+import { InstanceLifecycle } from "../project/lifecycle"
+import { InstanceALS } from "../project/instance-als"
 import { Vcs, VcsService } from "../project/vcs"
 import { runPromiseInstance } from "@/effect/runtime"
 import { Agent } from "../agent/agent"
@@ -208,12 +210,9 @@ export namespace Server {
         return WorkspaceContext.provide({
           workspaceID: rawWorkspaceID ? WorkspaceID.make(rawWorkspaceID) : undefined,
           async fn() {
-            return Instance.provide({
-              directory,
-              init: InstanceBootstrap,
-              async fn() {
-                return next()
-              },
+            const ctx = await InstanceLifecycle.boot(directory, InstanceBootstrap)
+            return InstanceALS.run(ctx, async () => {
+              return next()
             })
           },
         })
@@ -270,7 +269,7 @@ export namespace Server {
           },
         }),
         async (c) => {
-          await Instance.dispose()
+          await InstanceLifecycle.dispose(InstanceALS.directory)
           return c.json(true)
         },
       )

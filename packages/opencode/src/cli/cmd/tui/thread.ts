@@ -13,7 +13,8 @@ import type { Event } from "@opencode-ai/sdk/v2"
 import type { EventSource } from "./context/sdk"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { TuiConfig } from "@/config/tui"
-import { Instance } from "@/project/instance"
+import { InstanceLifecycle } from "@/project/lifecycle"
+import { InstanceALS } from "@/project/instance-als"
 
 declare global {
   const OPENCODE_WORKER_PATH: string
@@ -168,10 +169,8 @@ export const TuiThreadCommand = cmd({
       }
 
       const prompt = await input(args.prompt)
-      const config = await Instance.provide({
-        directory: cwd,
-        fn: () => TuiConfig.get(),
-      })
+      const threadCtx = await InstanceLifecycle.boot(cwd)
+      const config = await InstanceALS.run(threadCtx, () => TuiConfig.get())
 
       const network = await resolveNetworkOptions(args)
       const external =
