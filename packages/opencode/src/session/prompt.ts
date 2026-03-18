@@ -317,7 +317,7 @@ export namespace SessionPrompt {
     let step = 0
     const session = await Session.get(sessionID)
     while (true) {
-      SessionStatus.set(sessionID, { type: "busy" })
+      SessionStatus.set(sessionID, { type: "busy" }, _dir)
       log.info("loop", { step, sessionID })
       if (abort.aborted) break
       let msgs = await MessageV2.filterCompacted(MessageV2.stream(sessionID))
@@ -365,12 +365,16 @@ export namespace SessionPrompt {
       const model = await Provider.getModel(lastUser.model.providerID, lastUser.model.modelID).catch((e) => {
         if (Provider.ModelNotFoundError.isInstance(e)) {
           const hint = e.data.suggestions?.length ? ` Did you mean: ${e.data.suggestions.join(", ")}?` : ""
-          Bus.publish(Session.Event.Error, {
-            sessionID,
-            error: new NamedError.Unknown({
-              message: `Model not found: ${e.data.providerID}/${e.data.modelID}.${hint}`,
-            }).toObject(),
-          })
+          Bus.publish(
+            Session.Event.Error,
+            {
+              sessionID,
+              error: new NamedError.Unknown({
+                message: `Model not found: ${e.data.providerID}/${e.data.modelID}.${hint}`,
+              }).toObject(),
+            },
+            _dir,
+          )
         }
         throw e
       })
@@ -1275,12 +1279,16 @@ export namespace SessionPrompt {
                   .catch((error) => {
                     log.error("failed to read file", { error })
                     const message = error instanceof Error ? error.message : error.toString()
-                    Bus.publish(Session.Event.Error, {
-                      sessionID: input.sessionID,
-                      error: new NamedError.Unknown({
-                        message,
-                      }).toObject(),
-                    })
+                    Bus.publish(
+                      Session.Event.Error,
+                      {
+                        sessionID: input.sessionID,
+                        error: new NamedError.Unknown({
+                          message,
+                        }).toObject(),
+                      },
+                      _dir,
+                    )
                     pieces.push({
                       messageID: info.id,
                       sessionID: input.sessionID,

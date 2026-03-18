@@ -56,32 +56,40 @@ export namespace SessionStatus {
     ),
   }
 
-  export function get(sessionID: SessionID) {
+  export function get(sessionID: SessionID, directory?: string) {
     return (
-      state()[sessionID] ?? {
+      state(directory)[sessionID] ?? {
         type: "idle",
       }
     )
   }
 
-  export function list() {
-    return state()
+  export function list(directory?: string) {
+    return state(directory)
   }
 
-  export function set(sessionID: SessionID, status: Info) {
-    Bus.publish(Event.Status, {
-      sessionID,
-      status,
-    })
+  export function set(sessionID: SessionID, status: Info, directory?: string) {
+    Bus.publish(
+      Event.Status,
+      {
+        sessionID,
+        status,
+      },
+      directory,
+    )
     if (status.type === "idle") {
       // deprecated
-      Bus.publish(Event.Idle, {
-        sessionID,
-      })
-      delete state()[sessionID]
+      Bus.publish(
+        Event.Idle,
+        {
+          sessionID,
+        },
+        directory,
+      )
+      delete state(directory)[sessionID]
       return
     }
-    state()[sessionID] = status
+    state(directory)[sessionID] = status
   }
 }
 
