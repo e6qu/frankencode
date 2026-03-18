@@ -134,10 +134,12 @@ async function backupAndStripLegacy(file: string, source: string) {
     })
 }
 
-async function opencodeFiles(input: { directories: string[]; managed: string }) {
+async function opencodeFiles(input: { directories: string[]; managed: string; directory?: string; worktree?: string }) {
+  const directory = input.directory ?? Instance.directory
+  const worktree = input.worktree ?? Instance.worktree
   const project = Flag.OPENCODE_DISABLE_PROJECT_CONFIG
     ? []
-    : await ConfigPaths.projectFiles("opencode", Instance.directory, Instance.worktree)
+    : await ConfigPaths.projectFiles("opencode", directory, worktree)
   const files = [...project, ...ConfigPaths.fileInDirectory(Global.Path.config, "opencode")]
   for (const dir of unique(input.directories)) {
     files.push(...ConfigPaths.fileInDirectory(dir, "opencode"))

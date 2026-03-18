@@ -267,7 +267,7 @@ export namespace Worktree {
     return process.platform === "win32" ? normalized.toLowerCase() : normalized
   }
 
-  async function candidate(root: string, base?: string) {
+  async function candidate(root: string, worktree: string, base?: string) {
     for (const attempt of Array.from({ length: 26 }, (_, i) => i)) {
       const name = base ? (attempt === 0 ? base : `${base}-${randomName()}`) : randomName()
       const branch = `opencode/${name}`
@@ -277,7 +277,7 @@ export namespace Worktree {
 
       const ref = `refs/heads/${branch}`
       const branchCheck = await git(["show-ref", "--verify", "--quiet", ref], {
-        cwd: Instance.worktree,
+        cwd: worktree,
       })
       if (branchCheck.exitCode === 0) continue
 
@@ -335,29 +335,38 @@ export namespace Worktree {
     }, 0)
   }
 
-  export async function makeWorktreeInfo(name?: string): Promise<Info> {
-    if (Instance.project.vcs !== "git") {
+  export async function makeWorktreeInfo(
+    name?: string,
+    ctx?: { worktree: string; project: { id: ProjectID; vcs: string } },
+  ): Promise<Info> {
+    const project = ctx?.project ?? Instance.project
+    const worktree = ctx?.worktree ?? Instance.worktree
+    if (project.vcs !== "git") {
       throw new NotGitError({ message: "Worktrees are only supported for git projects" })
     }
 
-    const root = path.join(Global.Path.data, "worktree", Instance.project.id)
+    const root = path.join(Global.Path.data, "worktree", project.id)
     await fs.mkdir(root, { recursive: true })
 
     const base = name ? slug(name) : ""
-    return candidate(root, base || undefined)
+    return candidate(root, worktree, base || undefined)
   }
 
-  export async function createFromInfo(info: Info, startCommand?: string) {
+  export async function createFromInfo(
+    info: Info,
+    startCommand?: string,
+    ctx?: { worktree: string; project: { id: ProjectID } },
+  ) {
+    const worktree = ctx?.worktree ?? Instance.worktree
+    const projectID = ctx?.project?.id ?? Instance.project.id
     const created = await git(["worktree", "add", "--no-checkout", "-b", info.branch, info.directory], {
-      cwd: Instance.worktree,
+      cwd: worktree,
     })
     if (created.exitCode !== 0) {
       throw new CreateFailedError({ message: errorText(created) || "Failed to create git worktree" })
     }
 
-    await Project.addSandbox(Instance.project.id, info.directory).catch(() => undefined)
-
-    const projectID = Instance.project.id
+    await Project.addSandbox(projectID, info.directory).catch(() => undefined)
     const extra = startCommand?.trim()
 
     return () => {
@@ -432,7 +441,9 @@ export namespace Worktree {
   })
 
   export const remove = fn(RemoveInput, async (input) => {
-    if (Instance.project.vcs !== "git") {
+    const worktree = Instance.worktree
+    const project = Instance.project
+    if (project.vcs !== "git") {
       throw new NotGitError({ message: "Worktrees are only supported for git projects" })
     }
 
@@ -482,7 +493,7 @@ export namespace Worktree {
       await git(["fsmonitor--daemon", "stop"], { cwd: target })
     }
 
-    const list = await git(["worktree", "list", "--porcelain"], { cwd: Instance.worktree })
+    const list = await git(["worktree", "list", "--porcelain"], { cwd: worktree })
     if (list.exitCode !== 0) {
       throw new RemoveFailedError({ message: errorText(list) || "Failed to read git worktrees" })
     }
@@ -500,10 +511,10 @@ export namespace Worktree {
 
     await stop(entry.path)
     const removed = await git(["worktree", "remove", "--force", entry.path], {
-      cwd: Instance.worktree,
+      cwd: worktree,
     })
     if (removed.exitCode !== 0) {
-      const next = await git(["worktree", "list", "--porcelain"], { cwd: Instance.worktree })
+      const next = await git(["worktree", "list", "--porcelain"], { cwd: worktree })
       if (next.exitCode !== 0) {
         throw new RemoveFailedError({
           message: errorText(removed) || errorText(next) || "Failed to remove git worktree",
@@ -520,7 +531,7 @@ export namespace Worktree {
 
     const branch = entry.branch?.replace(/^refs\/heads\//, "")
     if (branch) {
-      const deleted = await git(["branch", "-D", branch], { cwd: Instance.worktree })
+      const deleted = await git(["branch", "-D", branch], { cwd: worktree })
       if (deleted.exitCode !== 0) {
         throw new RemoveFailedError({ message: errorText(deleted) || "Failed to delete worktree branch" })
       }
@@ -530,17 +541,19 @@ export namespace Worktree {
   })
 
   export const reset = fn(ResetInput, async (input) => {
-    if (Instance.project.vcs !== "git") {
+    const worktree = Instance.worktree
+    const project = Instance.project
+    if (project.vcs !== "git") {
       throw new NotGitError({ message: "Worktrees are only supported for git projects" })
     }
 
     const directory = await canonical(input.directory)
-    const primary = await canonical(Instance.worktree)
+    const primary = await canonical(worktree)
     if (directory === primary) {
       throw new ResetFailedError({ message: "Cannot reset the primary workspace" })
     }
 
-    const list = await git(["worktree", "list", "--porcelain"], { cwd: Instance.worktree })
+    const list = await git(["worktree", "list", "--porcelain"], { cwd: worktree })
     if (list.exitCode !== 0) {
       throw new ResetFailedError({ message: errorText(list) || "Failed to read git worktrees" })
     }
@@ -573,7 +586,7 @@ export namespace Worktree {
       throw new ResetFailedError({ message: "Worktree not found" })
     }
 
-    const remoteList = await git(["remote"], { cwd: Instance.worktree })
+    const remoteList = await git(["remote"], { cwd: worktree })
     if (remoteList.exitCode !== 0) {
       throw new ResetFailedError({ message: errorText(remoteList) || "Failed to list git remotes" })
     }
@@ -592,7 +605,7 @@ export namespace Worktree {
           : ""
 
     const remoteHead = remote
-      ? await git(["symbolic-ref", `refs/remotes/${remote}/HEAD`], { cwd: Instance.worktree })
+      ? await git(["symbolic-ref", `refs/remotes/${remote}/HEAD`], { cwd: worktree })
       : { exitCode: 1, stdout: undefined, stderr: undefined }
 
     const remoteRef = remoteHead.exitCode === 0 ? outputText(remoteHead.stdout) : ""
@@ -600,10 +613,10 @@ export namespace Worktree {
     const remoteBranch = remote && remoteTarget.startsWith(`${remote}/`) ? remoteTarget.slice(`${remote}/`.length) : ""
 
     const mainCheck = await git(["show-ref", "--verify", "--quiet", "refs/heads/main"], {
-      cwd: Instance.worktree,
+      cwd: worktree,
     })
     const masterCheck = await git(["show-ref", "--verify", "--quiet", "refs/heads/master"], {
-      cwd: Instance.worktree,
+      cwd: worktree,
     })
     const localBranch = mainCheck.exitCode === 0 ? "main" : masterCheck.exitCode === 0 ? "master" : ""
 
@@ -613,7 +626,7 @@ export namespace Worktree {
     }
 
     if (remoteBranch) {
-      const fetch = await git(["fetch", remote, remoteBranch], { cwd: Instance.worktree })
+      const fetch = await git(["fetch", remote, remoteBranch], { cwd: worktree })
       if (fetch.exitCode !== 0) {
         throw new ResetFailedError({ message: errorText(fetch) || `Failed to fetch ${target}` })
       }
@@ -664,8 +677,7 @@ export namespace Worktree {
       throw new ResetFailedError({ message: `Worktree reset left local changes:\n${dirty}` })
     }
 
-    const projectID = Instance.project.id
-    queueStartScripts(worktreePath, { projectID })
+    queueStartScripts(worktreePath, { projectID: project.id })
 
     return true
   })

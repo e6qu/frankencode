@@ -82,8 +82,8 @@ export namespace Config {
     return merged
   }
 
-  function state(): Promise<ConfigStateResult> {
-    const dir = Instance.directory
+  function state(directory?: string): Promise<ConfigStateResult> {
+    const dir = directory ?? Instance.directory
     let s = configStates.get(dir)
     if (!s) {
       s = initConfig()
@@ -93,6 +93,8 @@ export namespace Config {
   }
 
   async function initConfig(): Promise<ConfigStateResult> {
+    const directory = Instance.directory
+    const worktree = Instance.worktree
     const auth = await Auth.all()
 
     // Config loading order (low -> high precedence): https://opencode.ai/docs/config#precedence-order
@@ -139,7 +141,7 @@ export namespace Config {
 
     // Project config overrides global and remote config.
     if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
-      for (const file of await ConfigPaths.projectFiles("opencode", Instance.directory, Instance.worktree)) {
+      for (const file of await ConfigPaths.projectFiles("opencode", directory, worktree)) {
         result = mergeConfigConcatArrays(result, await loadFile(file))
       }
     }
@@ -148,7 +150,7 @@ export namespace Config {
     result.mode = result.mode || {}
     result.plugin = result.plugin || []
 
-    const directories = await ConfigPaths.directories(Instance.directory, Instance.worktree)
+    const directories = await ConfigPaths.directories(directory, worktree)
 
     // .opencode directory config overrides (project and global) config sources.
     if (Flag.OPENCODE_CONFIG_DIR) {
@@ -187,7 +189,7 @@ export namespace Config {
       result = mergeConfigConcatArrays(
         result,
         await load(process.env.OPENCODE_CONFIG_CONTENT, {
-          dir: Instance.directory,
+          dir: directory,
           source: "OPENCODE_CONFIG_CONTENT",
         }),
       )

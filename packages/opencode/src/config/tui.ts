@@ -31,8 +31,8 @@ export namespace TuiConfig {
     return Flag.OPENCODE_TUI_CONFIG
   }
 
-  function state() {
-    const dir = Instance.directory
+  function state(directory?: string) {
+    const dir = directory ?? Instance.directory
     let s = tuiStates.get(dir)
     if (!s) {
       s = initTuiConfig()
@@ -42,17 +42,19 @@ export namespace TuiConfig {
   }
 
   async function initTuiConfig() {
+    const directory = Instance.directory
+    const worktree = Instance.worktree
     let projectFiles = Flag.OPENCODE_DISABLE_PROJECT_CONFIG
       ? []
-      : await ConfigPaths.projectFiles("tui", Instance.directory, Instance.worktree)
-    const directories = await ConfigPaths.directories(Instance.directory, Instance.worktree)
+      : await ConfigPaths.projectFiles("tui", directory, worktree)
+    const directories = await ConfigPaths.directories(directory, worktree)
     const custom = customPath()
     const managed = Config.managedConfigDir()
     await migrateTuiConfig({ directories, custom, managed })
     // Re-compute after migration since migrateTuiConfig may have created new tui.json files
     projectFiles = Flag.OPENCODE_DISABLE_PROJECT_CONFIG
       ? []
-      : await ConfigPaths.projectFiles("tui", Instance.directory, Instance.worktree)
+      : await ConfigPaths.projectFiles("tui", directory, worktree)
 
     let result: Info = {}
 
