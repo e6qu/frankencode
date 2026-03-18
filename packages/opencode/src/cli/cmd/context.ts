@@ -5,7 +5,7 @@ import { UI } from "../ui"
 import { EditGraph } from "@/cas/graph"
 import { SideThread } from "@/session/side-thread"
 import { CAS } from "@/cas"
-import { Instance } from "@/project/instance"
+import { InstanceALS } from "@/project/instance-als"
 import { Session } from "@/session"
 
 export const ContextCommand = cmd({
@@ -192,7 +192,7 @@ const ContextThreadsCommand = cmd({
       }),
   handler: async (args) => {
     await bootstrap(process.cwd(), async () => {
-      const projectID = Instance.project.id
+      const projectID = InstanceALS.project.id
       const result = SideThread.list({
         projectID,
         status: args.status as any,

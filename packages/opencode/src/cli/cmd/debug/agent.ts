@@ -6,7 +6,7 @@ import { Session } from "../../../session"
 import type { MessageV2 } from "../../../session/message-v2"
 import { MessageID, PartID } from "../../../session/schema"
 import { ToolRegistry } from "../../../tool/registry"
-import { Instance } from "../../../project/instance"
+import { InstanceALS } from "../../../project/instance-als"
 import { PermissionNext } from "../../../permission/next"
 import { iife } from "../../../util/iife"
 import { bootstrap } from "../../bootstrap"
@@ -112,8 +112,8 @@ function parseToolParams(input?: string) {
 }
 
 async function createToolContext(agent: Agent.Info) {
-  const directory = Instance.directory
-  const worktree = Instance.worktree
+  const directory = InstanceALS.directory
+  const worktree = InstanceALS.worktree
   const session = await Session.create({ title: `Debug tool run (${agent.name})` })
   const messageID = MessageID.ascending()
   const model = agent.model ?? (await Provider.defaultModel())

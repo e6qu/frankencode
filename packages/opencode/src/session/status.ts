@@ -1,6 +1,6 @@
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
-import { Instance } from "@/project/instance"
+import { InstanceALS } from "@/project/instance-als"
 import { InstanceContext } from "@/effect/instance-context"
 import { SessionID } from "./schema"
 import z from "zod"
@@ -9,7 +9,7 @@ import { Effect, Layer, ServiceMap } from "effect"
 const states = new Map<string, Record<string, SessionStatus.Info>>()
 
 function state(directory?: string) {
-  const dir = directory ?? Instance.directory
+  const dir = directory ?? InstanceALS.directory
   let s = states.get(dir)
   if (!s) {
     s = {}

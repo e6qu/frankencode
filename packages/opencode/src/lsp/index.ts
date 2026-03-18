@@ -8,7 +8,7 @@ import { LSPServer } from "./server"
 import z from "zod"
 import { Config } from "../config/config"
 import { spawn } from "child_process"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { Flag } from "@/flag/flag"
 import { registerDisposer } from "@/effect/instance-registry"
 
@@ -95,7 +95,7 @@ export namespace LSP {
   }
 
   function state(directory?: string): Promise<LSPState> {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     let existing = stateMap.get(dir)
     if (existing) return existing
     existing = (async () => {
@@ -187,7 +187,7 @@ export namespace LSP {
         result.push({
           id: client.serverID,
           name: x.servers[client.serverID].id,
-          root: path.relative(Instance.directory, client.root),
+          root: path.relative(InstanceALS.directory, client.root),
           status: "connected",
         })
       }
@@ -199,8 +199,8 @@ export namespace LSP {
     const s = await state()
     const extension = path.parse(file).ext || file
     const result: LSPClient.Info[] = []
-    const directory = Instance.directory
-    const worktree = Instance.worktree
+    const directory = InstanceALS.directory
+    const worktree = InstanceALS.worktree
 
     async function schedule(server: LSPServer.Info, root: string, key: string) {
       const handle = await server
@@ -288,8 +288,8 @@ export namespace LSP {
   export async function hasClients(file: string) {
     const s = await state()
     const extension = path.parse(file).ext || file
-    const directory = Instance.directory
-    const worktree = Instance.worktree
+    const directory = InstanceALS.directory
+    const worktree = InstanceALS.worktree
     for (const server of Object.values(s.servers)) {
       if (server.extensions.length && !server.extensions.includes(extension)) continue
       const root = await server.root(file, directory, worktree)

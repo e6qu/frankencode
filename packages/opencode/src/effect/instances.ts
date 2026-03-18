@@ -6,7 +6,7 @@ import { FileTimeService } from "@/file/time"
 import { FileWatcherService } from "@/file/watcher"
 import { FormatService } from "@/format"
 import { PermissionService } from "@/permission/service"
-import { Instance } from "@/project/instance"
+import { InstanceALS } from "@/project/instance-als"
 import { VcsService } from "@/project/vcs"
 import { ProviderAuthService } from "@/provider/auth-service"
 import { QuestionService } from "@/question/service"
@@ -41,7 +41,7 @@ export type InstanceServices =
 const contextByDirectory = new Map<string, InstanceContext.Shape>()
 
 function lookup(key: string) {
-  const shape = contextByDirectory.get(key) ?? Instance.current
+  const shape = contextByDirectory.get(key) ?? InstanceALS.current
   const ctx = Layer.sync(InstanceContext, () => InstanceContext.of(shape))
   return Layer.mergeAll(
     Layer.fresh(BusService.layer),

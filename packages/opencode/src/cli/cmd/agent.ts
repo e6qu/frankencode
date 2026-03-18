@@ -8,7 +8,6 @@ import path from "path"
 import fs from "fs/promises"
 import { Filesystem } from "../../util/filesystem"
 import matter from "gray-matter"
-import { Instance } from "../../project/instance"
 import { InstanceLifecycle } from "../../project/lifecycle"
 import { InstanceALS } from "../../project/instance-als"
 import { EOL } from "os"
@@ -72,8 +71,8 @@ const AgentCreateCommand = cmd({
         prompts.intro("Create agent")
       }
 
-      const project = Instance.project
-      const worktree = Instance.worktree
+      const project = InstanceALS.project
+      const worktree = InstanceALS.worktree
 
       // Determine scope/path
       let targetPath: string

@@ -12,7 +12,7 @@ import { NamedError } from "@opencode-ai/util/error"
 import { ModelsDev } from "./models"
 import { Auth } from "../auth"
 import { Env } from "../env"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Flag } from "../flag/flag"
 import { iife } from "@/util/iife"
@@ -842,7 +842,7 @@ export namespace Provider {
   }
 
   function state(directory?: string) {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     let s = providerStates.get(dir)
     if (!s) {
       s = initProvider()

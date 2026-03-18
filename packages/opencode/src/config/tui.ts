@@ -5,7 +5,7 @@ import { Config } from "./config"
 import { ConfigPaths } from "./paths"
 import { migrateTuiConfig } from "./migrate-tui-config"
 import { TuiInfo } from "./tui-schema"
-import { Instance } from "@/project/instance"
+import { InstanceALS } from "@/project/instance-als"
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util/log"
 import { Global } from "@/global"
@@ -32,7 +32,7 @@ export namespace TuiConfig {
   }
 
   function state(directory?: string) {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     let s = tuiStates.get(dir)
     if (!s) {
       s = initTuiConfig()
@@ -42,8 +42,8 @@ export namespace TuiConfig {
   }
 
   async function initTuiConfig() {
-    const directory = Instance.directory
-    const worktree = Instance.worktree
+    const directory = InstanceALS.directory
+    const worktree = InstanceALS.worktree
     let projectFiles = Flag.OPENCODE_DISABLE_PROJECT_CONFIG
       ? []
       : await ConfigPaths.projectFiles("tui", directory, worktree)

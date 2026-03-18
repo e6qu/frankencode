@@ -13,7 +13,7 @@ import { Config } from "../config/config"
 import { Log } from "../util/log"
 import { NamedError } from "@opencode-ai/util/error"
 import z from "zod/v4"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Installation } from "../installation"
 import { withTimeout } from "@/util/timeout"
@@ -222,7 +222,7 @@ export namespace MCP {
   }
 
   function state(directory?: string): MCPState {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     let existing = stateMap.get(dir)
     if (existing) return existing
     const promise = (async () => {
@@ -467,7 +467,7 @@ export namespace MCP {
 
     if (mcp.type === "local") {
       const [cmd, ...args] = mcp.command
-      const cwd = directory ?? Instance.directory
+      const cwd = directory ?? InstanceALS.directory
       const transport = new StdioClientTransport({
         stderr: "pipe",
         command: cmd,

@@ -4,7 +4,7 @@ import { Provider } from "../provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { generateObject, streamObject, type ModelMessage } from "ai"
 import { SystemPrompt } from "../session/system"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Truncate } from "../tool/truncation"
 import { Auth } from "../auth"
@@ -61,7 +61,7 @@ export namespace Agent {
   export type Info = z.infer<typeof Info>
 
   function state(directory?: string): Promise<Record<string, Info>> {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     let s = agentStates.get(dir)
     if (!s) {
       s = initAgents()
@@ -72,7 +72,7 @@ export namespace Agent {
 
   async function initAgents(): Promise<Record<string, Info>> {
     const cfg = await Config.get()
-    const worktree = Instance.worktree
+    const worktree = InstanceALS.worktree
 
     const skillDirs = await Skill.dirs()
     const whitelistedDirs = [Truncate.GLOB, ...skillDirs.map((dir) => path.join(dir, "*"))]

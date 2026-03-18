@@ -8,7 +8,6 @@ import { MCP } from "../../mcp"
 import { McpAuth } from "../../mcp/auth"
 import { McpOAuthProvider } from "../../mcp/oauth-provider"
 import { Config } from "../../config/config"
-import { Instance } from "../../project/instance"
 import { InstanceLifecycle } from "../../project/lifecycle"
 import { InstanceALS } from "../../project/instance-als"
 import { Installation } from "../../installation"
@@ -418,8 +417,8 @@ export const McpAddCommand = cmd({
       UI.empty()
       prompts.intro("Add MCP server")
 
-      const project = Instance.project
-      const worktree = Instance.worktree
+      const project = InstanceALS.project
+      const worktree = InstanceALS.worktree
 
       // Resolve config paths eagerly for hints
       const [projectConfigPath, globalConfigPath] = await Promise.all([

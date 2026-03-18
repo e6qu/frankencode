@@ -1,5 +1,5 @@
 import { Effect, Layer, ServiceMap } from "effect"
-import { Instance } from "@/project/instance"
+import { InstanceALS } from "@/project/instance-als"
 
 export namespace TuiConfigService {
   export interface Service {
@@ -13,7 +13,7 @@ export class TuiConfigService extends ServiceMap.Service<TuiConfigService, TuiCo
   static readonly layer = Layer.effect(
     TuiConfigService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const dir = InstanceALS.directory
       const { TuiConfig, tuiStates } = yield* Effect.promise(() => import("./tui"))
       yield* Effect.promise(() => TuiConfig.get())
       yield* Effect.addFinalizer(() =>

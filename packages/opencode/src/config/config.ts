@@ -20,7 +20,6 @@ import {
   parse as parseJsonc,
   printParseErrorCode,
 } from "jsonc-parser"
-import { Instance } from "../project/instance"
 import { InstanceLifecycle } from "../project/lifecycle"
 import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
@@ -85,7 +84,7 @@ export namespace Config {
   }
 
   function state(directory?: string): Promise<ConfigStateResult> {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     let s = configStates.get(dir)
     if (!s) {
       s = initConfig()
@@ -95,8 +94,8 @@ export namespace Config {
   }
 
   async function initConfig(): Promise<ConfigStateResult> {
-    const directory = Instance.directory
-    const worktree = Instance.worktree
+    const directory = InstanceALS.directory
+    const worktree = InstanceALS.worktree
     const auth = await Auth.all()
 
     // Config loading order (low -> high precedence): https://opencode.ai/docs/config#precedence-order
@@ -1420,10 +1419,10 @@ export namespace Config {
   }
 
   export async function update(config: Info) {
-    const filepath = path.join(Instance.directory, "config.json")
+    const filepath = path.join(InstanceALS.directory, "config.json")
     const existing = await loadFile(filepath)
     await Filesystem.writeJson(filepath, mergeDeep(existing, config))
-    configStates.delete(Instance.directory)
+    configStates.delete(InstanceALS.directory)
     await InstanceLifecycle.dispose(InstanceALS.directory)
   }
 

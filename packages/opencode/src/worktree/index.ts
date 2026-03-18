@@ -3,7 +3,7 @@ import path from "path"
 import z from "zod"
 import { NamedError } from "@opencode-ai/util/error"
 import { Global } from "../global"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { InstanceLifecycle } from "../project/lifecycle"
 import { InstanceALS } from "../project/instance-als"
 import { InstanceBootstrap } from "../project/bootstrap"
@@ -341,8 +341,8 @@ export namespace Worktree {
     name?: string,
     ctx?: { worktree: string; project: { id: ProjectID; vcs: string } },
   ): Promise<Info> {
-    const project = ctx?.project ?? Instance.project
-    const worktree = ctx?.worktree ?? Instance.worktree
+    const project = ctx?.project ?? InstanceALS.project
+    const worktree = ctx?.worktree ?? InstanceALS.worktree
     if (project.vcs !== "git") {
       throw new NotGitError({ message: "Worktrees are only supported for git projects" })
     }
@@ -359,8 +359,8 @@ export namespace Worktree {
     startCommand?: string,
     ctx?: { worktree: string; project: { id: ProjectID } },
   ) {
-    const worktree = ctx?.worktree ?? Instance.worktree
-    const projectID = ctx?.project?.id ?? Instance.project.id
+    const worktree = ctx?.worktree ?? InstanceALS.worktree
+    const projectID = ctx?.project?.id ?? InstanceALS.project.id
     const created = await git(["worktree", "add", "--no-checkout", "-b", info.branch, info.directory], {
       cwd: worktree,
     })
@@ -439,8 +439,8 @@ export namespace Worktree {
   })
 
   export const remove = fn(RemoveInput, async (input) => {
-    const worktree = Instance.worktree
-    const project = Instance.project
+    const worktree = InstanceALS.worktree
+    const project = InstanceALS.project
     if (project.vcs !== "git") {
       throw new NotGitError({ message: "Worktrees are only supported for git projects" })
     }
@@ -539,8 +539,8 @@ export namespace Worktree {
   })
 
   export const reset = fn(ResetInput, async (input) => {
-    const worktree = Instance.worktree
-    const project = Instance.project
+    const worktree = InstanceALS.worktree
+    const project = InstanceALS.project
     if (project.vcs !== "git") {
       throw new NotGitError({ message: "Worktrees are only supported for git projects" })
     }

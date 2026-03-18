@@ -13,7 +13,6 @@ import { NamedError } from "@opencode-ai/util/error"
 import { LSP } from "../lsp"
 import { Format } from "../format"
 import { TuiRoutes } from "./routes/tui"
-import { Instance } from "../project/instance"
 import { InstanceLifecycle } from "../project/lifecycle"
 import { InstanceALS } from "../project/instance-als"
 import { Vcs, VcsService } from "../project/vcs"
@@ -303,8 +302,8 @@ export namespace Server {
           },
         }),
         async (c) => {
-          const directory = Instance.directory
-          const worktree = Instance.worktree
+          const directory = InstanceALS.directory
+          const worktree = InstanceALS.worktree
           return c.json({
             home: Global.Path.home,
             state: Global.Path.state,

@@ -13,7 +13,7 @@ import { Provider } from "../provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { type Tool as AITool, tool, jsonSchema, type ToolCallOptions, asSchema } from "ai"
 import { SessionCompaction } from "./compaction"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Bus } from "../bus"
 import { ProviderTransform } from "../provider/transform"
@@ -93,7 +93,7 @@ export namespace SessionPrompt {
   const log = Log.create({ service: "session.prompt" })
 
   function state(directory?: string): PromptState {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     let s = promptStates.get(dir)
     if (!s) {
       s = {}
@@ -219,7 +219,7 @@ export namespace SessionPrompt {
         seen.add(name)
         const filepath = name.startsWith("~/")
           ? path.join(os.homedir(), name.slice(2))
-          : path.resolve(worktree ?? Instance.worktree, name)
+          : path.resolve(worktree ?? InstanceALS.worktree, name)
 
         const stats = await fs.stat(filepath).catch(() => undefined)
         if (!stats) {
@@ -294,10 +294,10 @@ export namespace SessionPrompt {
     const { sessionID, resume_existing } = input
 
     // Capture instance context at loop entry
-    const _dir = Instance.directory
-    const _wt = Instance.worktree
-    const _pid = Instance.project.id
-    const _cp = Instance.containsPath
+    const _dir = InstanceALS.directory
+    const _wt = InstanceALS.worktree
+    const _pid = InstanceALS.project.id
+    const _cp = InstanceALS.containsPath
 
     const abort = resume_existing ? resume(sessionID) : start(sessionID)
     if (!abort) {
@@ -814,9 +814,9 @@ export namespace SessionPrompt {
     const tools: Record<string, AITool> = {}
 
     // Capture instance context for tool execution
-    const _directory = input.directory ?? Instance.directory
-    const _worktree = input.worktree ?? Instance.worktree
-    const _projectID = input.projectID ?? Instance.project.id
+    const _directory = input.directory ?? InstanceALS.directory
+    const _worktree = input.worktree ?? InstanceALS.worktree
+    const _projectID = input.projectID ?? InstanceALS.project.id
 
     const context = (args: any, options: ToolCallOptions): Tool.Context => ({
       sessionID: input.session.id,
@@ -1035,9 +1035,9 @@ export namespace SessionPrompt {
   }
 
   async function createUserMessage(input: PromptInput) {
-    const _dir = Instance.directory
-    const _wt = Instance.worktree
-    const _pid = Instance.project.id
+    const _dir = InstanceALS.directory
+    const _wt = InstanceALS.worktree
+    const _pid = InstanceALS.project.id
     const agent = await Agent.get(input.agent ?? (await Agent.defaultAgent()))
 
     const model = input.model ?? agent.model ?? (await lastModel(input.sessionID))
@@ -1581,8 +1581,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
   })
   export type ShellInput = z.infer<typeof ShellInput>
   export async function shell(input: ShellInput) {
-    const _dir = Instance.directory
-    const _wt = Instance.worktree
+    const _dir = InstanceALS.directory
+    const _wt = InstanceALS.worktree
     const abort = start(input.sessionID)
     if (!abort) {
       throw new Session.BusyError(input.sessionID)

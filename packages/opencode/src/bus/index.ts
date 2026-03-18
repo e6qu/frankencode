@@ -1,6 +1,6 @@
 import z from "zod"
 import { Log } from "../util/log"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { BusEvent } from "./bus-event"
 import { GlobalBus } from "./global"
 import { Effect, Layer, ServiceMap } from "effect"
@@ -10,7 +10,7 @@ type BusSubscription = (event: any) => void
 const states = new Map<string, { subscriptions: Map<any, BusSubscription[]> }>()
 
 function state(directory?: string) {
-  const dir = directory ?? Instance.directory
+  const dir = directory ?? InstanceALS.directory
   let s = states.get(dir)
   if (!s) {
     s = { subscriptions: new Map() }
@@ -35,7 +35,7 @@ export namespace Bus {
     properties: z.output<Definition["properties"]>,
     directory?: string,
   ) {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     const payload = {
       type: def.type,
       properties,

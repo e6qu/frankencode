@@ -1,5 +1,5 @@
 import { Effect, Layer, ServiceMap } from "effect"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { InstanceContext } from "../effect/instance-context"
 
 const states = new Map<string, Record<string, string | undefined>>()
@@ -23,7 +23,7 @@ export namespace Env {
 }
 
 function state(directory?: string) {
-  const dir = directory ?? Instance.directory
+  const dir = directory ?? InstanceALS.directory
   let s = states.get(dir)
   if (!s) {
     s = { ...process.env } as Record<string, string | undefined>

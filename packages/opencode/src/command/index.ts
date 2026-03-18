@@ -2,7 +2,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { SessionID, MessageID } from "@/session/schema"
 import z from "zod"
 import { Config } from "../config/config"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Identifier } from "../id/id"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
@@ -87,7 +87,7 @@ export namespace Command {
   } as const
 
   function state(directory?: string): Promise<Record<string, Info>> {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     let s = commandStates.get(dir)
     if (!s) {
       s = initCommands(dir)
@@ -98,7 +98,7 @@ export namespace Command {
 
   async function initCommands(): Promise<Record<string, Info>> {
     const cfg = await Config.get()
-    const worktree = Instance.worktree
+    const worktree = InstanceALS.worktree
 
     const result: Record<string, Info> = {
       [Default.INIT]: {

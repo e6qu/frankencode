@@ -5,7 +5,7 @@ import { Log } from "../util/log"
 import { createOpencodeClient } from "@opencode-ai/sdk"
 import { Server } from "../server/server"
 import { BunProc } from "../bun"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Flag } from "../flag/flag"
 import { CodexAuthPlugin } from "./codex"
@@ -28,7 +28,7 @@ export namespace Plugin {
   const INTERNAL_PLUGINS: PluginInstance[] = [CodexAuthPlugin, CopilotAuthPlugin, GitlabAuthPlugin]
 
   function state(directory?: string) {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     let s = pluginStates.get(dir)
     if (!s) {
       s = initPlugins(dir)
@@ -52,8 +52,8 @@ export namespace Plugin {
     const hooks: Hooks[] = []
     const input: PluginInput = {
       client,
-      project: Instance.project,
-      worktree: Instance.worktree,
+      project: InstanceALS.project,
+      worktree: InstanceALS.worktree,
       directory: dir,
       get serverUrl(): URL {
         return Server.url ?? new URL("http://localhost:4096")

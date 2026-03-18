@@ -16,7 +16,7 @@ import { ProjectTable } from "../project/project.sql"
 import { Storage } from "@/storage/storage"
 import { Log } from "../util/log"
 import { MessageV2 } from "./message-v2"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { SessionPrompt } from "./prompt"
 import { fn } from "@/util/fn"
 import { Command } from "../command"
@@ -228,8 +228,8 @@ export namespace Session {
       })
       .optional(),
     async (input) => {
-      const directory = Instance.directory
-      const projectID = Instance.project.id
+      const directory = InstanceALS.directory
+      const projectID = InstanceALS.project.id
       return createNext({
         parentID: input?.parentID,
         directory,
@@ -250,8 +250,8 @@ export namespace Session {
       const original = await get(input.sessionID)
       if (!original) throw new Error("session not found")
       const title = getForkedTitle(original.title)
-      const directory = Instance.directory
-      const projectID = Instance.project.id
+      const directory = InstanceALS.directory
+      const projectID = InstanceALS.project.id
       const session = await createNext({
         directory,
         projectID,
@@ -311,7 +311,7 @@ export namespace Session {
     permission?: PermissionNext.Ruleset
     projectID?: ProjectID
   }) {
-    const projectID = input.projectID ?? Instance.project.id
+    const projectID = input.projectID ?? InstanceALS.project.id
     const result: Info = {
       id: SessionID.descending(input.id),
       slug: Slug.create(),
@@ -356,8 +356,8 @@ export namespace Session {
   }
 
   export function plan(input: { slug: string; time: { created: number }; worktree?: string; vcs?: string }) {
-    const vcs = input.vcs ?? Instance.project.vcs
-    const worktree = input.worktree ?? Instance.worktree
+    const vcs = input.vcs ?? InstanceALS.project.vcs
+    const worktree = input.worktree ?? InstanceALS.worktree
     const base = vcs ? path.join(worktree, ".opencode", "plans") : path.join(Global.Path.data, "plans")
     return path.join(base, [input.time.created, input.slug].join("-") + ".md")
   }
@@ -564,7 +564,7 @@ export namespace Session {
     limit?: number
     project?: { id: ProjectID }
   }) {
-    const project = input?.project ?? Instance.project
+    const project = input?.project ?? InstanceALS.project
     const conditions = [eq(SessionTable.project_id, project.id)]
 
     if (WorkspaceContext.workspaceID) {
@@ -669,7 +669,7 @@ export namespace Session {
   }
 
   export const children = fn(SessionID.zod, async (parentID) => {
-    const project = Instance.project
+    const project = InstanceALS.project
     const rows = Database.use((db) =>
       db
         .select()

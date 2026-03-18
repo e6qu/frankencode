@@ -6,7 +6,7 @@ import { File } from "../file"
 import { Project } from "./project"
 import { Bus } from "../bus"
 import { Command } from "../command"
-import { Instance } from "./instance"
+import { InstanceALS } from "./instance-als"
 import { VcsService } from "./vcs"
 import { Log } from "@/util/log"
 import { ShareNext } from "@/share/share-next"
@@ -27,8 +27,8 @@ function ensureTruncateCleanup() {
 }
 
 export async function InstanceBootstrap() {
-  const directory = Instance.directory
-  const projectID = Instance.project.id
+  const directory = InstanceALS.directory
+  const projectID = InstanceALS.project.id
   Log.Default.info("bootstrapping", { directory })
   await Plugin.init()
   ShareNext.init()

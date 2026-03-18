@@ -2,7 +2,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Session } from "."
 import { SessionID, MessageID, PartID } from "./schema"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { Provider } from "../provider/provider"
 import { MessageV2 } from "./message-v2"
 import z from "zod"
@@ -149,8 +149,8 @@ export namespace SessionCompaction {
       variant: userMessage.variant,
       summary: true,
       path: {
-        cwd: input.directory ?? Instance.directory,
-        root: input.worktree ?? Instance.worktree,
+        cwd: input.directory ?? InstanceALS.directory,
+        root: input.worktree ?? InstanceALS.worktree,
       },
       cost: 0,
       tokens: {

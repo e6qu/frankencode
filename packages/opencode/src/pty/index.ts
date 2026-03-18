@@ -3,7 +3,7 @@ import { Bus } from "@/bus"
 import { type IPty } from "bun-pty"
 import z from "zod"
 import { Log } from "../util/log"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { lazy } from "@opencode-ai/util/lazy"
 import { Shell } from "@/shell/shell"
@@ -115,7 +115,7 @@ export namespace Pty {
   }
 
   function state(directory?: string) {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     let sessions = stateMap.get(dir)
     if (!sessions) {
       sessions = new Map<PtyID, ActiveSession>()
@@ -140,7 +140,7 @@ export namespace Pty {
       args.push("-l")
     }
 
-    const directory = Instance.directory
+    const directory = InstanceALS.directory
     const cwd = input.cwd || directory
     const shellEnv = await Plugin.trigger("shell.env", { cwd }, { env: {} })
     const env = {

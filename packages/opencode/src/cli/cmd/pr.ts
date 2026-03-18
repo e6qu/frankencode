@@ -1,6 +1,5 @@
 import { UI } from "../ui"
 import { cmd } from "./cmd"
-import { Instance } from "@/project/instance"
 import { InstanceLifecycle } from "../../project/lifecycle"
 import { InstanceALS } from "../../project/instance-als"
 import { Process } from "@/util/process"
@@ -18,8 +17,8 @@ export const PrCommand = cmd({
   async handler(args) {
     const ctx = await InstanceLifecycle.boot(process.cwd())
     return InstanceALS.run(ctx, async () => {
-      const project = Instance.project
-      const worktree = Instance.worktree
+      const project = InstanceALS.project
+      const worktree = InstanceALS.worktree
       if (project.vcs !== "git") {
         UI.error("Could not find git repository. Please run this command from a git repository.")
         process.exit(1)

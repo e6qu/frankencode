@@ -6,7 +6,7 @@ import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
 import { Database } from "../../storage/db"
 import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
-import { Instance } from "../../project/instance"
+import { InstanceALS } from "../../project/instance-als"
 import { ShareNext } from "../../share/share-next"
 import { EOL } from "os"
 import { Filesystem } from "../../util/filesystem"
@@ -153,7 +153,7 @@ export const ImportCommand = cmd({
         return
       }
 
-      const projectID = Instance.project.id
+      const projectID = InstanceALS.project.id
       const info = Session.Info.parse({
         ...exportData.info,
         projectID,

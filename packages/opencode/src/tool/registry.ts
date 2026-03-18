@@ -14,7 +14,7 @@ import { InvalidTool } from "./invalid"
 import { SkillTool } from "./skill"
 import type { Agent } from "../agent/agent"
 import { Tool } from "./tool"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Config } from "../config/config"
 import path from "path"
@@ -53,7 +53,7 @@ export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
 
   function state(directory?: string) {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     let s = toolRegistryStates.get(dir)
     if (!s) {
       s = initRegistry()
@@ -198,8 +198,8 @@ export namespace ToolRegistry {
         })
         .map(async (t) => {
           using _ = log.time(t.id)
-          const dir = Instance.directory
-          const wt = Instance.worktree
+          const dir = InstanceALS.directory
+          const wt = InstanceALS.worktree
           const tool = await t.init({ agent, directory: dir, worktree: wt })
           const output = {
             description: tool.description,

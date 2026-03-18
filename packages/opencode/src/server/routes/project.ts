@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { describeRoute, validator } from "hono-openapi"
 import { resolver } from "hono-openapi"
-import { Instance } from "../../project/instance"
+import { InstanceALS } from "../../project/instance-als"
 import { InstanceLifecycle } from "../../project/lifecycle"
 import { Project } from "../../project/project"
 import z from "zod"
@@ -52,7 +52,7 @@ export const ProjectRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        const project = Instance.project
+        const project = InstanceALS.project
         return c.json(project)
       },
     )
@@ -74,8 +74,8 @@ export const ProjectRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        const dir = Instance.directory
-        const prev = Instance.project
+        const dir = InstanceALS.directory
+        const prev = InstanceALS.project
         const next = await Project.initGit({
           directory: dir,
           project: prev,

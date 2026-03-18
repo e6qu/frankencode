@@ -19,7 +19,6 @@ import type {
 import { UI } from "../ui"
 import { cmd } from "./cmd"
 import { ModelsDev } from "../../provider/models"
-import { Instance } from "@/project/instance"
 import { InstanceLifecycle } from "../../project/lifecycle"
 import { InstanceALS } from "../../project/instance-als"
 import { bootstrap } from "../bootstrap"
@@ -251,8 +250,8 @@ export const GithubInstallCommand = cmd({
         }
 
         async function getAppInfo() {
-          const project = Instance.project
-          const worktree = Instance.worktree
+          const project = InstanceALS.project
+          const worktree = InstanceALS.worktree
           if (project.vcs !== "git") {
             prompts.log.error(`Could not find git repository. Please run this command from a git repository.`)
             throw new UI.CancelledError()
@@ -496,7 +495,7 @@ export const GithubRunCommand = cmd({
           ? "pr_review"
           : "issue"
         : undefined
-      const worktree = Instance.worktree
+      const worktree = InstanceALS.worktree
       const gitText = async (args: string[]) => {
         const result = await git(args, { cwd: worktree })
         if (result.exitCode !== 0) {

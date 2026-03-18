@@ -5,7 +5,7 @@ import { bootstrap } from "../bootstrap"
 import { Database } from "../../storage/db"
 import { SessionTable } from "../../session/session.sql"
 import { Project } from "../../project/project"
-import { Instance } from "../../project/instance"
+import { InstanceALS } from "../../project/instance-als"
 
 interface SessionStats {
   totalSessions: number
@@ -84,7 +84,7 @@ export const StatsCommand = cmd({
 })
 
 async function getCurrentProject(): Promise<Project.Info> {
-  const project = Instance.project
+  const project = InstanceALS.project
   return project
 }
 

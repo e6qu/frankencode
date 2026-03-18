@@ -3,7 +3,7 @@ import os from "os"
 import { Global } from "../global"
 import { Filesystem } from "../util/filesystem"
 import { Config } from "../config/config"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { Flag } from "@/flag/flag"
 import { Log } from "../util/log"
 import { Glob } from "../util/glob"
@@ -33,7 +33,7 @@ function globalFiles() {
 
 async function resolveRelative(instruction: string, directory?: string, worktree?: string): Promise<string[]> {
   if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
-    return Filesystem.globUp(instruction, directory ?? Instance.directory, worktree ?? Instance.worktree).catch(
+    return Filesystem.globUp(instruction, directory ?? InstanceALS.directory, worktree ?? InstanceALS.worktree).catch(
       () => [],
     )
   }
@@ -49,7 +49,7 @@ async function resolveRelative(instruction: string, directory?: string, worktree
 const states = new Map<string, { claims: Map<string, Set<string>> }>()
 
 function state(directory?: string) {
-  const dir = directory ?? Instance.directory
+  const dir = directory ?? InstanceALS.directory
   let s = states.get(dir)
   if (!s) {
     s = { claims: new Map() }
@@ -80,8 +80,8 @@ export namespace InstructionPrompt {
   }
 
   export async function systemPaths(directory?: string, worktree?: string) {
-    const dir = directory ?? Instance.directory
-    const wt = worktree ?? Instance.worktree
+    const dir = directory ?? InstanceALS.directory
+    const wt = worktree ?? InstanceALS.worktree
     const config = await Config.get()
     const paths = new Set<string>()
 
@@ -183,7 +183,7 @@ export namespace InstructionPrompt {
     messageID: string,
     directory?: string,
   ) {
-    const dir = directory ?? Instance.directory
+    const dir = directory ?? InstanceALS.directory
     const system = await systemPaths(dir)
     const already = loaded(messages)
     const results: { filepath: string; content: string }[] = []

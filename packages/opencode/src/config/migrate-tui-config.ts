@@ -4,7 +4,7 @@ import { unique } from "remeda"
 import z from "zod"
 import { ConfigPaths } from "./paths"
 import { TuiInfo, TuiOptions } from "./tui-schema"
-import { Instance } from "@/project/instance"
+import { InstanceALS } from "@/project/instance-als"
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util/log"
 import { Filesystem } from "@/util/filesystem"
@@ -135,8 +135,8 @@ async function backupAndStripLegacy(file: string, source: string) {
 }
 
 async function opencodeFiles(input: { directories: string[]; managed: string; directory?: string; worktree?: string }) {
-  const directory = input.directory ?? Instance.directory
-  const worktree = input.worktree ?? Instance.worktree
+  const directory = input.directory ?? InstanceALS.directory
+  const worktree = input.worktree ?? InstanceALS.worktree
   const project = Flag.OPENCODE_DISABLE_PROJECT_CONFIG
     ? []
     : await ConfigPaths.projectFiles("opencode", directory, worktree)
