@@ -1,14 +1,15 @@
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Instance } from "@/project/instance"
+import { InstanceContext } from "@/effect/instance-context"
 import { SessionID } from "./schema"
 import z from "zod"
 import { Effect, Layer, ServiceMap } from "effect"
 
 const states = new Map<string, Record<string, SessionStatus.Info>>()
 
-function state() {
-  const dir = Instance.directory
+function state(directory?: string) {
+  const dir = directory ?? Instance.directory
   let s = states.get(dir)
   if (!s) {
     s = {}
@@ -98,7 +99,8 @@ export class SessionStatusService extends ServiceMap.Service<SessionStatusServic
   static readonly layer = Layer.effect(
     SessionStatusService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const ctx = yield* InstanceContext
+      const dir = ctx.directory
       let data = states.get(dir)
       if (!data) {
         data = {}

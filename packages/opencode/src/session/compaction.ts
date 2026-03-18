@@ -110,6 +110,8 @@ export namespace SessionCompaction {
     abort: AbortSignal
     auto: boolean
     overflow?: boolean
+    directory?: string
+    worktree?: string
   }) {
     const userMessage = input.messages.findLast((m) => m.info.id === input.parentID)!.info as MessageV2.User
 
@@ -147,8 +149,8 @@ export namespace SessionCompaction {
       variant: userMessage.variant,
       summary: true,
       path: {
-        cwd: Instance.directory,
-        root: Instance.worktree,
+        cwd: input.directory ?? Instance.directory,
+        root: input.worktree ?? Instance.worktree,
       },
       cost: 0,
       tokens: {
