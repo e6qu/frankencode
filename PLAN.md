@@ -1,8 +1,8 @@
 # Frankencode Feature Roadmap
 
-> **Frankencode** is a fork of [OpenCode](https://github.com/anomalyco/opencode) (`dev` branch) that adds surgical, reversible, agent-driven context editing with content-addressable storage and a conversation history graph.
+> **Frankencode** is a fork of [OpenCode](https://github.com/anomalyco/opencode) (`dev` branch) that adds context editing, content-addressable storage, and an edit graph.
 
-**Status (2026-03-18):** All features implemented. 40 bugs fixed. Upstream fully synced. Effect-ification B1-B10c complete (144 of 221 Instance refs remain — all deep construction sites use locals, Effect layers use InstanceContext). 1423 tests passing. See `STATUS.md` for current state, `DO_NEXT.md` for what's next.
+**Status (2026-03-19):** Features implemented. 40 bugs fixed. Upstream synced. Effect-ification B1-B10g done — Instance split into InstanceALS, InstanceLifecycle, InstanceContext. No `src/` code imports Instance (test-only shim). 1423 tests passing. See `STATUS.md`, `DO_NEXT.md`.
 
 ---
 
@@ -99,5 +99,8 @@ These appear as "deletions" in `git diff dev..upstream/dev` because upstream nev
 | Upstream Full Rebase (Phase 4) | ✅ Complete (#19) |
 | Effect-ification B1 (state maps) | ✅ Complete (#20) |
 | Effect-ification B2-B8 | ✅ Complete (on branch) |
-| Effect-ification B9 (server+CLI) | ⬜ Next |
-| Effect-ification B10 (ALS elimination) | ⬜ After B9 |
+| Effect-ification B9 (server+CLI) | ✅ Complete (on branch) |
+| Effect-ification B10a-c (Effect runtime + service layers + prompt) | ✅ Complete (on branch) |
+| Effect-ification B10d-e (prompt/status/compaction threading) | ✅ Complete (on branch) |
+| Effect-ification B10f (InstanceLifecycle module) | ✅ Complete (on branch) |
+| Effect-ification B10g (Instance → test-only shim) | ✅ Complete (on branch) |

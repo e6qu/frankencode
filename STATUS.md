@@ -1,19 +1,19 @@
 # Frankencode — Project Status
 
-**Date:** 2026-03-18
+**Date:** 2026-03-19
 **Upstream:** `anomalyco/opencode` @ `dev`
 **Fork:** `e6qu/frankencode` @ `dev`
 
 ## Overview
 
-Frankencode is a fork of OpenCode that adds surgical, reversible, agent-driven context editing with content-addressable storage and a conversation history graph. All 4 planned feature phases are implemented. Upstream sync is complete. Effect-ification is in progress — stages B1-B10c complete (entry points parameterized, Effect layers use InstanceContext, prompt construction sites use locals). 144 Instance refs remain (43 ALS fallbacks, 25 provide/dispose, 14 captures, 6 self-refs in instance.ts). B10d-g (fallback removal, Instance.provide replacement, Instance deletion) remain.
+Frankencode is a fork of OpenCode that adds context editing, CAS, and an edit graph. Effect-ification B1-B10g done — Instance split into InstanceALS, InstanceLifecycle, InstanceContext. No `src/` code imports Instance (test-only shim remains). Remaining: migrate 67 test files off Instance shim, eliminate `?? InstanceALS.x` fallback patterns, add TUI component tests.
 
 ## Branch Status
 
 | Branch | Status | PR |
 |--------|--------|----|
 | `dev` | Main development branch | — |
-| `effect/complete-effectification` | Effect-ification B2-B8 complete, B9-B10 in progress | Pending PR to `dev` |
+| `effect/complete-effectification` | Effect-ification B1-B10g complete, Instance is test-only shim | Pending PR to `dev` |
 | `fix/code-review-bugs` | 16 bug fixes + 25 tests | [#12](https://github.com/e6qu/frankencode/pull/12) (merged) |
 | `fix/upstream-backports-p1` | Phase 1: 9 upstream bug fixes (B1-B9) | [#16](https://github.com/e6qu/frankencode/pull/16) (merged) |
 | `fix/upstream-backports-p2` | Phase 2: 6 upstream bug fixes (B10-B16) | [#17](https://github.com/e6qu/frankencode/pull/17) (merged) |
@@ -42,9 +42,10 @@ The `Instance` singleton uses AsyncLocalStorage (ALS) for per-directory context.
 | B9 | Server + CLI entry points | ~20 files | **Done** |
 | B10a-b | Effect runtime + service-layers | 3 files | **Done** |
 | B10c | prompt.ts construction sites | 1 file | **Done** |
-| B10d | ALS fallback removal | ~15 files | Not started |
-| B10e-f | Instance.provide/dispose replacement | ~20 files | Not started |
-| B10g | Delete Instance module | ~50 files | Not started |
+| B10d | ALS fallback removal | ~15 files | **Done** |
+| B10e | prompt/status/compaction threading | 3 files | **Done** |
+| B10f | InstanceLifecycle module | 2 files | **Done** |
+| B10g | Instance → test-only shim | ~50 files | **Done** |
 
 ### Modules fully Instance-free:
 - `skill/scripts.ts`, `format/formatter.ts`, `file/watcher.ts`, `file/index.ts`, `project/vcs.ts`, `format/index.ts`, `lsp/server.ts`, `lsp/client.ts`
