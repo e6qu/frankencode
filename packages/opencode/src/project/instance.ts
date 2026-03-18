@@ -1,3 +1,8 @@
+/**
+ * @deprecated Use InstanceALS for context reads and InstanceLifecycle for
+ * boot/dispose/reload. This module exists only as a compatibility shim
+ * for test code. No src/ code imports this module.
+ */
 import { InstanceALS } from "./instance-als"
 import { InstanceLifecycle } from "./lifecycle"
 import type { Project } from "./project"
@@ -31,8 +36,7 @@ export const Instance = {
     return InstanceLifecycle.reload(input)
   },
   async dispose() {
-    const directory = Instance.directory
-    return InstanceLifecycle.dispose(directory)
+    return InstanceLifecycle.dispose(InstanceALS.directory)
   },
   async disposeAll() {
     return InstanceLifecycle.disposeAll()
