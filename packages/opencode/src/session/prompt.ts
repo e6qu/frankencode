@@ -92,8 +92,8 @@ registerDisposer(async (directory) => {
 export namespace SessionPrompt {
   const log = Log.create({ service: "session.prompt" })
 
-  function state(): PromptState {
-    const dir = Instance.directory
+  function state(directory?: string): PromptState {
+    const dir = directory ?? Instance.directory
     let s = promptStates.get(dir)
     if (!s) {
       s = {}
@@ -203,7 +203,7 @@ export namespace SessionPrompt {
     return loop({ sessionID: input.sessionID })
   })
 
-  export async function resolvePromptParts(template: string): Promise<PromptInput["parts"]> {
+  export async function resolvePromptParts(template: string, worktree?: string): Promise<PromptInput["parts"]> {
     const parts: PromptInput["parts"] = [
       {
         type: "text",
@@ -219,7 +219,7 @@ export namespace SessionPrompt {
         seen.add(name)
         const filepath = name.startsWith("~/")
           ? path.join(os.homedir(), name.slice(2))
-          : path.resolve(Instance.worktree, name)
+          : path.resolve(worktree ?? Instance.worktree, name)
 
         const stats = await fs.stat(filepath).catch(() => undefined)
         if (!stats) {
@@ -292,6 +292,12 @@ export namespace SessionPrompt {
   })
   export const loop = fn(LoopInput, async (input) => {
     const { sessionID, resume_existing } = input
+
+    // Capture instance context at loop entry
+    const _dir = Instance.directory
+    const _wt = Instance.worktree
+    const _pid = Instance.project.id
+    const _cp = Instance.containsPath
 
     const abort = resume_existing ? resume(sessionID) : start(sessionID)
     if (!abort) {
@@ -384,8 +390,8 @@ export namespace SessionPrompt {
           agent: task.agent,
           variant: lastUser.variant,
           path: {
-            cwd: Instance.directory,
-            root: Instance.worktree,
+            cwd: _dir,
+            root: _wt,
           },
           cost: 0,
           tokens: {
@@ -445,10 +451,10 @@ export namespace SessionPrompt {
           callID: part.callID,
           extra: { bypassAgentCheck: true },
           messages: msgs,
-          directory: Instance.directory,
-          worktree: Instance.worktree,
-          projectID: Instance.project.id,
-          containsPath: Instance.containsPath,
+          directory: _dir,
+          worktree: _wt,
+          projectID: _pid,
+          containsPath: _cp,
           async metadata(input) {
             part = (await Session.updatePart({
               ...part,
@@ -600,8 +606,8 @@ export namespace SessionPrompt {
           agent: agent.name,
           variant: lastUser.variant,
           path: {
-            cwd: Instance.directory,
-            root: Instance.worktree,
+            cwd: _dir,
+            root: _wt,
           },
           cost: 0,
           tokens: {
@@ -692,7 +698,7 @@ export namespace SessionPrompt {
         const parts: string[] = []
         const objective = await Objective.get(sessionID)
         if (objective) parts.push(`**Objective:** ${objective}`)
-        const { threads } = SideThread.list({ projectID: Instance.project.id, status: "parked" })
+        const { threads } = SideThread.list({ projectID: _pid, status: "parked" })
         if (threads.length > 0) {
           parts.push(`**Parked side threads (${threads.length}):**`)
           for (const t of threads.slice(0, 5)) {
@@ -796,14 +802,17 @@ export namespace SessionPrompt {
     processor: SessionProcessor.Info
     bypassAgentCheck: boolean
     messages: MessageV2.WithParts[]
+    directory?: string
+    worktree?: string
+    projectID?: string
   }) {
     using _ = log.time("resolveTools")
     const tools: Record<string, AITool> = {}
 
     // Capture instance context for tool execution
-    const _directory = Instance.directory
-    const _worktree = Instance.worktree
-    const _projectID = Instance.project.id
+    const _directory = input.directory ?? Instance.directory
+    const _worktree = input.worktree ?? Instance.worktree
+    const _projectID = input.projectID ?? Instance.project.id
 
     const context = (args: any, options: ToolCallOptions): Tool.Context => ({
       sessionID: input.session.id,
@@ -1022,6 +1031,9 @@ export namespace SessionPrompt {
   }
 
   async function createUserMessage(input: PromptInput) {
+    const _dir = Instance.directory
+    const _wt = Instance.worktree
+    const _pid = Instance.project.id
     const agent = await Agent.get(input.agent ?? (await Agent.defaultAgent()))
 
     const model = input.model ?? agent.model ?? (await lastModel(input.sessionID))
@@ -1223,10 +1235,14 @@ export namespace SessionPrompt {
                       messageID: info.id,
                       extra: { bypassCwdCheck: true, model },
                       messages: [],
-                      directory: Instance.directory,
-                      worktree: Instance.worktree,
-                      projectID: Instance.project.id,
-                      containsPath: Instance.containsPath,
+                      directory: _dir,
+                      worktree: _wt,
+                      projectID: _pid,
+                      containsPath(filepath: string) {
+                        if (Filesystem.contains(_dir, filepath)) return true
+                        if (_wt === "/") return false
+                        return Filesystem.contains(_wt, filepath)
+                      },
                       metadata: async () => {},
                       ask: async () => {},
                     }
@@ -1286,10 +1302,14 @@ export namespace SessionPrompt {
                   messageID: info.id,
                   extra: { bypassCwdCheck: true },
                   messages: [],
-                  directory: Instance.directory,
-                  worktree: Instance.worktree,
-                  projectID: Instance.project.id,
-                  containsPath: Instance.containsPath,
+                  directory: _dir,
+                  worktree: _wt,
+                  projectID: _pid,
+                  containsPath(filepath: string) {
+                    if (Filesystem.contains(_dir, filepath)) return true
+                    if (_wt === "/") return false
+                    return Filesystem.contains(_wt, filepath)
+                  },
                   metadata: async () => {},
                   ask: async () => {},
                 }
@@ -1553,6 +1573,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
   })
   export type ShellInput = z.infer<typeof ShellInput>
   export async function shell(input: ShellInput) {
+    const _dir = Instance.directory
+    const _wt = Instance.worktree
     const abort = start(input.sessionID)
     if (!abort) {
       throw new Session.BusyError(input.sessionID)
@@ -1609,8 +1631,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       agent: input.agent,
       cost: 0,
       path: {
-        cwd: Instance.directory,
-        root: Instance.worktree,
+        cwd: _dir,
+        root: _wt,
       },
       time: {
         created: Date.now(),
@@ -1699,7 +1721,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     const matchingInvocation = invocations[shellName] ?? invocations[""]
     const args = matchingInvocation?.args
 
-    const cwd = Instance.directory
+    const cwd = _dir
     const shellEnv = await Plugin.trigger(
       "shell.env",
       { cwd, sessionID: input.sessionID, callID: part.callID },
