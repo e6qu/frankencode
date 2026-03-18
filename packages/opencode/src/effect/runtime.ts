@@ -9,8 +9,9 @@ export const runtime = ManagedRuntime.make(
   Layer.mergeAll(AccountService.defaultLayer, Instances.layer).pipe(Layer.provideMerge(AuthService.defaultLayer)),
 )
 
-export function runPromiseInstance<A, E>(effect: Effect.Effect<A, E, InstanceServices>) {
-  return runtime.runPromise(effect.pipe(Effect.provide(Instances.get(Instance.directory))))
+export function runPromiseInstance<A, E>(effect: Effect.Effect<A, E, InstanceServices>, directory?: string) {
+  const dir = directory ?? Instance.directory
+  return runtime.runPromise(effect.pipe(Effect.provide(Instances.get(dir))))
 }
 
 export function disposeRuntime() {

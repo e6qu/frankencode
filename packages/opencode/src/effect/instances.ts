@@ -35,14 +35,14 @@ export type InstanceServices =
   | SessionStatusService
   | InstructionService
 
-// NOTE: LayerMap only passes the key (directory string) to lookup, but we need
-// the full instance context (directory, worktree, project). We read from the
-// legacy Instance ALS here, which is safe because lookup is only triggered via
-// runPromiseInstance -> Instances.get, which always runs inside Instance.provide.
-// This should go away once the old Instance type is removed and lookup can load
-// the full context directly.
-function lookup(_key: string) {
-  const ctx = Layer.sync(InstanceContext, () => InstanceContext.of(Instance.current))
+// Side map: stores full InstanceContext.Shape per directory so the LayerMap
+// lookup function can create InstanceContext without touching the ALS.
+// Populated by Instances.get() before the first lookup for a given directory.
+const contextByDirectory = new Map<string, InstanceContext.Shape>()
+
+function lookup(key: string) {
+  const shape = contextByDirectory.get(key) ?? Instance.current
+  const ctx = Layer.sync(InstanceContext, () => InstanceContext.of(shape))
   return Layer.mergeAll(
     Layer.fresh(BusService.layer),
     Layer.fresh(EnvService.layer),
@@ -76,11 +76,13 @@ export class Instances extends ServiceMap.Service<Instances, LayerMap.LayerMap<s
     }),
   )
 
-  static get(directory: string): Layer.Layer<InstanceServices, never, Instances> {
+  static get(directory: string, context?: InstanceContext.Shape): Layer.Layer<InstanceServices, never, Instances> {
+    if (context) contextByDirectory.set(directory, context)
     return Layer.unwrap(Instances.use((map) => Effect.succeed(map.get(directory))))
   }
 
   static invalidate(directory: string): Effect.Effect<void, never, Instances> {
+    contextByDirectory.delete(directory)
     return Instances.use((map) => map.invalidate(directory))
   }
 }

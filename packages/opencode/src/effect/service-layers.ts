@@ -11,7 +11,7 @@
  */
 
 import { Effect, Layer, ServiceMap } from "effect"
-import { Instance } from "@/project/instance"
+import { InstanceContext } from "./instance-context"
 
 // Type-only imports for service interfaces (erased at runtime, no circular dep impact)
 import type { Config } from "@/config/config"
@@ -35,7 +35,7 @@ export class ConfigService extends ServiceMap.Service<ConfigService, ConfigServi
   static readonly layer = Layer.effect(
     ConfigService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const { directory: dir } = yield* InstanceContext
       const { Config, configStates } = yield* Effect.promise(() => import("@/config/config"))
       yield* Effect.promise(() => Config.get())
       yield* Effect.addFinalizer(() =>
@@ -64,7 +64,7 @@ export class PluginService extends ServiceMap.Service<PluginService, PluginServi
   static readonly layer = Layer.effect(
     PluginService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const { directory: dir } = yield* InstanceContext
       const { Plugin, pluginStates } = yield* Effect.promise(() => import("@/plugin"))
       yield* Effect.promise(() => Plugin.init())
       yield* Effect.addFinalizer(() =>
@@ -95,7 +95,7 @@ export class ToolRegistryService extends ServiceMap.Service<ToolRegistryService,
   static readonly layer = Layer.effect(
     ToolRegistryService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const { directory: dir } = yield* InstanceContext
       const { ToolRegistry, toolRegistryStates } = yield* Effect.promise(() => import("@/tool/registry"))
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => {
@@ -123,7 +123,7 @@ export class AgentService extends ServiceMap.Service<AgentService, AgentService.
   static readonly layer = Layer.effect(
     AgentService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const { directory: dir } = yield* InstanceContext
       const { Agent, agentStates } = yield* Effect.promise(() => import("@/agent/agent"))
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => {
@@ -151,7 +151,7 @@ export class CommandService extends ServiceMap.Service<CommandService, CommandSe
   static readonly layer = Layer.effect(
     CommandService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const { directory: dir } = yield* InstanceContext
       const { Command, commandStates } = yield* Effect.promise(() => import("@/command"))
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => {
@@ -181,7 +181,7 @@ export class ProviderService extends ServiceMap.Service<ProviderService, Provide
   static readonly layer = Layer.effect(
     ProviderService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const { directory: dir } = yield* InstanceContext
       const { Provider, providerStates } = yield* Effect.promise(() => import("@/provider/provider"))
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => {
@@ -209,7 +209,7 @@ export class PromptService extends ServiceMap.Service<PromptService, PromptServi
   static readonly layer = Layer.effect(
     PromptService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const { directory: dir } = yield* InstanceContext
       const { promptStates } = yield* Effect.promise(() => import("@/session/prompt"))
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => {
@@ -243,7 +243,7 @@ export class PtyService extends ServiceMap.Service<PtyService, PtyService.Servic
   static readonly layer = Layer.effect(
     PtyService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const { directory: dir } = yield* InstanceContext
       const { Pty, ptyStateMap } = yield* Effect.promise(() => import("@/pty"))
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => {
@@ -287,7 +287,7 @@ export class LspService extends ServiceMap.Service<LspService, LspService.Servic
   static readonly layer = Layer.effect(
     LspService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const { directory: dir } = yield* InstanceContext
       const { LSP, lspStateMap } = yield* Effect.promise(() => import("@/lsp"))
       yield* Effect.promise(() => LSP.init())
       yield* Effect.addFinalizer(() =>
@@ -321,7 +321,7 @@ export class McpService extends ServiceMap.Service<McpService, McpService.Servic
   static readonly layer = Layer.effect(
     McpService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const { directory: dir } = yield* InstanceContext
       const { MCP, mcpStateMap, descendants } = yield* Effect.promise(() => import("@/mcp"))
       yield* Effect.addFinalizer(() =>
         Effect.promise(async () => {
