@@ -17,6 +17,10 @@ const ctx = {
   agent: "build",
   abort: AbortSignal.any([]),
   messages: [],
+  get directory() { return Instance.directory },
+  get worktree() { return Instance.worktree },
+  get projectID() { return Instance.project.id },
+  containsPath: (fp: string) => Instance.containsPath(fp),
   metadata: () => {},
   ask: async () => {},
 }

@@ -13,6 +13,10 @@ const baseCtx: Omit<Tool.Context, "ask"> = {
   agent: "build",
   abort: AbortSignal.any([]),
   messages: [],
+  directory: "",
+  worktree: "",
+  projectID: "",
+  containsPath: (fp: string) => Instance.containsPath(fp),
   metadata: () => {},
 }
 

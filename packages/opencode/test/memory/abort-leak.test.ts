@@ -13,6 +13,10 @@ const ctx = {
   agent: "build",
   abort: new AbortController().signal,
   messages: [],
+  directory: "",
+  worktree: "",
+  projectID: "",
+  containsPath: () => true,
   metadata: () => {},
   ask: async () => {},
 }

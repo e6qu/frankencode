@@ -1,6 +1,5 @@
 import { Tool } from "./tool"
 import { SideThread } from "@/session/side-thread"
-import { Instance } from "@/project/instance"
 import z from "zod"
 
 export const ThreadListTool = Tool.define("thread_list", {
@@ -15,9 +14,9 @@ export const ThreadListTool = Tool.define("thread_list", {
     offset: z.number().min(0).default(0).describe("Offset for pagination"),
   }),
 
-  async execute(args, _ctx) {
+  async execute(args, ctx) {
     const result = SideThread.list({
-      projectID: Instance.project.id,
+      projectID: ctx.projectID,
       status: args.status as any,
       limit: args.limit,
       offset: args.offset,

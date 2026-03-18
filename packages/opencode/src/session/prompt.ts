@@ -445,6 +445,10 @@ export namespace SessionPrompt {
           callID: part.callID,
           extra: { bypassAgentCheck: true },
           messages: msgs,
+          directory: Instance.directory,
+          worktree: Instance.worktree,
+          projectID: Instance.project.id,
+          containsPath: Instance.containsPath,
           async metadata(input) {
             part = (await Session.updatePart({
               ...part,
@@ -796,6 +800,11 @@ export namespace SessionPrompt {
     using _ = log.time("resolveTools")
     const tools: Record<string, AITool> = {}
 
+    // Capture instance context for tool execution
+    const _directory = Instance.directory
+    const _worktree = Instance.worktree
+    const _projectID = Instance.project.id
+
     const context = (args: any, options: ToolCallOptions): Tool.Context => ({
       sessionID: input.session.id,
       abort: options.abortSignal!,
@@ -804,6 +813,14 @@ export namespace SessionPrompt {
       extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck },
       agent: input.agent.name,
       messages: input.messages,
+      directory: _directory,
+      worktree: _worktree,
+      projectID: _projectID,
+      containsPath(filepath: string) {
+        if (Filesystem.contains(_directory, filepath)) return true
+        if (_worktree === "/") return false
+        return Filesystem.contains(_worktree, filepath)
+      },
       metadata: async (val: { title?: string; metadata?: any }) => {
         const match = input.processor.partFromToolCall(options.toolCallId)
         if (match && match.state.status === "running") {
@@ -1206,6 +1223,10 @@ export namespace SessionPrompt {
                       messageID: info.id,
                       extra: { bypassCwdCheck: true, model },
                       messages: [],
+                      directory: Instance.directory,
+                      worktree: Instance.worktree,
+                      projectID: Instance.project.id,
+                      containsPath: Instance.containsPath,
                       metadata: async () => {},
                       ask: async () => {},
                     }
@@ -1265,6 +1286,10 @@ export namespace SessionPrompt {
                   messageID: info.id,
                   extra: { bypassCwdCheck: true },
                   messages: [],
+                  directory: Instance.directory,
+                  worktree: Instance.worktree,
+                  projectID: Instance.project.id,
+                  containsPath: Instance.containsPath,
                   metadata: async () => {},
                   ask: async () => {},
                 }

@@ -103,8 +103,8 @@ export namespace ToolRegistry {
         execute: async (args, ctx) => {
           const pluginCtx = {
             ...ctx,
-            directory: Instance.directory,
-            worktree: Instance.worktree,
+            directory: ctx.directory,
+            worktree: ctx.worktree,
           } as unknown as PluginToolContext
           const result = await def.execute(args as any, pluginCtx)
           const out = await Truncate.output(result, {}, initCtx?.agent)
@@ -198,7 +198,7 @@ export namespace ToolRegistry {
         })
         .map(async (t) => {
           using _ = log.time(t.id)
-          const tool = await t.init({ agent })
+          const tool = await t.init({ agent, directory: Instance.directory, worktree: Instance.worktree })
           const output = {
             description: tool.description,
             parameters: tool.parameters,

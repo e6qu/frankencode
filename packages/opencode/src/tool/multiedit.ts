@@ -3,7 +3,6 @@ import { Tool } from "./tool"
 import { EditTool } from "./edit"
 import DESCRIPTION from "./multiedit.txt"
 import path from "path"
-import { Instance } from "../project/instance"
 
 export const MultiEditTool = Tool.define("multiedit", {
   description: DESCRIPTION,
@@ -35,7 +34,7 @@ export const MultiEditTool = Tool.define("multiedit", {
       results.push(result)
     }
     return {
-      title: path.relative(Instance.worktree, params.filePath),
+      title: path.relative(ctx.worktree, params.filePath),
       metadata: {
         results: results.map((r) => r.metadata),
       },
