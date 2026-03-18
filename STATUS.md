@@ -6,7 +6,7 @@
 
 ## Overview
 
-Frankencode is a fork of OpenCode that adds surgical, reversible, agent-driven context editing with content-addressable storage and a conversation history graph. All 4 planned feature phases are implemented. Upstream sync is complete. Effect-ification is in progress — stages B1-B8 complete (inner modules parameterized), B9-B10 remain.
+Frankencode is a fork of OpenCode that adds surgical, reversible, agent-driven context editing with content-addressable storage and a conversation history graph. All 4 planned feature phases are implemented. Upstream sync is complete. Effect-ification is in progress — stages B1-B10c complete (entry points parameterized, Effect layers use InstanceContext, prompt construction sites use locals). 144 Instance refs remain (43 ALS fallbacks, 25 provide/dispose, 14 captures, 6 self-refs in instance.ts). B10d-g (fallback removal, Instance.provide replacement, Instance deletion) remain.
 
 ## Branch Status
 
@@ -27,7 +27,7 @@ Frankencode is a fork of OpenCode that adds surgical, reversible, agent-driven c
 
 The `Instance` singleton uses AsyncLocalStorage (ALS) for per-directory context. The Effect runtime already has a per-directory `LayerMap` with 24+ services. We're threading explicit parameters through all modules to replace ALS reads.
 
-### Progress: B1-B8 complete (172 Instance.* refs remain from 221)
+### Progress: B1-B10c complete (144 Instance.* refs remain from 221)
 
 | Stage | Name | Files | Status |
 |-------|------|-------|--------|
@@ -39,8 +39,12 @@ The `Instance` singleton uses AsyncLocalStorage (ALS) for per-directory context.
 | B6 | LSP module | 3 files | **Done** |
 | B7 | Session leaf helpers | 5 files | **Done** |
 | B8 | Worktree + Config modules | 4 files | **Done** |
-| B9 | Server + CLI entry points | ~18 files | Not started |
-| B10 | ALS elimination (final) | ~15 files | Not started |
+| B9 | Server + CLI entry points | ~20 files | **Done** |
+| B10a-b | Effect runtime + service-layers | 3 files | **Done** |
+| B10c | prompt.ts construction sites | 1 file | **Done** |
+| B10d | ALS fallback removal | ~15 files | Not started |
+| B10e-f | Instance.provide/dispose replacement | ~20 files | Not started |
+| B10g | Delete Instance module | ~50 files | Not started |
 
 ### Modules fully Instance-free:
 - `skill/scripts.ts`, `format/formatter.ts`, `file/watcher.ts`, `file/index.ts`, `project/vcs.ts`, `format/index.ts`, `lsp/server.ts`, `lsp/client.ts`
