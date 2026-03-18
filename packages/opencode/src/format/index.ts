@@ -70,7 +70,7 @@ export class FormatService extends ServiceMap.Service<FormatService, FormatServi
 
           if (result.command.length === 0) continue
 
-          result.enabled = async () => true
+          result.enabled = async (_directory: string, _worktree: string) => true
           result.name = name
           formatters[name] = result
         }
@@ -81,7 +81,7 @@ export class FormatService extends ServiceMap.Service<FormatService, FormatServi
       async function isEnabled(item: Formatter.Info) {
         let status = enabled[item.name]
         if (status === undefined) {
-          status = await item.enabled()
+          status = await item.enabled(instance.directory, instance.project.worktree)
           enabled[item.name] = status
         }
         return status
