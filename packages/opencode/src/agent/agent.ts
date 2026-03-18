@@ -5,6 +5,7 @@ import { ModelID, ProviderID } from "../provider/schema"
 import { generateObject, streamObject, type ModelMessage } from "ai"
 import { SystemPrompt } from "../session/system"
 import { Instance } from "../project/instance"
+import { registerDisposer } from "@/effect/instance-registry"
 import { Truncate } from "../tool/truncation"
 import { Auth } from "../auth"
 import { ProviderTransform } from "../provider/transform"
@@ -25,6 +26,11 @@ import { Global } from "@/global"
 import path from "path"
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
+
+export const agentStates = new Map<string, Promise<Record<string, Agent.Info>>>()
+registerDisposer(async (directory) => {
+  agentStates.delete(directory)
+})
 
 export namespace Agent {
   export const Info = z
@@ -54,7 +60,17 @@ export namespace Agent {
     })
   export type Info = z.infer<typeof Info>
 
-  const state = Instance.state(async () => {
+  function state(): Promise<Record<string, Info>> {
+    const dir = Instance.directory
+    let s = agentStates.get(dir)
+    if (!s) {
+      s = initAgents()
+      agentStates.set(dir, s)
+    }
+    return s
+  }
+
+  async function initAgents(): Promise<Record<string, Info>> {
     const cfg = await Config.get()
 
     const skillDirs = await Skill.dirs()
@@ -361,7 +377,7 @@ export namespace Agent {
     }
 
     return result
-  })
+  }
 
   export async function get(agent: string) {
     return state().then((x) => x[agent])

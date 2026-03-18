@@ -3,6 +3,7 @@ import { SessionID, MessageID } from "@/session/schema"
 import z from "zod"
 import { Config } from "../config/config"
 import { Instance } from "../project/instance"
+import { registerDisposer } from "@/effect/instance-registry"
 import { Identifier } from "../id/id"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
@@ -19,6 +20,11 @@ import PROMPT_CLASSIFY from "./template/classify.txt"
 import PROMPT_VERIFY from "./template/verify.txt"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
+
+export const commandStates = new Map<string, Promise<Record<string, Command.Info>>>()
+registerDisposer(async (directory) => {
+  commandStates.delete(directory)
+})
 
 export namespace Command {
   export const Event = {
@@ -80,7 +86,17 @@ export namespace Command {
     VERIFY: "verify",
   } as const
 
-  const state = Instance.state(async () => {
+  function state(): Promise<Record<string, Info>> {
+    const dir = Instance.directory
+    let s = commandStates.get(dir)
+    if (!s) {
+      s = initCommands()
+      commandStates.set(dir, s)
+    }
+    return s
+  }
+
+  async function initCommands(): Promise<Record<string, Info>> {
     const cfg = await Config.get()
 
     const result: Record<string, Info> = {
@@ -272,7 +288,7 @@ export namespace Command {
     }
 
     return result
-  })
+  }
 
   export async function get(name: string) {
     return state().then((x) => x[name])

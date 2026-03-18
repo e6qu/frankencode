@@ -4,10 +4,34 @@ import { type IPty } from "bun-pty"
 import z from "zod"
 import { Log } from "../util/log"
 import { Instance } from "../project/instance"
+import { registerDisposer } from "@/effect/instance-registry"
 import { lazy } from "@opencode-ai/util/lazy"
 import { Shell } from "@/shell/shell"
 import { Plugin } from "@/plugin"
 import { PtyID } from "./schema"
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const stateMap = new Map<string, Map<PtyID, any>>()
+
+registerDisposer(async (directory) => {
+  const sessions = stateMap.get(directory)
+  if (sessions) {
+    for (const session of sessions.values()) {
+      try {
+        session.process.kill()
+      } catch {}
+      for (const [key, ws] of session.subscribers.entries()) {
+        try {
+          if (ws.data === key) ws.close()
+        } catch {
+          // ignore
+        }
+      }
+    }
+    sessions.clear()
+  }
+  stateMap.delete(directory)
+})
 
 export namespace Pty {
   const log = Log.create({ service: "pty" })
@@ -81,7 +105,7 @@ export namespace Pty {
     Deleted: BusEvent.define("pty.deleted", z.object({ id: PtyID.zod })),
   }
 
-  interface ActiveSession {
+  export interface ActiveSession {
     info: Info
     process: IPty
     buffer: string
@@ -90,24 +114,15 @@ export namespace Pty {
     subscribers: Map<unknown, Socket>
   }
 
-  const state = Instance.state(
-    () => new Map<PtyID, ActiveSession>(),
-    async (sessions) => {
-      for (const session of sessions.values()) {
-        try {
-          session.process.kill()
-        } catch {}
-        for (const [key, ws] of session.subscribers.entries()) {
-          try {
-            if (ws.data === key) ws.close()
-          } catch {
-            // ignore
-          }
-        }
-      }
-      sessions.clear()
-    },
-  )
+  function state() {
+    const directory = Instance.directory
+    let sessions = stateMap.get(directory)
+    if (!sessions) {
+      sessions = new Map<PtyID, ActiveSession>()
+      stateMap.set(directory, sessions)
+    }
+    return sessions
+  }
 
   export function list() {
     return Array.from(state().values()).map((s) => s.info)

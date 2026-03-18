@@ -21,6 +21,7 @@ import {
   printParseErrorCode,
 } from "jsonc-parser"
 import { Instance } from "../project/instance"
+import { registerDisposer } from "@/effect/instance-registry"
 import { LSPServer } from "../lsp/server"
 import { BunProc } from "@/bun"
 import { Installation } from "@/installation"
@@ -38,6 +39,12 @@ import { ConfigPaths } from "./paths"
 import { Filesystem } from "@/util/filesystem"
 import { Process } from "@/util/process"
 import { Lock } from "@/util/lock"
+
+type ConfigStateResult = { config: Config.Info; directories: string[]; deps: Promise<void>[] }
+export const configStates = new Map<string, Promise<ConfigStateResult>>()
+registerDisposer(async (directory) => {
+  configStates.delete(directory)
+})
 
 export namespace Config {
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
@@ -75,7 +82,17 @@ export namespace Config {
     return merged
   }
 
-  export const state = Instance.state(async () => {
+  function state(): Promise<ConfigStateResult> {
+    const dir = Instance.directory
+    let s = configStates.get(dir)
+    if (!s) {
+      s = initConfig()
+      configStates.set(dir, s)
+    }
+    return s
+  }
+
+  async function initConfig(): Promise<ConfigStateResult> {
     const auth = await Auth.all()
 
     // Config loading order (low -> high precedence): https://opencode.ai/docs/config#precedence-order
@@ -263,7 +280,7 @@ export namespace Config {
       directories,
       deps,
     }
-  })
+  }
 
   export async function waitForDependencies() {
     const deps = await state().then((x) => x.deps)
@@ -1402,6 +1419,7 @@ export namespace Config {
     const filepath = path.join(Instance.directory, "config.json")
     const existing = await loadFile(filepath)
     await Filesystem.writeJson(filepath, mergeDeep(existing, config))
+    configStates.delete(Instance.directory)
     await Instance.dispose()
   }
 
@@ -1512,5 +1530,3 @@ export namespace Config {
     return state().then((x) => x.directories)
   }
 }
-Filesystem.write
-Filesystem.write

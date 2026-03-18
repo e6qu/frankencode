@@ -9,6 +9,12 @@ import { Instance } from "@/project/instance"
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util/log"
 import { Global } from "@/global"
+import { registerDisposer } from "@/effect/instance-registry"
+
+const tuiStates = new Map<string, Promise<{ config: TuiConfig.Info }>>()
+registerDisposer(async (directory) => {
+  tuiStates.delete(directory)
+})
 
 export namespace TuiConfig {
   const log = Log.create({ service: "tui.config" })
@@ -25,7 +31,17 @@ export namespace TuiConfig {
     return Flag.OPENCODE_TUI_CONFIG
   }
 
-  const state = Instance.state(async () => {
+  function state() {
+    const dir = Instance.directory
+    let s = tuiStates.get(dir)
+    if (!s) {
+      s = initTuiConfig()
+      tuiStates.set(dir, s)
+    }
+    return s
+  }
+
+  async function initTuiConfig() {
     let projectFiles = Flag.OPENCODE_DISABLE_PROJECT_CONFIG
       ? []
       : await ConfigPaths.projectFiles("tui", Instance.directory, Instance.worktree)
@@ -71,7 +87,7 @@ export namespace TuiConfig {
     return {
       config: result,
     }
-  })
+  }
 
   export async function get() {
     return state().then((x) => x.config)

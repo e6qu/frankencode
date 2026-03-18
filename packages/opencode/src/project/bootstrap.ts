@@ -14,6 +14,18 @@ import { Snapshot } from "../snapshot"
 import { Truncate } from "../tool/truncation"
 import { runPromiseInstance } from "@/effect/runtime"
 
+const HOUR_MS = 60 * 60 * 1000
+let truncateTimer: ReturnType<typeof setInterval> | undefined
+
+function ensureTruncateCleanup() {
+  if (truncateTimer) return
+  Truncate.cleanup().catch(() => {})
+  truncateTimer = setInterval(() => {
+    Truncate.cleanup().catch(() => {})
+  }, HOUR_MS)
+  truncateTimer.unref()
+}
+
 export async function InstanceBootstrap() {
   Log.Default.info("bootstrapping", { directory: Instance.directory })
   await Plugin.init()
@@ -24,7 +36,7 @@ export async function InstanceBootstrap() {
   File.init()
   await runPromiseInstance(VcsService.use((s) => s.init()))
   Snapshot.init()
-  Truncate.init()
+  ensureTruncateCleanup()
 
   Bus.subscribe(Command.Event.Executed, async (payload) => {
     if (payload.properties.name === Command.Default.INIT) {

@@ -1,15 +1,11 @@
+import { Effect, Layer, ServiceMap } from "effect"
 import { Instance } from "../project/instance"
 
-export namespace Env {
-  const state = Instance.state(() => {
-    // Create a shallow copy to isolate environment per instance
-    // Prevents parallel tests from interfering with each other's env vars
-    return { ...process.env } as Record<string, string | undefined>
-  })
+const states = new Map<string, Record<string, string | undefined>>()
 
+export namespace Env {
   export function get(key: string) {
-    const env = state()
-    return env[key]
+    return state()[key]
   }
 
   export function all() {
@@ -17,12 +13,58 @@ export namespace Env {
   }
 
   export function set(key: string, value: string) {
-    const env = state()
-    env[key] = value
+    state()[key] = value
   }
 
   export function remove(key: string) {
-    const env = state()
-    delete env[key]
+    delete state()[key]
   }
+}
+
+function state() {
+  const dir = Instance.directory
+  let s = states.get(dir)
+  if (!s) {
+    s = { ...process.env } as Record<string, string | undefined>
+    states.set(dir, s)
+  }
+  return s
+}
+
+export namespace EnvService {
+  export interface Service {
+    readonly get: (key: string) => string | undefined
+    readonly all: () => Record<string, string | undefined>
+    readonly set: (key: string, value: string) => void
+    readonly remove: (key: string) => void
+  }
+}
+
+export class EnvService extends ServiceMap.Service<EnvService, EnvService.Service>()("@opencode/Env") {
+  static readonly layer = Layer.effect(
+    EnvService,
+    Effect.gen(function* () {
+      const dir = Instance.directory
+      let env = states.get(dir)
+      if (!env) {
+        env = { ...process.env } as Record<string, string | undefined>
+        states.set(dir, env)
+      }
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          states.delete(dir)
+        }),
+      )
+      return EnvService.of({
+        get: (key) => env[key],
+        all: () => env,
+        set: (key, value) => {
+          env[key] = value
+        },
+        remove: (key) => {
+          delete env[key]
+        },
+      })
+    }),
+  )
 }

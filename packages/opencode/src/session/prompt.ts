@@ -14,6 +14,7 @@ import { ModelID, ProviderID } from "../provider/schema"
 import { type Tool as AITool, tool, jsonSchema, type ToolCallOptions, asSchema } from "ai"
 import { SessionCompaction } from "./compaction"
 import { Instance } from "../project/instance"
+import { registerDisposer } from "@/effect/instance-registry"
 import { Bus } from "../bus"
 import { ProviderTransform } from "../provider/transform"
 import { SystemPrompt } from "./system"
@@ -65,29 +66,41 @@ IMPORTANT:
 
 const STRUCTURED_OUTPUT_SYSTEM_PROMPT = `IMPORTANT: The user has requested structured output. You MUST use the StructuredOutput tool to provide your final response. Do NOT respond with plain text - you MUST call the StructuredOutput tool with your answer formatted according to the schema.`
 
+type PromptState = Record<
+  string,
+  {
+    abort: AbortController
+    callbacks: {
+      resolve(input: MessageV2.WithParts): void
+      reject(reason?: any): void
+    }[]
+  }
+>
+
+const promptStates = new Map<string, PromptState>()
+
+registerDisposer(async (directory) => {
+  const current = promptStates.get(directory)
+  if (current) {
+    for (const item of Object.values(current)) {
+      item.abort.abort()
+    }
+    promptStates.delete(directory)
+  }
+})
+
 export namespace SessionPrompt {
   const log = Log.create({ service: "session.prompt" })
 
-  const state = Instance.state(
-    () => {
-      const data: Record<
-        string,
-        {
-          abort: AbortController
-          callbacks: {
-            resolve(input: MessageV2.WithParts): void
-            reject(reason?: any): void
-          }[]
-        }
-      > = {}
-      return data
-    },
-    async (current) => {
-      for (const item of Object.values(current)) {
-        item.abort.abort()
-      }
-    },
-  )
+  function state(): PromptState {
+    const dir = Instance.directory
+    let s = promptStates.get(dir)
+    if (!s) {
+      s = {}
+      promptStates.set(dir, s)
+    }
+    return s
+  }
 
   export function assertNotBusy(sessionID: SessionID) {
     const match = state()[sessionID]
