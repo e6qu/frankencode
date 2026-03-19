@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import path from "path"
 import { InstructionPrompt } from "../../src/session/instruction"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { Global } from "../../src/global"
 import { tmpdir } from "../fixture/fixture"
 

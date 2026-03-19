@@ -3,7 +3,7 @@ import { $ } from "bun"
 import path from "path"
 import fs from "fs/promises"
 import { File } from "../../src/file"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { Filesystem } from "../../src/util/filesystem"
 import { tmpdir } from "../fixture/fixture"
 

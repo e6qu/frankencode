@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Bus } from "../../src/bus"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { tmpdir } from "../fixture/fixture"
 import z from "zod"
 

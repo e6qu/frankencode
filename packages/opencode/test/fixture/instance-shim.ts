@@ -1,11 +1,10 @@
 /**
- * @deprecated Use InstanceALS for context reads and InstanceLifecycle for
- * boot/dispose/reload. This module exists only as a compatibility shim
- * for test code. No src/ code imports this module.
+ * Test-only compatibility shim. Delegates to InstanceALS + InstanceLifecycle.
+ * Kept to avoid mechanical rewriting of 58 test files that use Instance.provide().
  */
-import { InstanceALS } from "./instance-als"
-import { InstanceLifecycle } from "./lifecycle"
-import type { Project } from "./project"
+import { InstanceALS } from "../../src/project/instance-als"
+import { InstanceLifecycle } from "../../src/project/lifecycle"
+import type { Project } from "../../src/project/project"
 
 export const Instance = {
   async provide<R>(input: { directory: string; init?: () => Promise<any>; fn: () => R }): Promise<R> {

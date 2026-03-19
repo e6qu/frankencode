@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test"
 import { Skill } from "../../src/skill"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 import fs from "fs/promises"

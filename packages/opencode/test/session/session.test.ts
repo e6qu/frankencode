@@ -3,7 +3,7 @@ import path from "path"
 import { Session } from "../../src/session"
 import { Bus } from "../../src/bus"
 import { Log } from "../../src/util/log"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { MessageV2 } from "../../src/session/message-v2"
 import { MessageID, PartID } from "../../src/session/schema"
 

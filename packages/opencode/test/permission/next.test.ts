@@ -7,7 +7,7 @@ import { Instances } from "../../src/effect/instances"
 import { PermissionNext } from "../../src/permission/next"
 import * as S from "../../src/permission/service"
 import { PermissionID } from "../../src/permission/schema"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { tmpdir } from "../fixture/fixture"
 import { MessageID, SessionID } from "../../src/session/schema"
 

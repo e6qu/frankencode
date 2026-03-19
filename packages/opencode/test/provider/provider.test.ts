@@ -2,7 +2,7 @@ import { test, expect } from "bun:test"
 import path from "path"
 
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { Provider } from "../../src/provider/provider"
 import { ProviderID, ModelID } from "../../src/provider/schema"
 import { Env } from "../../src/env"

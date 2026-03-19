@@ -6,7 +6,7 @@ import { Deferred, Effect, Fiber, Option } from "effect"
 import { tmpdir } from "../fixture/fixture"
 import { watcherConfigLayer, withServices } from "../fixture/instance"
 import { FileWatcher, FileWatcherService } from "../../src/file/watcher"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { GlobalBus } from "../../src/bus/global"
 
 // Native @parcel/watcher bindings aren't reliably available in CI (missing on Linux, flaky on Windows)

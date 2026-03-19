@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { tmpdir } from "../fixture/fixture"
 import { withServices } from "../fixture/instance"
 import { FormatService } from "../../src/format"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 
 describe("FormatService", () => {
   afterEach(() => Instance.disposeAll())

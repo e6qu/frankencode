@@ -1,7 +1,7 @@
 import path from "path"
 import { describe, expect, test } from "bun:test"
 import { fileURLToPath } from "url"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Session } from "../../src/session"
 import { MessageV2 } from "../../src/session/message-v2"

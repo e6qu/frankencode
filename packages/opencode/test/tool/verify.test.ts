@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 
 // We test the exported tool and internal behaviors indirectly through it.
 // For unit-level circuit breaker tests, we import the module and test via the tool.

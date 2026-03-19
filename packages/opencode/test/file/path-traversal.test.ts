@@ -3,7 +3,7 @@ import path from "path"
 import fs from "fs/promises"
 import { Filesystem } from "../../src/util/filesystem"
 import { File } from "../../src/file"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { tmpdir } from "../fixture/fixture"
 
 describe("Filesystem.contains", () => {

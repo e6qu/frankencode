@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { Config } from "../../src/config/config"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Color } from "../../src/util/color"

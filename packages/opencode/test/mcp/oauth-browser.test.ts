@@ -102,7 +102,7 @@ beforeEach(() => {
 const { MCP } = await import("../../src/mcp/index")
 const { Bus } = await import("../../src/bus")
 const { McpOAuthCallback } = await import("../../src/mcp/oauth-callback")
-const { Instance } = await import("../../src/project/instance")
+const { Instance } = await import("../fixture/instance-shim")
 const { tmpdir } = await import("../fixture/fixture")
 
 test("BrowserOpenFailed event is published when open() throws", async () => {
