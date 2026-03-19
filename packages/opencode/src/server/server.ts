@@ -358,7 +358,7 @@ export namespace Server {
           },
         }),
         async (c) => {
-          const commands = await Command.list()
+          const commands = await Command.list(InstanceALS.directory)
           return c.json(commands)
         },
       )

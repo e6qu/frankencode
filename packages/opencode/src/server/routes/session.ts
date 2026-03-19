@@ -13,6 +13,7 @@ import { SessionSummary } from "@/session/summary"
 import { Todo } from "../../session/todo"
 import { Agent } from "../../agent/agent"
 import { Snapshot } from "@/snapshot"
+import { InstanceALS } from "@/project/instance-als"
 import { Log } from "../../util/log"
 import { PermissionNext } from "@/permission/next"
 import { PermissionID } from "@/permission/schema"
@@ -89,7 +90,7 @@ export const SessionRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        const result = SessionStatus.list()
+        const result = SessionStatus.list(InstanceALS.directory)
         return c.json(result)
       },
     )

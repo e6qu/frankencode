@@ -1856,7 +1856,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
   export async function command(input: CommandInput) {
     log.info("command", input)
-    const command = await Command.get(input.command)
+    const command = await Command.get(input.command, InstanceALS.directory)
     const agentName = command.agent ?? input.agent ?? (await Agent.defaultAgent())
 
     const raw = input.arguments.match(argsRegex) ?? []

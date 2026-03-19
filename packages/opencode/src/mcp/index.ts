@@ -309,7 +309,7 @@ export namespace MCP {
 
   export async function add(name: string, mcp: Config.Mcp) {
     const s = await state(InstanceALS.directory)
-    const result = await create(name, mcp)
+    const result = await create(name, mcp, InstanceALS.directory)
     if (!result) {
       const status = {
         status: "failed" as const,
@@ -341,7 +341,7 @@ export namespace MCP {
     }
   }
 
-  async function create(key: string, mcp: Config.Mcp, directory?: string) {
+  async function create(key: string, mcp: Config.Mcp, directory: string) {
     if (mcp.enabled === false) {
       log.info("mcp server disabled", { key })
       return {
@@ -466,7 +466,7 @@ export namespace MCP {
 
     if (mcp.type === "local") {
       const [cmd, ...args] = mcp.command
-      const cwd = directory ?? InstanceALS.directory
+      const cwd = directory
       const transport = new StdioClientTransport({
         stderr: "pipe",
         command: cmd,
@@ -585,7 +585,7 @@ export namespace MCP {
       return
     }
 
-    const result = await create(name, { ...mcp, enabled: true })
+    const result = await create(name, { ...mcp, enabled: true }, InstanceALS.directory)
 
     if (!result) {
       const s = await state(InstanceALS.directory)

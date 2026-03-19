@@ -1,6 +1,5 @@
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
-import { InstanceALS } from "@/project/instance-als"
 import { InstanceContext } from "@/effect/instance-context"
 import { SessionID } from "./schema"
 import z from "zod"
@@ -55,21 +54,20 @@ export namespace SessionStatus {
     ),
   }
 
-  export function get(sessionID: SessionID, directory?: string) {
-    const dir = directory ?? InstanceALS.directory
+  export function get(sessionID: SessionID, directory: string) {
     return (
-      state(dir)[sessionID] ?? {
+      state(directory)[sessionID] ?? {
         type: "idle",
       }
     )
   }
 
-  export function list(directory?: string) {
-    return state(directory ?? InstanceALS.directory)
+  export function list(directory: string) {
+    return state(directory)
   }
 
-  export function set(sessionID: SessionID, status: Info, directory?: string) {
-    const dir = directory ?? InstanceALS.directory
+  export function set(sessionID: SessionID, status: Info, directory: string) {
+    const dir = directory
     Bus.publish(
       Event.Status,
       {

@@ -290,11 +290,11 @@ export namespace Command {
     return result
   }
 
-  export async function get(name: string, directory?: string) {
-    return state(directory ?? InstanceALS.directory).then((x) => x[name])
+  export async function get(name: string, directory: string) {
+    return state(directory).then((x) => x[name])
   }
 
-  export async function list(directory?: string) {
-    return state(directory ?? InstanceALS.directory).then((x) => Object.values(x))
+  export async function list(directory: string) {
+    return state(directory).then((x) => Object.values(x))
   }
 }

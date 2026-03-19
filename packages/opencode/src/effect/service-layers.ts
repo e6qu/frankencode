@@ -159,7 +159,7 @@ export class CommandService extends ServiceMap.Service<CommandService, CommandSe
         }),
       )
       return CommandService.of({
-        list: () => Effect.promise(() => Command.list()),
+        list: () => Effect.promise(() => Command.list(dir)),
       })
     }),
   )

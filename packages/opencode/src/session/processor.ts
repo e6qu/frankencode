@@ -16,6 +16,7 @@ import { PermissionNext } from "@/permission/next"
 import { Question } from "@/question"
 import { PartID } from "./schema"
 import type { SessionID, MessageID } from "./schema"
+import { InstanceALS } from "@/project/instance-als"
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -57,7 +58,7 @@ export namespace SessionProcessor {
               input.abort.throwIfAborted()
               switch (value.type) {
                 case "start":
-                  SessionStatus.set(input.sessionID, { type: "busy" })
+                  SessionStatus.set(input.sessionID, { type: "busy" }, InstanceALS.directory)
                   break
 
                 case "reasoning-start":
@@ -368,12 +369,16 @@ export namespace SessionProcessor {
               if (retry !== undefined) {
                 attempt++
                 const delay = SessionRetry.delay(attempt, error.name === "APIError" ? error : undefined)
-                SessionStatus.set(input.sessionID, {
-                  type: "retry",
-                  attempt,
-                  message: retry,
-                  next: Date.now() + delay,
-                })
+                SessionStatus.set(
+                  input.sessionID,
+                  {
+                    type: "retry",
+                    attempt,
+                    message: retry,
+                    next: Date.now() + delay,
+                  },
+                  InstanceALS.directory,
+                )
                 await SessionRetry.sleep(delay, input.abort).catch(() => {})
                 continue
               }
@@ -382,7 +387,7 @@ export namespace SessionProcessor {
                 sessionID: input.assistantMessage.sessionID,
                 error: input.assistantMessage.error,
               })
-              SessionStatus.set(input.sessionID, { type: "idle" })
+              SessionStatus.set(input.sessionID, { type: "idle" }, InstanceALS.directory)
             }
           }
           if (snapshot) {
