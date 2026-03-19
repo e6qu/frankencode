@@ -1,12 +1,12 @@
 # Frankencode — Project Status
 
-**Date:** 2026-03-19
+**Date:** 2026-03-20
 **Upstream:** `anomalyco/opencode` @ `dev`
 **Fork:** `e6qu/frankencode` @ `dev`
 
 ## Overview
 
-Frankencode is a fork of OpenCode that adds context editing, CAS, and an edit graph. Effect-ification B1-B10g done — Instance split into InstanceALS, InstanceLifecycle, InstanceContext. No `src/` code imports Instance (test-only shim remains). Remaining: migrate 67 test files off Instance shim, eliminate `?? InstanceALS.x` fallback patterns, add TUI component tests.
+Frankencode is a fork of OpenCode that adds context editing, CAS, and an edit graph. Effect-ification complete — `src/project/instance.ts` deleted, Instance split into InstanceALS + InstanceLifecycle + InstanceContext. Test shim in `test/fixture/instance-shim.ts`. 23 ALS fallbacks eliminated; 36 remain (wide-callers deferred). 81 TUI component tests added. 1447 tests passing, 0 TS errors.
 
 ## Branch Status
 
@@ -59,7 +59,8 @@ The `Instance` singleton uses AsyncLocalStorage (ALS) for per-directory context.
 
 ## Test Status
 
-- **1423 tests passing**, 0 failures, 8 skipped
+- **1447 tests passing**, 0 failures, 8 skipped
+- **81 TUI component tests** (helpers + 5 dialogs + 3 standalones)
 - **25 regression tests** for bug fixes
 
 ## Bug Status

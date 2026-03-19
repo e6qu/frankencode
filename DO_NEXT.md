@@ -26,24 +26,22 @@
 
 ## Next — Phase 4: Finalize Effect-ification
 
-### Stream 2: Migrate 67 test files off Instance shim → delete Instance
+### Stream 2: Migrate test files off Instance shim → delete Instance — DONE
 
-- [ ] Update test fixtures (instance.ts, db.ts) to use InstanceALS + InstanceLifecycle
-- [ ] Migrate test batch 1: tool/file/format/permission/snapshot/pty/bus/memory (~26 files)
-- [ ] Migrate test batch 2: session/server/config/provider/remaining (~30 files)
-- [ ] Delete Instance shim (`src/project/instance.ts`)
+- [x] Update test fixtures (instance.ts, db.ts) to use InstanceALS + InstanceLifecycle
+- [x] Move Instance shim to test/fixture/instance-shim.ts, update 58 test imports
+- [x] Delete `src/project/instance.ts`
 
-### Stream 3: Eliminate ALS fallback patterns in src/
+### Stream 3: Eliminate ALS fallback patterns in src/ — Partial
 
-- [ ] Make state() directory param required in ~14 leaf modules
-- [ ] Eliminate session module fallbacks (~20 patterns)
-- [ ] Eliminate remaining fallbacks (worktree, bash, config)
+- [x] Make state() directory param required in 15 leaf modules + runPromiseInstance
+- [x] Eliminate fallbacks in command, mcp, status, migrate-tui-config (8 patterns)
+- [ ] Remaining 36 fallbacks (env, bus, plugin, session core, worktree, pty, bash) — cascade too widely, defer to future PR
 
 ### Stream 4: TUI component tests
 
-- [ ] Test helpers + 14 dialog component tests
-- [ ] UI primitive + route + standalone component tests
-- [ ] Interaction tests with keyboard/mouse
+- [x] Test helpers + 5 dialog component tests + 3 standalone component tests (81 TUI tests total)
+- [ ] Remaining 9 dialog tests + route tests + interaction tests (deferred)
 
 ## Then — PR to dev
 
