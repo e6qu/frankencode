@@ -5,6 +5,7 @@ import path from "path"
 import z from "zod"
 import { InstanceContext } from "@/effect/instance-context"
 import { runPromiseInstance } from "@/effect/runtime"
+import { InstanceALS } from "@/project/instance-als"
 import { Config } from "../config/config"
 import { Global } from "../global"
 import { Log } from "../util/log"
@@ -46,35 +47,59 @@ export namespace Snapshot {
 
   // Promise facade — existing callers use these
   export function init() {
-    void runPromiseInstance(SnapshotService.use((s) => s.init()))
+    void runPromiseInstance(
+      SnapshotService.use((s) => s.init()),
+      InstanceALS.directory,
+    )
   }
 
   export async function cleanup() {
-    return runPromiseInstance(SnapshotService.use((s) => s.cleanup()))
+    return runPromiseInstance(
+      SnapshotService.use((s) => s.cleanup()),
+      InstanceALS.directory,
+    )
   }
 
   export async function track() {
-    return runPromiseInstance(SnapshotService.use((s) => s.track()))
+    return runPromiseInstance(
+      SnapshotService.use((s) => s.track()),
+      InstanceALS.directory,
+    )
   }
 
   export async function patch(hash: string) {
-    return runPromiseInstance(SnapshotService.use((s) => s.patch(hash)))
+    return runPromiseInstance(
+      SnapshotService.use((s) => s.patch(hash)),
+      InstanceALS.directory,
+    )
   }
 
   export async function restore(snapshot: string) {
-    return runPromiseInstance(SnapshotService.use((s) => s.restore(snapshot)))
+    return runPromiseInstance(
+      SnapshotService.use((s) => s.restore(snapshot)),
+      InstanceALS.directory,
+    )
   }
 
   export async function revert(patches: Patch[]) {
-    return runPromiseInstance(SnapshotService.use((s) => s.revert(patches)))
+    return runPromiseInstance(
+      SnapshotService.use((s) => s.revert(patches)),
+      InstanceALS.directory,
+    )
   }
 
   export async function diff(hash: string) {
-    return runPromiseInstance(SnapshotService.use((s) => s.diff(hash)))
+    return runPromiseInstance(
+      SnapshotService.use((s) => s.diff(hash)),
+      InstanceALS.directory,
+    )
   }
 
   export async function diffFull(from: string, to: string) {
-    return runPromiseInstance(SnapshotService.use((s) => s.diffFull(from, to)))
+    return runPromiseInstance(
+      SnapshotService.use((s) => s.diffFull(from, to)),
+      InstanceALS.directory,
+    )
   }
 }
 

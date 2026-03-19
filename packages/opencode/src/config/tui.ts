@@ -11,7 +11,7 @@ import { Log } from "@/util/log"
 import { Global } from "@/global"
 import { registerDisposer } from "@/effect/instance-registry"
 
-const tuiStates = new Map<string, Promise<{ config: TuiConfig.Info }>>()
+export const tuiStates = new Map<string, Promise<{ config: TuiConfig.Info }>>()
 registerDisposer(async (directory) => {
   tuiStates.delete(directory)
 })
@@ -31,12 +31,11 @@ export namespace TuiConfig {
     return Flag.OPENCODE_TUI_CONFIG
   }
 
-  function state(directory?: string) {
-    const dir = directory ?? InstanceALS.directory
-    let s = tuiStates.get(dir)
+  function state(directory: string) {
+    let s = tuiStates.get(directory)
     if (!s) {
       s = initTuiConfig()
-      tuiStates.set(dir, s)
+      tuiStates.set(directory, s)
     }
     return s
   }
@@ -92,7 +91,7 @@ export namespace TuiConfig {
   }
 
   export async function get() {
-    return state().then((x) => x.config)
+    return state(InstanceALS.directory).then((x) => x.config)
   }
 
   async function loadFile(filepath: string): Promise<Info> {

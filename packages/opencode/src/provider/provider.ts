@@ -841,12 +841,11 @@ export namespace Provider {
     }
   }
 
-  function state(directory?: string) {
-    const dir = directory ?? InstanceALS.directory
-    let s = providerStates.get(dir)
+  function state(directory: string) {
+    let s = providerStates.get(directory)
     if (!s) {
       s = initProvider()
-      providerStates.set(dir, s)
+      providerStates.set(directory, s)
     }
     return s
   }
@@ -1099,7 +1098,7 @@ export namespace Provider {
   }
 
   export async function list() {
-    return state().then((state) => state.providers)
+    return state(InstanceALS.directory).then((state) => state.providers)
   }
 
   async function getSDK(model: Model) {
@@ -1107,7 +1106,7 @@ export namespace Provider {
       using _ = log.time("getSDK", {
         providerID: model.providerID,
       })
-      const s = await state()
+      const s = await state(InstanceALS.directory)
       const provider = s.providers[model.providerID]
       const options = { ...provider.options }
 
@@ -1236,11 +1235,11 @@ export namespace Provider {
   }
 
   export async function getProvider(providerID: ProviderID) {
-    return state().then((s) => s.providers[providerID])
+    return state(InstanceALS.directory).then((s) => s.providers[providerID])
   }
 
   export async function getModel(providerID: ProviderID, modelID: ModelID) {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const provider = s.providers[providerID]
     if (!provider) {
       const availableProviders = Object.keys(s.providers)
@@ -1260,7 +1259,7 @@ export namespace Provider {
   }
 
   export async function getLanguage(model: Model): Promise<LanguageModelV2> {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const key = `${model.providerID}/${model.id}`
     if (s.models.has(key)) return s.models.get(key)!
 
@@ -1287,7 +1286,7 @@ export namespace Provider {
   }
 
   export async function closest(providerID: ProviderID, query: string[]) {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const provider = s.providers[providerID]
     if (!provider) return undefined
     for (const item of query) {
@@ -1309,7 +1308,7 @@ export namespace Provider {
       return getModel(parsed.providerID, parsed.modelID)
     }
 
-    const provider = await state().then((state) => state.providers[providerID])
+    const provider = await state(InstanceALS.directory).then((state) => state.providers[providerID])
     if (provider) {
       let priority = [
         "claude-haiku-4-5",

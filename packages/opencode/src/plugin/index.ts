@@ -27,12 +27,11 @@ export namespace Plugin {
   // Built-in plugins that are directly imported (not installed from npm)
   const INTERNAL_PLUGINS: PluginInstance[] = [CodexAuthPlugin, CopilotAuthPlugin, GitlabAuthPlugin]
 
-  function state(directory?: string) {
-    const dir = directory ?? InstanceALS.directory
-    let s = pluginStates.get(dir)
+  function state(directory: string) {
+    let s = pluginStates.get(directory)
     if (!s) {
-      s = initPlugins(dir)
-      pluginStates.set(dir, s)
+      s = initPlugins(directory)
+      pluginStates.set(directory, s)
     }
     return s
   }
@@ -131,7 +130,7 @@ export namespace Plugin {
     Output = Parameters<Required<Hooks>[Name]>[1],
   >(name: Name, input: Input, output: Output, directory?: string): Promise<Output> {
     if (!name) return output
-    for (const hook of await state(directory).then((x) => x.hooks)) {
+    for (const hook of await state(directory ?? InstanceALS.directory).then((x) => x.hooks)) {
       const fn = hook[name]
       if (!fn) continue
       // @ts-expect-error if you feel adventurous, please fix the typing, make sure to bump the try-counter if you
@@ -143,18 +142,18 @@ export namespace Plugin {
   }
 
   export async function list(directory?: string) {
-    return state(directory).then((x) => x.hooks)
+    return state(directory ?? InstanceALS.directory).then((x) => x.hooks)
   }
 
   export async function init(directory?: string) {
-    const hooks = await state(directory).then((x) => x.hooks)
+    const hooks = await state(directory ?? InstanceALS.directory).then((x) => x.hooks)
     const config = await Config.get()
     for (const hook of hooks) {
       // @ts-expect-error this is because we haven't moved plugin to sdk v2
       await hook.config?.(config)
     }
     Bus.subscribeAll(async (input) => {
-      const hooks = await state().then((x) => x.hooks)
+      const hooks = await state(directory ?? InstanceALS.directory).then((x) => x.hooks)
       for (const hook of hooks) {
         hook["event"]?.({
           event: input,

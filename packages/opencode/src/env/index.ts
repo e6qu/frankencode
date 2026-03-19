@@ -6,28 +6,27 @@ const states = new Map<string, Record<string, string | undefined>>()
 
 export namespace Env {
   export function get(key: string, directory?: string) {
-    return state(directory)[key]
+    return state(directory ?? InstanceALS.directory)[key]
   }
 
   export function all(directory?: string) {
-    return state(directory)
+    return state(directory ?? InstanceALS.directory)
   }
 
   export function set(key: string, value: string, directory?: string) {
-    state(directory)[key] = value
+    state(directory ?? InstanceALS.directory)[key] = value
   }
 
   export function remove(key: string, directory?: string) {
-    delete state(directory)[key]
+    delete state(directory ?? InstanceALS.directory)[key]
   }
 }
 
-function state(directory?: string) {
-  const dir = directory ?? InstanceALS.directory
-  let s = states.get(dir)
+function state(directory: string) {
+  let s = states.get(directory)
   if (!s) {
     s = { ...process.env } as Record<string, string | undefined>
-    states.set(dir, s)
+    states.set(directory, s)
   }
   return s
 }

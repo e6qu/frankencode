@@ -8,12 +8,11 @@ import { Effect, Layer, ServiceMap } from "effect"
 
 const states = new Map<string, Record<string, SessionStatus.Info>>()
 
-function state(directory?: string) {
-  const dir = directory ?? InstanceALS.directory
-  let s = states.get(dir)
+function state(directory: string) {
+  let s = states.get(directory)
   if (!s) {
     s = {}
-    states.set(dir, s)
+    states.set(directory, s)
   }
   return s
 }
@@ -57,25 +56,27 @@ export namespace SessionStatus {
   }
 
   export function get(sessionID: SessionID, directory?: string) {
+    const dir = directory ?? InstanceALS.directory
     return (
-      state(directory)[sessionID] ?? {
+      state(dir)[sessionID] ?? {
         type: "idle",
       }
     )
   }
 
   export function list(directory?: string) {
-    return state(directory)
+    return state(directory ?? InstanceALS.directory)
   }
 
   export function set(sessionID: SessionID, status: Info, directory?: string) {
+    const dir = directory ?? InstanceALS.directory
     Bus.publish(
       Event.Status,
       {
         sessionID,
         status,
       },
-      directory,
+      dir,
     )
     if (status.type === "idle") {
       // deprecated
@@ -84,12 +85,12 @@ export namespace SessionStatus {
         {
           sessionID,
         },
-        directory,
+        dir,
       )
-      delete state(directory)[sessionID]
+      delete state(dir)[sessionID]
       return
     }
-    state(directory)[sessionID] = status
+    state(dir)[sessionID] = status
   }
 }
 

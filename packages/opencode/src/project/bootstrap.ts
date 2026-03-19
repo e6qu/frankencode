@@ -34,9 +34,15 @@ export async function InstanceBootstrap() {
   ShareNext.init()
   await Format.init()
   await LSP.init()
-  await runPromiseInstance(FileWatcherService.use((service) => service.init()))
+  await runPromiseInstance(
+    FileWatcherService.use((service) => service.init()),
+    directory,
+  )
   File.init()
-  await runPromiseInstance(VcsService.use((s) => s.init()))
+  await runPromiseInstance(
+    VcsService.use((s) => s.init()),
+    directory,
+  )
   Snapshot.init()
   ensureTruncateCleanup()
 

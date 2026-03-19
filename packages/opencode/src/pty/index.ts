@@ -11,10 +11,10 @@ import { Plugin } from "@/plugin"
 import { PtyID } from "./schema"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const stateMap = new Map<string, Map<PtyID, any>>()
+export const ptyStateMap = new Map<string, Map<PtyID, any>>()
 
 registerDisposer(async (directory) => {
-  const sessions = stateMap.get(directory)
+  const sessions = ptyStateMap.get(directory)
   if (sessions) {
     for (const session of sessions.values()) {
       try {
@@ -30,7 +30,7 @@ registerDisposer(async (directory) => {
     }
     sessions.clear()
   }
-  stateMap.delete(directory)
+  ptyStateMap.delete(directory)
 })
 
 export namespace Pty {
@@ -114,22 +114,21 @@ export namespace Pty {
     subscribers: Map<unknown, Socket>
   }
 
-  function state(directory?: string) {
-    const dir = directory ?? InstanceALS.directory
-    let sessions = stateMap.get(dir)
+  function state(directory: string) {
+    let sessions = ptyStateMap.get(directory)
     if (!sessions) {
       sessions = new Map<PtyID, ActiveSession>()
-      stateMap.set(dir, sessions)
+      ptyStateMap.set(directory, sessions)
     }
     return sessions
   }
 
   export function list() {
-    return Array.from(state().values()).map((s) => s.info)
+    return Array.from(state(InstanceALS.directory).values()).map((s) => s.info)
   }
 
   export function get(id: PtyID) {
-    return state().get(id)?.info
+    return state(InstanceALS.directory).get(id)?.info
   }
 
   export async function create(input: CreateInput) {
@@ -182,7 +181,7 @@ export namespace Pty {
       cursor: 0,
       subscribers: new Map(),
     }
-    state().set(id, session)
+    state(InstanceALS.directory).set(id, session)
     ptyProcess.onData((chunk) => {
       session.cursor += chunk.length
 
@@ -222,7 +221,7 @@ export namespace Pty {
   }
 
   export async function update(id: PtyID, input: UpdateInput) {
-    const session = state().get(id)
+    const session = state(InstanceALS.directory).get(id)
     if (!session) return
     if (input.title) {
       session.info.title = input.title
@@ -235,9 +234,10 @@ export namespace Pty {
   }
 
   export async function remove(id: PtyID, directory?: string) {
-    const session = state(directory).get(id)
+    const dir = directory ?? InstanceALS.directory
+    const session = state(dir).get(id)
     if (!session) return
-    state(directory).delete(id)
+    state(dir).delete(id)
     log.info("removing session", { id })
     try {
       session.process.kill()
@@ -254,21 +254,21 @@ export namespace Pty {
   }
 
   export function resize(id: PtyID, cols: number, rows: number) {
-    const session = state().get(id)
+    const session = state(InstanceALS.directory).get(id)
     if (session && session.info.status === "running") {
       session.process.resize(cols, rows)
     }
   }
 
   export function write(id: PtyID, data: string) {
-    const session = state().get(id)
+    const session = state(InstanceALS.directory).get(id)
     if (session && session.info.status === "running") {
       session.process.write(data)
     }
   }
 
   export function connect(id: PtyID, ws: Socket, cursor?: number) {
-    const session = state().get(id)
+    const session = state(InstanceALS.directory).get(id)
     if (!session) {
       ws.close()
       return

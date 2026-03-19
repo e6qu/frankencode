@@ -52,12 +52,11 @@ registerDisposer(async (directory) => {
 export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
 
-  function state(directory?: string) {
-    const dir = directory ?? InstanceALS.directory
-    let s = toolRegistryStates.get(dir)
+  function state(directory: string) {
+    let s = toolRegistryStates.get(directory)
     if (!s) {
       s = initRegistry()
-      toolRegistryStates.set(dir, s)
+      toolRegistryStates.set(directory, s)
     }
     return s
   }
@@ -119,7 +118,7 @@ export namespace ToolRegistry {
   }
 
   export async function register(tool: Tool.Info) {
-    const { custom } = await state()
+    const { custom } = await state(InstanceALS.directory)
     const idx = custom.findIndex((t) => t.id === tool.id)
     if (idx >= 0) {
       custom.splice(idx, 1, tool)
@@ -129,7 +128,7 @@ export namespace ToolRegistry {
   }
 
   async function all(): Promise<Tool.Info[]> {
-    const custom = await state().then((x) => x.custom)
+    const custom = await state(InstanceALS.directory).then((x) => x.custom)
     const config = await Config.get()
     const question = ["app", "cli", "desktop"].includes(Flag.OPENCODE_CLIENT) || Flag.OPENCODE_ENABLE_QUESTION_TOOL
 

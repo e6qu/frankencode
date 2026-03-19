@@ -8,7 +8,7 @@ const modelID = parts[1] ?? "gpt-5-nano"
 const now = Date.now()
 
 const seed = async () => {
-  const { Instance } = await import("../src/project/instance")
+  const { Instance } = await import("../test/fixture/instance-shim")
   const { InstanceBootstrap } = await import("../src/project/bootstrap")
   const { Config } = await import("../src/config/config")
   const { disposeRuntime } = await import("../src/effect/runtime")

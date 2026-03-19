@@ -83,12 +83,11 @@ export namespace Config {
     return merged
   }
 
-  function state(directory?: string): Promise<ConfigStateResult> {
-    const dir = directory ?? InstanceALS.directory
-    let s = configStates.get(dir)
+  function state(directory: string): Promise<ConfigStateResult> {
+    let s = configStates.get(directory)
     if (!s) {
       s = initConfig()
-      configStates.set(dir, s)
+      configStates.set(directory, s)
     }
     return s
   }
@@ -286,7 +285,7 @@ export namespace Config {
   }
 
   export async function waitForDependencies() {
-    const deps = await state().then((x) => x.deps)
+    const deps = await state(InstanceALS.directory).then((x) => x.deps)
     await Promise.all(deps)
   }
 
@@ -1411,7 +1410,7 @@ export namespace Config {
   )
 
   export async function get() {
-    return state().then((x) => x.config)
+    return state(InstanceALS.directory).then((x) => x.config)
   }
 
   export async function getGlobal() {
@@ -1530,6 +1529,6 @@ export namespace Config {
   }
 
   export async function directories() {
-    return state().then((x) => x.directories)
+    return state(InstanceALS.directory).then((x) => x.directories)
   }
 }

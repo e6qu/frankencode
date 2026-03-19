@@ -77,7 +77,7 @@ type PromptState = Record<
   }
 >
 
-const promptStates = new Map<string, PromptState>()
+export const promptStates = new Map<string, PromptState>()
 
 registerDisposer(async (directory) => {
   const current = promptStates.get(directory)
@@ -92,18 +92,17 @@ registerDisposer(async (directory) => {
 export namespace SessionPrompt {
   const log = Log.create({ service: "session.prompt" })
 
-  function state(directory?: string): PromptState {
-    const dir = directory ?? InstanceALS.directory
-    let s = promptStates.get(dir)
+  function state(directory: string): PromptState {
+    let s = promptStates.get(directory)
     if (!s) {
       s = {}
-      promptStates.set(dir, s)
+      promptStates.set(directory, s)
     }
     return s
   }
 
   export function assertNotBusy(sessionID: SessionID) {
-    const match = state()[sessionID]
+    const match = state(InstanceALS.directory)[sessionID]
     if (match) throw new Session.BusyError(sessionID)
   }
 
@@ -254,8 +253,8 @@ export namespace SessionPrompt {
     return parts
   }
 
-  function start(sessionID: SessionID) {
-    const s = state()
+  function start(sessionID: SessionID, directory: string) {
+    const s = state(directory)
     if (s[sessionID]) return
     const controller = new AbortController()
     s[sessionID] = {
@@ -265,24 +264,25 @@ export namespace SessionPrompt {
     return controller.signal
   }
 
-  function resume(sessionID: SessionID) {
-    const s = state()
+  function resume(sessionID: SessionID, directory: string) {
+    const s = state(directory)
     if (!s[sessionID]) return
 
     return s[sessionID].abort.signal
   }
 
-  export function cancel(sessionID: SessionID) {
+  export function cancel(sessionID: SessionID, directory?: string) {
+    const dir = directory ?? InstanceALS.directory
     log.info("cancel", { sessionID })
-    const s = state()
+    const s = state(dir)
     const match = s[sessionID]
     if (!match) {
-      SessionStatus.set(sessionID, { type: "idle" })
+      SessionStatus.set(sessionID, { type: "idle" }, dir)
       return
     }
     match.abort.abort()
     delete s[sessionID]
-    SessionStatus.set(sessionID, { type: "idle" })
+    SessionStatus.set(sessionID, { type: "idle" }, dir)
     return
   }
 
@@ -299,15 +299,15 @@ export namespace SessionPrompt {
     const _pid = InstanceALS.project.id
     const _cp = InstanceALS.containsPath
 
-    const abort = resume_existing ? resume(sessionID) : start(sessionID)
+    const abort = resume_existing ? resume(sessionID, _dir) : start(sessionID, _dir)
     if (!abort) {
       return new Promise<MessageV2.WithParts>((resolve, reject) => {
-        const callbacks = state()[sessionID].callbacks
+        const callbacks = state(_dir)[sessionID].callbacks
         callbacks.push({ resolve, reject })
       })
     }
 
-    using _ = defer(() => cancel(sessionID))
+    using _ = defer(() => cancel(sessionID, _dir))
 
     // Structured output state
     // Note: On session resumption, state is reset but outputFormat is preserved
@@ -781,7 +781,7 @@ export namespace SessionPrompt {
     SessionCompaction.prune({ sessionID })
     for await (const item of MessageV2.stream(sessionID)) {
       if (item.info.role === "user") continue
-      const queued = state()[sessionID]?.callbacks ?? []
+      const queued = state(_dir)[sessionID]?.callbacks ?? []
       for (const q of queued) {
         q.resolve(item)
       }
@@ -1583,16 +1583,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
   export async function shell(input: ShellInput) {
     const _dir = InstanceALS.directory
     const _wt = InstanceALS.worktree
-    const abort = start(input.sessionID)
+    const abort = start(input.sessionID, _dir)
     if (!abort) {
       throw new Session.BusyError(input.sessionID)
     }
 
     using _ = defer(() => {
       // If no queued callbacks, cancel (the default)
-      const callbacks = state()[input.sessionID]?.callbacks ?? []
+      const callbacks = state(_dir)[input.sessionID]?.callbacks ?? []
       if (callbacks.length === 0) {
-        cancel(input.sessionID)
+        cancel(input.sessionID, _dir)
       } else {
         // Otherwise, trigger the session loop to process queued items
         loop({ sessionID: input.sessionID, resume_existing: true }).catch((error) => {

@@ -60,12 +60,11 @@ export namespace Agent {
     })
   export type Info = z.infer<typeof Info>
 
-  function state(directory?: string): Promise<Record<string, Info>> {
-    const dir = directory ?? InstanceALS.directory
-    let s = agentStates.get(dir)
+  function state(directory: string): Promise<Record<string, Info>> {
+    let s = agentStates.get(directory)
     if (!s) {
       s = initAgents()
-      agentStates.set(dir, s)
+      agentStates.set(directory, s)
     }
     return s
   }
@@ -381,13 +380,13 @@ export namespace Agent {
   }
 
   export async function get(agent: string) {
-    return state().then((x) => x[agent])
+    return state(InstanceALS.directory).then((x) => x[agent])
   }
 
   export async function list() {
     const cfg = await Config.get()
     return pipe(
-      await state(),
+      await state(InstanceALS.directory),
       values(),
       sortBy([(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "build"), "desc"]),
     )
@@ -395,7 +394,7 @@ export namespace Agent {
 
   export async function defaultAgent() {
     const cfg = await Config.get()
-    const agents = await state()
+    const agents = await state(InstanceALS.directory)
 
     if (cfg.default_agent) {
       const agent = agents[cfg.default_agent]

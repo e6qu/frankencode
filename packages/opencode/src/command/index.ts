@@ -86,12 +86,11 @@ export namespace Command {
     VERIFY: "verify",
   } as const
 
-  function state(directory?: string): Promise<Record<string, Info>> {
-    const dir = directory ?? InstanceALS.directory
-    let s = commandStates.get(dir)
+  function state(directory: string): Promise<Record<string, Info>> {
+    let s = commandStates.get(directory)
     if (!s) {
-      s = initCommands(dir)
-      commandStates.set(dir, s)
+      s = initCommands()
+      commandStates.set(directory, s)
     }
     return s
   }
@@ -292,10 +291,10 @@ export namespace Command {
   }
 
   export async function get(name: string, directory?: string) {
-    return state(directory).then((x) => x[name])
+    return state(directory ?? InstanceALS.directory).then((x) => x[name])
   }
 
   export async function list(directory?: string) {
-    return state(directory).then((x) => Object.values(x))
+    return state(directory ?? InstanceALS.directory).then((x) => Object.values(x))
   }
 }

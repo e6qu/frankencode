@@ -19,14 +19,14 @@ interface LSPState {
   spawning: Map<string, Promise<LSPClient.Info | undefined>>
 }
 
-const stateMap = new Map<string, Promise<LSPState>>()
+export const lspStateMap = new Map<string, Promise<LSPState>>()
 registerDisposer(async (directory) => {
-  const s = stateMap.get(directory)
+  const s = lspStateMap.get(directory)
   if (s) {
     const resolved = await s
     await Promise.all(resolved.clients.map((client) => client.shutdown()))
   }
-  stateMap.delete(directory)
+  lspStateMap.delete(directory)
 })
 
 export namespace LSP {
@@ -94,9 +94,8 @@ export namespace LSP {
     }
   }
 
-  function state(directory?: string): Promise<LSPState> {
-    const dir = directory ?? InstanceALS.directory
-    let existing = stateMap.get(dir)
+  function state(directory: string): Promise<LSPState> {
+    let existing = lspStateMap.get(directory)
     if (existing) return existing
     existing = (async () => {
       const clients: LSPClient.Info[] = []
@@ -160,12 +159,12 @@ export namespace LSP {
         spawning: new Map<string, Promise<LSPClient.Info | undefined>>(),
       }
     })()
-    stateMap.set(dir, existing)
+    lspStateMap.set(directory, existing)
     return existing
   }
 
   export async function init() {
-    return state()
+    return state(InstanceALS.directory)
   }
 
   export const Status = z
@@ -181,13 +180,14 @@ export namespace LSP {
   export type Status = z.infer<typeof Status>
 
   export async function status() {
-    return state().then((x) => {
+    const dir = InstanceALS.directory
+    return state(dir).then((x) => {
       const result: Status[] = []
       for (const client of x.clients) {
         result.push({
           id: client.serverID,
           name: x.servers[client.serverID].id,
-          root: path.relative(InstanceALS.directory, client.root),
+          root: path.relative(dir, client.root),
           status: "connected",
         })
       }
@@ -196,7 +196,7 @@ export namespace LSP {
   }
 
   async function getClients(file: string) {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const extension = path.parse(file).ext || file
     const result: LSPClient.Info[] = []
     const directory = InstanceALS.directory
@@ -286,7 +286,7 @@ export namespace LSP {
   }
 
   export async function hasClients(file: string) {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const extension = path.parse(file).ext || file
     const directory = InstanceALS.directory
     const worktree = InstanceALS.worktree
@@ -481,7 +481,7 @@ export namespace LSP {
   }
 
   async function runAll<T>(input: (client: LSPClient.Info) => Promise<T>): Promise<T[]> {
-    const clients = await state().then((x) => x.clients)
+    const clients = await state(InstanceALS.directory).then((x) => x.clients)
     const tasks = clients.map((x) => input(x))
     return Promise.all(tasks)
   }

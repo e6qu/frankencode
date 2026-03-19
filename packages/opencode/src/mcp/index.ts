@@ -29,7 +29,7 @@ import open from "open"
 type TransportWithAuth = StreamableHTTPClientTransport | SSEClientTransport
 const pendingOAuthTransports = new Map<string, TransportWithAuth>()
 
-async function descendants(pid: number): Promise<number[]> {
+export async function descendants(pid: number): Promise<number[]> {
   if (process.platform === "win32") return []
   const pids: number[] = []
   const queue = [pid]
@@ -56,10 +56,10 @@ type MCPState = Promise<{
   clients: Record<string, Client>
 }>
 
-const stateMap = new Map<string, MCPState>()
+export const mcpStateMap = new Map<string, MCPState>()
 
 registerDisposer(async (directory) => {
-  const s = stateMap.get(directory)
+  const s = mcpStateMap.get(directory)
   if (s) {
     const state = await s
     // The MCP SDK only signals the direct child process on close.
@@ -86,7 +86,7 @@ registerDisposer(async (directory) => {
     )
     pendingOAuthTransports.clear()
   }
-  stateMap.delete(directory)
+  mcpStateMap.delete(directory)
 })
 
 export namespace MCP {
@@ -221,9 +221,8 @@ export namespace MCP {
     return typeof entry === "object" && entry !== null && "type" in entry
   }
 
-  function state(directory?: string): MCPState {
-    const dir = directory ?? InstanceALS.directory
-    let existing = stateMap.get(dir)
+  function state(directory: string): MCPState {
+    let existing = mcpStateMap.get(directory)
     if (existing) return existing
     const promise = (async () => {
       const cfg = await Config.get()
@@ -244,7 +243,7 @@ export namespace MCP {
             return
           }
 
-          const result = await create(key, mcp, dir).catch(() => undefined)
+          const result = await create(key, mcp, directory).catch(() => undefined)
           if (!result) return
 
           status[key] = result.status
@@ -259,7 +258,7 @@ export namespace MCP {
         clients,
       }
     })()
-    stateMap.set(dir, promise)
+    mcpStateMap.set(directory, promise)
     return promise
   }
 
@@ -309,7 +308,7 @@ export namespace MCP {
   }
 
   export async function add(name: string, mcp: Config.Mcp) {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const result = await create(name, mcp)
     if (!result) {
       const status = {
@@ -554,7 +553,7 @@ export namespace MCP {
   }
 
   export async function status() {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const cfg = await Config.get()
     const config = cfg.mcp ?? {}
     const result: Record<string, Status> = {}
@@ -569,7 +568,7 @@ export namespace MCP {
   }
 
   export async function clients() {
-    return state().then((state) => state.clients)
+    return state(InstanceALS.directory).then((state) => state.clients)
   }
 
   export async function connect(name: string) {
@@ -589,7 +588,7 @@ export namespace MCP {
     const result = await create(name, { ...mcp, enabled: true })
 
     if (!result) {
-      const s = await state()
+      const s = await state(InstanceALS.directory)
       s.status[name] = {
         status: "failed",
         error: "Unknown error during connection",
@@ -597,7 +596,7 @@ export namespace MCP {
       return
     }
 
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     s.status[name] = result.status
     if (result.mcpClient) {
       // Close existing client if present to prevent memory leaks
@@ -612,7 +611,7 @@ export namespace MCP {
   }
 
   export async function disconnect(name: string) {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const client = s.clients[name]
     if (client) {
       await client.close().catch((error) => {
@@ -625,7 +624,7 @@ export namespace MCP {
 
   export async function tools() {
     const result: Record<string, Tool> = {}
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const cfg = await Config.get()
     const config = cfg.mcp ?? {}
     const clientsSnapshot = await clients()
@@ -666,7 +665,7 @@ export namespace MCP {
   }
 
   export async function prompts() {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const clientsSnapshot = await clients()
 
     const prompts = Object.fromEntries<PromptInfo & { client: string }>(
@@ -687,7 +686,7 @@ export namespace MCP {
   }
 
   export async function resources() {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const clientsSnapshot = await clients()
 
     const result = Object.fromEntries<ResourceInfo & { client: string }>(
@@ -848,7 +847,7 @@ export namespace MCP {
 
     if (!authorizationUrl) {
       // Already authenticated
-      const s = await state()
+      const s = await state(InstanceALS.directory)
       return s.status[mcpName] ?? { status: "connected" }
     }
 

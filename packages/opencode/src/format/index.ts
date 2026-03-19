@@ -11,6 +11,7 @@ import { Process } from "../util/process"
 import { InstanceContext } from "@/effect/instance-context"
 import { Effect, Layer, ServiceMap } from "effect"
 import { runPromiseInstance } from "@/effect/runtime"
+import { InstanceALS } from "@/project/instance-als"
 
 const log = Log.create({ service: "format" })
 
@@ -27,11 +28,17 @@ export namespace Format {
   export type Status = z.infer<typeof Status>
 
   export async function init() {
-    return runPromiseInstance(FormatService.use((s) => s.init()))
+    return runPromiseInstance(
+      FormatService.use((s) => s.init()),
+      InstanceALS.directory,
+    )
   }
 
   export async function status() {
-    return runPromiseInstance(FormatService.use((s) => s.status()))
+    return runPromiseInstance(
+      FormatService.use((s) => s.status()),
+      InstanceALS.directory,
+    )
   }
 }
 

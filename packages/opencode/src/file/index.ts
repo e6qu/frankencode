@@ -14,6 +14,7 @@ import { Protected } from "./protected"
 import { InstanceContext } from "@/effect/instance-context"
 import { Effect, Layer, ServiceMap } from "effect"
 import { runPromiseInstance } from "@/effect/runtime"
+import { InstanceALS } from "@/project/instance-als"
 
 const log = Log.create({ service: "file" })
 
@@ -335,23 +336,38 @@ export namespace File {
   }
 
   export function init() {
-    return runPromiseInstance(FileService.use((s) => s.init()))
+    return runPromiseInstance(
+      FileService.use((s) => s.init()),
+      InstanceALS.directory,
+    )
   }
 
   export async function status() {
-    return runPromiseInstance(FileService.use((s) => s.status()))
+    return runPromiseInstance(
+      FileService.use((s) => s.status()),
+      InstanceALS.directory,
+    )
   }
 
   export async function read(file: string): Promise<Content> {
-    return runPromiseInstance(FileService.use((s) => s.read(file)))
+    return runPromiseInstance(
+      FileService.use((s) => s.read(file)),
+      InstanceALS.directory,
+    )
   }
 
   export async function list(dir?: string) {
-    return runPromiseInstance(FileService.use((s) => s.list(dir)))
+    return runPromiseInstance(
+      FileService.use((s) => s.list(dir)),
+      InstanceALS.directory,
+    )
   }
 
   export async function search(input: { query: string; limit?: number; dirs?: boolean; type?: "file" | "directory" }) {
-    return runPromiseInstance(FileService.use((s) => s.search(input)))
+    return runPromiseInstance(
+      FileService.use((s) => s.search(input)),
+      InstanceALS.directory,
+    )
   }
 }
 

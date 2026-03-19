@@ -9,12 +9,11 @@ import { InstanceContext } from "../effect/instance-context"
 type BusSubscription = (event: any) => void
 const states = new Map<string, { subscriptions: Map<any, BusSubscription[]> }>()
 
-function state(directory?: string) {
-  const dir = directory ?? InstanceALS.directory
-  let s = states.get(dir)
+function state(directory: string) {
+  let s = states.get(directory)
   if (!s) {
     s = { subscriptions: new Map() }
-    states.set(dir, s)
+    states.set(directory, s)
   }
   return s
 }
@@ -89,7 +88,7 @@ export namespace Bus {
 
   function raw(type: string, callback: (event: any) => void, directory?: string) {
     log.info("subscribing", { type })
-    const subscriptions = state(directory).subscriptions
+    const subscriptions = state(directory ?? InstanceALS.directory).subscriptions
     let match = subscriptions.get(type) ?? []
     match.push(callback)
     subscriptions.set(type, match)
