@@ -309,9 +309,9 @@ export namespace Session {
     workspaceID?: WorkspaceID
     directory: string
     permission?: PermissionNext.Ruleset
-    projectID?: ProjectID
+    projectID: ProjectID
   }) {
-    const projectID = input.projectID ?? InstanceALS.project.id
+    const projectID = input.projectID
     const result: Info = {
       id: SessionID.descending(input.id),
       slug: Slug.create(),
@@ -355,9 +355,9 @@ export namespace Session {
     return result
   }
 
-  export function plan(input: { slug: string; time: { created: number }; worktree?: string; vcs?: string }) {
-    const vcs = input.vcs ?? InstanceALS.project.vcs
-    const worktree = input.worktree ?? InstanceALS.worktree
+  export function plan(input: { slug: string; time: { created: number }; worktree: string; vcs?: string }) {
+    const vcs = input.vcs
+    const worktree = input.worktree
     const base = vcs ? path.join(worktree, ".opencode", "plans") : path.join(Global.Path.data, "plans")
     return path.join(base, [input.time.created, input.slug].join("-") + ".md")
   }
@@ -562,9 +562,9 @@ export namespace Session {
     start?: number
     search?: string
     limit?: number
-    project?: { id: ProjectID }
+    project: { id: ProjectID }
   }) {
-    const project = input?.project ?? InstanceALS.project
+    const project = input!.project
     const conditions = [eq(SessionTable.project_id, project.id)]
 
     if (WorkspaceContext.workspaceID) {

@@ -3,7 +3,6 @@ import os from "os"
 import { Global } from "../global"
 import { Filesystem } from "../util/filesystem"
 import { Config } from "../config/config"
-import { InstanceALS } from "../project/instance-als"
 import { Flag } from "@/flag/flag"
 import { Log } from "../util/log"
 import { Glob } from "../util/glob"
@@ -31,11 +30,9 @@ function globalFiles() {
   return files
 }
 
-async function resolveRelative(instruction: string, directory?: string, worktree?: string): Promise<string[]> {
+async function resolveRelative(instruction: string, directory: string, worktree: string): Promise<string[]> {
   if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
-    return Filesystem.globUp(instruction, directory ?? InstanceALS.directory, worktree ?? InstanceALS.worktree).catch(
-      () => [],
-    )
+    return Filesystem.globUp(instruction, directory, worktree).catch(() => [])
   }
   if (!Flag.OPENCODE_CONFIG_DIR) {
     log.warn(
@@ -48,8 +45,8 @@ async function resolveRelative(instruction: string, directory?: string, worktree
 
 const states = new Map<string, { claims: Map<string, Set<string>> }>()
 
-function state(directory?: string) {
-  const dir = directory ?? InstanceALS.directory
+function state(directory: string) {
+  const dir = directory
   let s = states.get(dir)
   if (!s) {
     s = { claims: new Map() }
@@ -59,14 +56,14 @@ function state(directory?: string) {
 }
 
 export namespace InstructionPrompt {
-  function isClaimed(messageID: string, filepath: string) {
-    const claimed = state().claims.get(messageID)
+  function isClaimed(directory: string, messageID: string, filepath: string) {
+    const claimed = state(directory).claims.get(messageID)
     if (!claimed) return false
     return claimed.has(filepath)
   }
 
-  function claim(messageID: string, filepath: string) {
-    const current = state()
+  function claim(directory: string, messageID: string, filepath: string) {
+    const current = state(directory)
     let claimed = current.claims.get(messageID)
     if (!claimed) {
       claimed = new Set()
@@ -75,13 +72,13 @@ export namespace InstructionPrompt {
     claimed.add(filepath)
   }
 
-  export function clear(messageID: string) {
-    state().claims.delete(messageID)
+  export function clear(directory: string, messageID: string) {
+    state(directory).claims.delete(messageID)
   }
 
-  export async function systemPaths(directory?: string, worktree?: string) {
-    const dir = directory ?? InstanceALS.directory
-    const wt = worktree ?? InstanceALS.worktree
+  export async function systemPaths(directory: string, worktree: string) {
+    const dir = directory
+    const wt = worktree
     const config = await Config.get()
     const paths = new Set<string>()
 
@@ -126,9 +123,9 @@ export namespace InstructionPrompt {
     return paths
   }
 
-  export async function system() {
+  export async function system(directory: string, worktree: string) {
     const config = await Config.get()
-    const paths = await systemPaths()
+    const paths = await systemPaths(directory, worktree)
 
     const files = Array.from(paths).map(async (p) => {
       const content = await Filesystem.readText(p).catch(() => "")
@@ -181,10 +178,11 @@ export namespace InstructionPrompt {
     messages: MessageV2.WithParts[],
     filepath: string,
     messageID: string,
-    directory?: string,
+    directory: string,
+    worktree: string,
   ) {
-    const dir = directory ?? InstanceALS.directory
-    const system = await systemPaths(dir)
+    const dir = directory
+    const system = await systemPaths(dir, worktree)
     const already = loaded(messages)
     const results: { filepath: string; content: string }[] = []
 
@@ -195,8 +193,8 @@ export namespace InstructionPrompt {
     while (current.startsWith(root) && current !== root) {
       const found = await find(current)
 
-      if (found && found !== target && !system.has(found) && !already.has(found) && !isClaimed(messageID, found)) {
-        claim(messageID, found)
+      if (found && found !== target && !system.has(found) && !already.has(found) && !isClaimed(dir, messageID, found)) {
+        claim(dir, messageID, found)
         const content = await Filesystem.readText(found).catch(() => undefined)
         if (content) {
           results.push({ filepath: found, content: "Instructions from: " + found + "\n" + content })

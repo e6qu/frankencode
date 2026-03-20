@@ -65,6 +65,7 @@ export const SessionRoutes = lazy(() =>
           start: query.start,
           search: query.search,
           limit: query.limit,
+          project: InstanceALS.project,
         })) {
           sessions.push(session)
         }
@@ -411,7 +412,7 @@ export const SessionRoutes = lazy(() =>
         }),
       ),
       async (c) => {
-        SessionPrompt.cancel(c.req.valid("param").sessionID)
+        SessionPrompt.cancel(c.req.valid("param").sessionID, InstanceALS.directory)
         return c.json(true)
       },
     )

@@ -122,7 +122,7 @@ describe("session.prompt special characters", () => {
       fn: async () => {
         const session = await Session.create({})
         const template = "Read @file#name.txt"
-        const parts = await SessionPrompt.resolvePromptParts(template)
+        const parts = await SessionPrompt.resolvePromptParts(template, tmp.path)
         const fileParts = parts.filter((part) => part.type === "file")
 
         expect(fileParts.length).toBe(1)

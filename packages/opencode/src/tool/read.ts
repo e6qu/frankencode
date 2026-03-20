@@ -114,7 +114,13 @@ export const ReadTool = Tool.define("read", {
       }
     }
 
-    const instructions = await InstructionPrompt.resolve(ctx.messages, filepath, ctx.messageID)
+    const instructions = await InstructionPrompt.resolve(
+      ctx.messages,
+      filepath,
+      ctx.messageID,
+      ctx.directory,
+      ctx.worktree,
+    )
 
     // Exclude SVG (XML-based) and vnd.fastbidsheet (.fbs extension, commonly FlatBuffers schema files)
     const mime = Filesystem.mimeType(filepath)

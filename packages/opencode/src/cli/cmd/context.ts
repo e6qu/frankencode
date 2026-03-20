@@ -258,6 +258,6 @@ const ContextDerefCommand = cmd({
 
 async function resolveSession(sessionID?: string): Promise<string | undefined> {
   if (sessionID) return sessionID
-  const sessions = [...Session.list({ roots: true, limit: 1 })]
+  const sessions = [...Session.list({ roots: true, limit: 1, project: InstanceALS.project })]
   return sessions[0]?.id
 }

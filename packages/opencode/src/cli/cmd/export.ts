@@ -1,5 +1,6 @@
 import type { Argv } from "yargs"
 import { Session } from "../../session"
+import { InstanceALS } from "../../project/instance-als"
 import { SessionID } from "../../session/schema"
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
@@ -28,7 +29,7 @@ export const ExportCommand = cmd({
         })
 
         const sessions = []
-        for await (const session of Session.list()) {
+        for await (const session of Session.list({ project: InstanceALS.project })) {
           sessions.push(session)
         }
 

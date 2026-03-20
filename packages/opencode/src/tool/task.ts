@@ -120,11 +120,11 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       const messageID = MessageID.ascending()
 
       function cancel() {
-        SessionPrompt.cancel(session.id)
+        SessionPrompt.cancel(session.id, ctx.directory)
       }
       ctx.abort.addEventListener("abort", cancel)
       using _ = defer(() => ctx.abort.removeEventListener("abort", cancel))
-      const promptParts = await SessionPrompt.resolvePromptParts(params.prompt)
+      const promptParts = await SessionPrompt.resolvePromptParts(params.prompt, ctx.worktree)
 
       const result = await SessionPrompt.prompt({
         messageID,

@@ -291,6 +291,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
+          projectID: "test",
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
@@ -390,6 +391,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
+          projectID: "test",
           model: resolved,
           agent,
           permission: [{ permission: "question", pattern: "*", action: "allow" }],
@@ -509,6 +511,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
+          projectID: "test",
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
@@ -631,6 +634,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
+          projectID: "test",
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
@@ -732,6 +736,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
+          projectID: "test",
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],

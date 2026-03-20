@@ -1,7 +1,5 @@
 import { Ripgrep } from "../file/ripgrep"
 
-import { InstanceALS } from "../project/instance-als"
-
 import PROMPT_ANTHROPIC from "./prompt/anthropic.txt"
 import PROMPT_ANTHROPIC_WITHOUT_TODO from "./prompt/qwen.txt"
 import PROMPT_BEAST from "./prompt/beast.txt"
@@ -31,11 +29,11 @@ export namespace SystemPrompt {
 
   export async function environment(
     model: Provider.Model,
-    ctx?: { directory: string; worktree: string; project: { vcs: string } },
+    ctx: { directory: string; worktree: string; project: { vcs?: string } },
   ) {
-    const directory = ctx?.directory ?? InstanceALS.directory
-    const worktree = ctx?.worktree ?? InstanceALS.worktree
-    const project = ctx?.project ?? InstanceALS.project
+    const directory = ctx.directory
+    const worktree = ctx.worktree
+    const project = ctx.project
     return [
       [
         `You are powered by the model named ${model.api.id}. The exact model ID is ${model.providerID}/${model.api.id}`,

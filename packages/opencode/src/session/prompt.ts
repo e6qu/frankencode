@@ -202,7 +202,7 @@ export namespace SessionPrompt {
     return loop({ sessionID: input.sessionID })
   })
 
-  export async function resolvePromptParts(template: string, worktree?: string): Promise<PromptInput["parts"]> {
+  export async function resolvePromptParts(template: string, worktree: string): Promise<PromptInput["parts"]> {
     const parts: PromptInput["parts"] = [
       {
         type: "text",
@@ -216,9 +216,7 @@ export namespace SessionPrompt {
         const name = match[1]
         if (seen.has(name)) return
         seen.add(name)
-        const filepath = name.startsWith("~/")
-          ? path.join(os.homedir(), name.slice(2))
-          : path.resolve(worktree ?? InstanceALS.worktree, name)
+        const filepath = name.startsWith("~/") ? path.join(os.homedir(), name.slice(2)) : path.resolve(worktree, name)
 
         const stats = await fs.stat(filepath).catch(() => undefined)
         if (!stats) {
@@ -271,8 +269,8 @@ export namespace SessionPrompt {
     return s[sessionID].abort.signal
   }
 
-  export function cancel(sessionID: SessionID, directory?: string) {
-    const dir = directory ?? InstanceALS.directory
+  export function cancel(sessionID: SessionID, directory: string) {
+    const dir = directory
     log.info("cancel", { sessionID })
     const s = state(dir)
     const match = s[sessionID]
@@ -296,7 +294,8 @@ export namespace SessionPrompt {
     // Capture instance context at loop entry
     const _dir = InstanceALS.directory
     const _wt = InstanceALS.worktree
-    const _pid = InstanceALS.project.id
+    const _project = InstanceALS.project
+    const _pid = _project.id
     const _cp = InstanceALS.containsPath
 
     const abort = resume_existing ? resume(sessionID, _dir) : start(sessionID, _dir)
@@ -360,6 +359,7 @@ export namespace SessionPrompt {
           modelID: lastUser.model.modelID,
           providerID: lastUser.model.providerID,
           history: msgs,
+          projectID: _pid,
         })
 
       const model = await Provider.getModel(lastUser.model.providerID, lastUser.model.modelID).catch((e) => {
@@ -571,6 +571,9 @@ export namespace SessionPrompt {
           sessionID,
           auto: task.auto,
           overflow: task.overflow,
+          directory: _dir,
+          worktree: _wt,
+          projectID: _pid,
         })
         if (result === "stop") break
         continue
@@ -599,6 +602,8 @@ export namespace SessionPrompt {
         messages: msgs,
         agent,
         session,
+        worktree: _wt,
+        vcs: _project.vcs,
       })
 
       const processor = SessionProcessor.create({
@@ -631,7 +636,7 @@ export namespace SessionPrompt {
         model,
         abort,
       })
-      using _ = defer(() => InstructionPrompt.clear(processor.message.id))
+      using _ = defer(() => InstructionPrompt.clear(_dir, processor.message.id))
 
       // Check if user explicitly invoked an agent via @ in this turn
       const lastUserMsg = msgs.findLast((m) => m.info.role === "user")
@@ -645,6 +650,9 @@ export namespace SessionPrompt {
         processor,
         bypassAgentCheck,
         messages: msgs,
+        directory: _dir,
+        worktree: _wt,
+        projectID: _pid,
       })
 
       // Inject StructuredOutput tool if JSON schema mode enabled
@@ -688,9 +696,9 @@ export namespace SessionPrompt {
       // Build system prompt, adding structured output instruction if needed
       const skills = await SystemPrompt.skills(agent)
       const system = [
-        ...(await SystemPrompt.environment(model)),
+        ...(await SystemPrompt.environment(model, { directory: _dir, worktree: _wt, project: _project })),
         ...(skills ? [skills] : []),
-        ...(await InstructionPrompt.system()),
+        ...(await InstructionPrompt.system(_dir, _wt)),
       ]
       const format = lastUser.format ?? { type: "text" }
       if (format.type === "json_schema") {
@@ -724,6 +732,7 @@ export namespace SessionPrompt {
         permission: session.permission,
         abort,
         sessionID,
+        projectID: _pid,
         system,
         messages: [
           ...MessageV2.toModelMessages(msgs, model),
@@ -806,17 +815,17 @@ export namespace SessionPrompt {
     processor: SessionProcessor.Info
     bypassAgentCheck: boolean
     messages: MessageV2.WithParts[]
-    directory?: string
-    worktree?: string
-    projectID?: string
+    directory: string
+    worktree: string
+    projectID: string
   }) {
     using _ = log.time("resolveTools")
     const tools: Record<string, AITool> = {}
 
     // Capture instance context for tool execution
-    const _directory = input.directory ?? InstanceALS.directory
-    const _worktree = input.worktree ?? InstanceALS.worktree
-    const _projectID = input.projectID ?? InstanceALS.project.id
+    const _directory = input.directory
+    const _worktree = input.worktree
+    const _projectID = input.projectID
 
     const context = (args: any, options: ToolCallOptions): Tool.Context => ({
       sessionID: input.session.id,
@@ -1065,7 +1074,7 @@ export namespace SessionPrompt {
       variant,
       objective: currentObjective ?? undefined,
     }
-    using _ = defer(() => InstructionPrompt.clear(info.id))
+    using _ = defer(() => InstructionPrompt.clear(_dir, info.id))
 
     type Draft<T> = T extends MessageV2.Part ? Omit<T, "id"> & { id?: string } : never
     const assign = (part: Draft<MessageV2.Part>): MessageV2.Part =>
@@ -1454,7 +1463,13 @@ export namespace SessionPrompt {
     }
   }
 
-  async function insertReminders(input: { messages: MessageV2.WithParts[]; agent: Agent.Info; session: Session.Info }) {
+  async function insertReminders(input: {
+    messages: MessageV2.WithParts[]
+    agent: Agent.Info
+    session: Session.Info
+    worktree: string
+    vcs?: string
+  }) {
     const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
     if (!userMessage) return input.messages
 
@@ -1463,7 +1478,7 @@ export namespace SessionPrompt {
 
     // Switching from plan mode to build mode
     if (input.agent.name !== "plan" && assistantMessage?.info.agent === "plan") {
-      const plan = Session.plan(input.session)
+      const plan = Session.plan({ ...input.session, worktree: input.worktree, vcs: input.vcs })
       const exists = await Filesystem.exists(plan)
       if (exists) {
         const part = await Session.updatePart({
@@ -1482,7 +1497,7 @@ export namespace SessionPrompt {
 
     // Entering plan mode
     if (input.agent.name === "plan" && assistantMessage?.info.agent !== "plan") {
-      const plan = Session.plan(input.session)
+      const plan = Session.plan({ ...input.session, worktree: input.worktree, vcs: input.vcs })
       const exists = await Filesystem.exists(plan)
       if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
       const part = await Session.updatePart({
@@ -1943,7 +1958,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       throw error
     }
 
-    const templateParts = await resolvePromptParts(template)
+    const templateParts = await resolvePromptParts(template, InstanceALS.worktree)
     const isSubtask = (agent.mode === "subagent" && command.subtask !== false) || command.subtask === true
     const parts = isSubtask
       ? [
@@ -2030,6 +2045,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     history: MessageV2.WithParts[]
     providerID: ProviderID
     modelID: ModelID
+    projectID: string
   }) {
     if (input.session.parentID) return
     if (!Session.isDefaultTitle(input.session.title)) return
@@ -2072,6 +2088,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       model,
       abort: new AbortController().signal,
       sessionID: input.session.id,
+      projectID: input.projectID,
       retries: 2,
       messages: [
         {

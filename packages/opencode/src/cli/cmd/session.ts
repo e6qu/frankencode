@@ -1,6 +1,7 @@
 import type { Argv } from "yargs"
 import { cmd } from "./cmd"
 import { Session } from "../../session"
+import { InstanceALS } from "../../project/instance-als"
 import { SessionID } from "../../session/schema"
 import { bootstrap } from "../bootstrap"
 import { UI } from "../ui"
@@ -90,7 +91,7 @@ export const SessionListCommand = cmd({
   },
   handler: async (args) => {
     await bootstrap(process.cwd(), async () => {
-      const sessions = [...Session.list({ roots: true, limit: args.maxCount })]
+      const sessions = [...Session.list({ roots: true, limit: args.maxCount, project: InstanceALS.project })]
 
       if (sessions.length === 0) {
         return

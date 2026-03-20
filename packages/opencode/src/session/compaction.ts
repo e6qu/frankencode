@@ -2,7 +2,6 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Session } from "."
 import { SessionID, MessageID, PartID } from "./schema"
-import { InstanceALS } from "../project/instance-als"
 import { Provider } from "../provider/provider"
 import { MessageV2 } from "./message-v2"
 import z from "zod"
@@ -110,8 +109,9 @@ export namespace SessionCompaction {
     abort: AbortSignal
     auto: boolean
     overflow?: boolean
-    directory?: string
-    worktree?: string
+    directory: string
+    worktree: string
+    projectID: string
   }) {
     const userMessage = input.messages.findLast((m) => m.info.id === input.parentID)!.info as MessageV2.User
 
@@ -149,8 +149,8 @@ export namespace SessionCompaction {
       variant: userMessage.variant,
       summary: true,
       path: {
-        cwd: input.directory ?? InstanceALS.directory,
-        root: input.worktree ?? InstanceALS.worktree,
+        cwd: input.directory,
+        root: input.worktree,
       },
       cost: 0,
       tokens: {
@@ -213,6 +213,7 @@ When constructing the summary, try to stick to this template:
       agent,
       abort: input.abort,
       sessionID: input.sessionID,
+      projectID: input.projectID,
       tools: {},
       system: [],
       messages: [

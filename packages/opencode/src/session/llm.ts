@@ -14,7 +14,6 @@ import {
 import { mergeDeep, pipe } from "remeda"
 import { ProviderTransform } from "@/provider/transform"
 import { Config } from "@/config/config"
-import { InstanceALS } from "@/project/instance-als"
 import type { Agent } from "@/agent/agent"
 import type { MessageV2 } from "./message-v2"
 import { Plugin } from "@/plugin"
@@ -40,7 +39,7 @@ export namespace LLM {
     tools: Record<string, Tool>
     retries?: number
     toolChoice?: "auto" | "required" | "none"
-    projectID?: string
+    projectID: string
   }
 
   export type StreamOutput = StreamTextResult<ToolSet, unknown>
@@ -210,7 +209,7 @@ export namespace LLM {
       headers: {
         ...(input.model.providerID.startsWith("opencode")
           ? {
-              "x-opencode-project": input.projectID ?? InstanceALS.project.id,
+              "x-opencode-project": input.projectID,
               "x-opencode-session": input.sessionID,
               "x-opencode-request": input.user.id,
               "x-opencode-client": Flag.OPENCODE_CLIENT,

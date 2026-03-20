@@ -16,10 +16,10 @@ describe("InstructionPrompt.resolve", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const system = await InstructionPrompt.systemPaths()
+        const system = await InstructionPrompt.systemPaths(tmp.path, tmp.path)
         expect(system.has(path.join(tmp.path, "AGENTS.md"))).toBe(true)
 
-        const results = await InstructionPrompt.resolve([], path.join(tmp.path, "src", "file.ts"), "test-message-1")
+        const results = await InstructionPrompt.resolve([], path.join(tmp.path, "src", "file.ts"), "test-message-1", tmp.path, tmp.path)
         expect(results).toEqual([])
       },
     })
@@ -35,13 +35,15 @@ describe("InstructionPrompt.resolve", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const system = await InstructionPrompt.systemPaths()
+        const system = await InstructionPrompt.systemPaths(tmp.path, tmp.path)
         expect(system.has(path.join(tmp.path, "subdir", "AGENTS.md"))).toBe(false)
 
         const results = await InstructionPrompt.resolve(
           [],
           path.join(tmp.path, "subdir", "nested", "file.ts"),
           "test-message-2",
+          tmp.path,
+          tmp.path,
         )
         expect(results.length).toBe(1)
         expect(results[0].filepath).toBe(path.join(tmp.path, "subdir", "AGENTS.md"))
@@ -60,10 +62,10 @@ describe("InstructionPrompt.resolve", () => {
       directory: tmp.path,
       fn: async () => {
         const filepath = path.join(tmp.path, "subdir", "AGENTS.md")
-        const system = await InstructionPrompt.systemPaths()
+        const system = await InstructionPrompt.systemPaths(tmp.path, tmp.path)
         expect(system.has(filepath)).toBe(false)
 
-        const results = await InstructionPrompt.resolve([], filepath, "test-message-2")
+        const results = await InstructionPrompt.resolve([], filepath, "test-message-2", tmp.path, tmp.path)
         expect(results).toEqual([])
       },
     })
@@ -106,7 +108,7 @@ describe("InstructionPrompt.systemPaths OPENCODE_CONFIG_DIR", () => {
       await Instance.provide({
         directory: projectTmp.path,
         fn: async () => {
-          const paths = await InstructionPrompt.systemPaths()
+          const paths = await InstructionPrompt.systemPaths(projectTmp.path, projectTmp.path)
           expect(paths.has(path.join(profileTmp.path, "AGENTS.md"))).toBe(true)
           expect(paths.has(path.join(globalTmp.path, "AGENTS.md"))).toBe(false)
         },
@@ -133,7 +135,7 @@ describe("InstructionPrompt.systemPaths OPENCODE_CONFIG_DIR", () => {
       await Instance.provide({
         directory: projectTmp.path,
         fn: async () => {
-          const paths = await InstructionPrompt.systemPaths()
+          const paths = await InstructionPrompt.systemPaths(projectTmp.path, projectTmp.path)
           expect(paths.has(path.join(profileTmp.path, "AGENTS.md"))).toBe(false)
           expect(paths.has(path.join(globalTmp.path, "AGENTS.md"))).toBe(true)
         },
@@ -159,7 +161,7 @@ describe("InstructionPrompt.systemPaths OPENCODE_CONFIG_DIR", () => {
       await Instance.provide({
         directory: projectTmp.path,
         fn: async () => {
-          const paths = await InstructionPrompt.systemPaths()
+          const paths = await InstructionPrompt.systemPaths(projectTmp.path, projectTmp.path)
           expect(paths.has(path.join(globalTmp.path, "AGENTS.md"))).toBe(true)
         },
       })
