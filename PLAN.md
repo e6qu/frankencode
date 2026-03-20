@@ -88,5 +88,5 @@ These appear as "deletions" in `git diff dev..upstream/dev` because upstream nev
 | Effect-ification B1 (state maps) | ✅ Complete (#20) |
 | Effect-ification B2-B10g | ✅ Complete (on branch, 27 commits) |
 | Instance deletion + test migration | ✅ Complete (on branch) |
-| ALS fallback elimination (partial) | ✅ 23 of 59 eliminated (on branch) |
+| ALS fallback elimination | ✅ All 59 of 59 eliminated (on branch) |
 | TUI component tests | ✅ 81 tests + tmux integration harness (on branch) |

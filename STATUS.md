@@ -6,7 +6,7 @@
 
 ## Overview
 
-Frankencode is a fork of OpenCode that adds context editing, CAS, and an edit graph. Effect-ification complete — `src/project/instance.ts` deleted, Instance split into InstanceALS + InstanceLifecycle + InstanceContext. Test shim at `test/fixture/instance-shim.ts`. 23 of 59 ALS fallbacks eliminated; 36 remain in wide-caller modules (deferred). 150 direct InstanceALS reads across 40 files (correct entry-point usage). 1447 tests passing across 123 files, 0 TS errors.
+Frankencode is a fork of OpenCode that adds context editing, CAS, and an edit graph. Effect-ification complete — `src/project/instance.ts` deleted, Instance split into InstanceALS + InstanceLifecycle + InstanceContext. Test shim at `test/fixture/instance-shim.ts`. All 59 ALS fallback patterns eliminated — zero `?? InstanceALS.x` in src/. 1447 tests passing across 122 files, 0 TS errors.
 
 ## Branch Status
 
