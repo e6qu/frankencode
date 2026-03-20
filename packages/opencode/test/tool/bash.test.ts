@@ -31,7 +31,7 @@ describe("tool.bash", () => {
     await Instance.provide({
       directory: projectRoot,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const result = await bash.execute(
           {
             command: "echo 'test'",
@@ -52,7 +52,7 @@ describe("tool.bash permissions", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const requests: Array<Omit<PermissionNext.Request, "id" | "sessionID" | "tool">> = []
         const testCtx = {
           ...ctx,
@@ -79,7 +79,7 @@ describe("tool.bash permissions", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const requests: Array<Omit<PermissionNext.Request, "id" | "sessionID" | "tool">> = []
         const testCtx = {
           ...ctx,
@@ -107,7 +107,7 @@ describe("tool.bash permissions", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const requests: Array<Omit<PermissionNext.Request, "id" | "sessionID" | "tool">> = []
         const testCtx = {
           ...ctx,
@@ -133,7 +133,7 @@ describe("tool.bash permissions", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const requests: Array<Omit<PermissionNext.Request, "id" | "sessionID" | "tool">> = []
         const testCtx = {
           ...ctx,
@@ -166,7 +166,7 @@ describe("tool.bash permissions", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const requests: Array<Omit<PermissionNext.Request, "id" | "sessionID" | "tool">> = []
         const testCtx = {
           ...ctx,
@@ -196,7 +196,7 @@ describe("tool.bash permissions", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const requests: Array<Omit<PermissionNext.Request, "id" | "sessionID" | "tool">> = []
         const testCtx = {
           ...ctx,
@@ -226,7 +226,7 @@ describe("tool.bash permissions", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const requests: Array<Omit<PermissionNext.Request, "id" | "sessionID" | "tool">> = []
         const testCtx = {
           ...ctx,
@@ -253,7 +253,7 @@ describe("tool.bash permissions", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const requests: Array<Omit<PermissionNext.Request, "id" | "sessionID" | "tool">> = []
         const testCtx = {
           ...ctx,
@@ -279,7 +279,7 @@ describe("tool.bash permissions", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const requests: Array<Omit<PermissionNext.Request, "id" | "sessionID" | "tool">> = []
         const testCtx = {
           ...ctx,
@@ -300,7 +300,7 @@ describe("tool.bash permissions", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const requests: Array<Omit<PermissionNext.Request, "id" | "sessionID" | "tool">> = []
         const testCtx = {
           ...ctx,
@@ -323,7 +323,7 @@ describe("tool.bash truncation", () => {
     await Instance.provide({
       directory: projectRoot,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const lineCount = Truncate.MAX_LINES + 500
         const result = await bash.execute(
           {
@@ -343,7 +343,7 @@ describe("tool.bash truncation", () => {
     await Instance.provide({
       directory: projectRoot,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const byteCount = Truncate.MAX_BYTES + 10000
         const result = await bash.execute(
           {
@@ -363,7 +363,7 @@ describe("tool.bash truncation", () => {
     await Instance.provide({
       directory: projectRoot,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const result = await bash.execute(
           {
             command: "echo hello",
@@ -382,7 +382,7 @@ describe("tool.bash truncation", () => {
     await Instance.provide({
       directory: projectRoot,
       fn: async () => {
-        const bash = await BashTool.init()
+        const bash = await BashTool.init({ directory: Instance.directory })
         const lineCount = Truncate.MAX_LINES + 100
         const result = await bash.execute(
           {

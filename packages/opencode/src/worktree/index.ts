@@ -337,11 +337,11 @@ export namespace Worktree {
   }
 
   export async function makeWorktreeInfo(
-    name?: string,
-    ctx?: { worktree: string; project: { id: ProjectID; vcs: string } },
+    name: string | undefined,
+    ctx: { worktree: string; project: { id: ProjectID; vcs?: string } },
   ): Promise<Info> {
-    const project = ctx?.project ?? InstanceALS.project
-    const worktree = ctx?.worktree ?? InstanceALS.worktree
+    const project = ctx.project
+    const worktree = ctx.worktree
     if (project.vcs !== "git") {
       throw new NotGitError({ message: "Worktrees are only supported for git projects" })
     }
@@ -355,11 +355,11 @@ export namespace Worktree {
 
   export async function createFromInfo(
     info: Info,
-    startCommand?: string,
-    ctx?: { worktree: string; project: { id: ProjectID } },
+    startCommand: string | undefined,
+    ctx: { worktree: string; project: { id: ProjectID } },
   ) {
-    const worktree = ctx?.worktree ?? InstanceALS.worktree
-    const projectID = ctx?.project?.id ?? InstanceALS.project.id
+    const worktree = ctx.worktree
+    const projectID = ctx.project.id
     const created = await git(["worktree", "add", "--no-checkout", "-b", info.branch, info.directory], {
       cwd: worktree,
     })
@@ -427,8 +427,11 @@ export namespace Worktree {
   }
 
   export const create = fn(CreateInput.optional(), async (input) => {
-    const info = await makeWorktreeInfo(input?.name)
-    const bootstrap = await createFromInfo(info, input?.startCommand)
+    const project = InstanceALS.project
+    const worktree = InstanceALS.worktree
+    const ctx = { worktree, project }
+    const info = await makeWorktreeInfo(input?.name, ctx)
+    const bootstrap = await createFromInfo(info, input?.startCommand, ctx)
     // This is needed due to how worktrees currently work in the
     // desktop app
     setTimeout(() => {

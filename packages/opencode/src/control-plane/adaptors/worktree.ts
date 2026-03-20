@@ -1,5 +1,6 @@
 import z from "zod"
 import { Worktree } from "@/worktree"
+import { InstanceALS } from "@/project/instance-als"
 import { type Adaptor, WorkspaceInfo } from "../types"
 
 const Config = WorkspaceInfo.extend({
@@ -12,7 +13,8 @@ type Config = z.infer<typeof Config>
 
 export const WorktreeAdaptor: Adaptor = {
   async configure(info) {
-    const worktree = await Worktree.makeWorktreeInfo(info.name ?? undefined)
+    const ctx = { worktree: InstanceALS.worktree, project: InstanceALS.project }
+    const worktree = await Worktree.makeWorktreeInfo(info.name ?? undefined, ctx)
     return {
       ...info,
       name: worktree.name,
@@ -22,11 +24,16 @@ export const WorktreeAdaptor: Adaptor = {
   },
   async create(info) {
     const config = Config.parse(info)
-    const bootstrap = await Worktree.createFromInfo({
-      name: config.name,
-      directory: config.directory,
-      branch: config.branch,
-    })
+    const ctx = { worktree: InstanceALS.worktree, project: InstanceALS.project }
+    const bootstrap = await Worktree.createFromInfo(
+      {
+        name: config.name,
+        directory: config.directory,
+        branch: config.branch,
+      },
+      undefined,
+      ctx,
+    )
     return bootstrap()
   },
   async remove(info) {

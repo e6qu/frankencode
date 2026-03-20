@@ -233,8 +233,8 @@ export namespace Pty {
     return session.info
   }
 
-  export async function remove(id: PtyID, directory?: string) {
-    const dir = directory ?? InstanceALS.directory
+  export async function remove(id: PtyID, directory: string = InstanceALS.directory) {
+    const dir = directory
     const session = state(dir).get(id)
     if (!session) return
     state(dir).delete(id)

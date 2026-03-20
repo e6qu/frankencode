@@ -4,7 +4,6 @@ import { Tool } from "./tool"
 import path from "path"
 import DESCRIPTION from "./bash.txt"
 import { Log } from "../util/log"
-import { InstanceALS } from "../project/instance-als"
 import { lazy } from "@/util/lazy"
 import { Language } from "web-tree-sitter"
 import fs from "fs/promises"
@@ -55,7 +54,10 @@ const parser = lazy(async () => {
 export const BashTool = Tool.define("bash", async (initCtx?: Tool.InitContext) => {
   const shell = Shell.acceptable()
   log.info("bash tool using shell", { shell })
-  const directory = initCtx?.directory ?? InstanceALS.directory
+  if (!initCtx?.directory) {
+    throw new Error("BashTool.init requires initCtx.directory")
+  }
+  const directory = initCtx.directory
 
   return {
     description: DESCRIPTION.replaceAll("${directory}", directory)
