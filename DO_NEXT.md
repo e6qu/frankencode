@@ -25,22 +25,31 @@
 
 - [ ] PR `effect/complete-effectification` → `dev` (27 commits)
 
-## Next — Remaining ALS Fallback Elimination
+## Now — Eliminate All 36 Remaining ALS Fallbacks
 
-36 fallbacks remain in wide-caller modules. Each requires threading `directory` through many callers:
+### Batch A: Session modules (24 fallbacks, 1-2 callers each)
 
-- [ ] `env/index.ts` (4): Env.get/set/all/remove — 26+ callers in provider.ts alone
-- [ ] `bus/index.ts` (2): Bus.publish/subscribe — 33+ caller files
-- [ ] `plugin/index.ts` (4): Plugin.trigger/list/init — 14+ caller files
-- [ ] `session/prompt.ts` (5): resolveTools, insertReminders, ensureTitle
-- [ ] `session/instruction.ts` (5): resolveRelative, systemPaths, loadPromptInstruction
-- [ ] `session/index.ts` (4): createNext, plan, list, children
-- [ ] `session/system.ts` (3): environment() ctx parameter
-- [ ] `session/compaction.ts` (2): process() directory/worktree
-- [ ] `session/llm.ts` (1): projectID header
-- [ ] `worktree/index.ts` (4): makeWorktreeInfo, createFromInfo
-- [ ] `pty/index.ts` (1): remove() — test dependency
-- [ ] `tool/bash.ts` (1): initCtx.directory — test dependency
+- [ ] `session/system.ts` (3): make ctx required in environment()
+- [ ] `session/instruction.ts` (5): make directory/worktree required
+- [ ] `session/compaction.ts` (2): make directory/worktree required in process()
+- [ ] `session/llm.ts` (1): make projectID required
+- [ ] `session/index.ts` (4): make projectID/worktree/vcs required
+- [ ] `session/prompt.ts` (5): make directory/worktree/projectID required in resolveTools etc.
+- [ ] Commit: "refactor: eliminate 24 session module ALS fallbacks"
+
+### Batch B: Worktree + Pty + Bash (6 fallbacks)
+
+- [ ] `worktree/index.ts` (4): make ctx required in makeWorktreeInfo, createFromInfo
+- [ ] `pty/index.ts` (1): make directory required in remove(), update test
+- [ ] `tool/bash.ts` (1): make initCtx.directory required, update test
+- [ ] Commit: "refactor: eliminate worktree/pty/bash ALS fallbacks"
+
+### Batch C: Wide-caller modules (10 fallbacks)
+
+- [ ] `env/index.ts` (4): make directory required, update 25 callers
+- [ ] `plugin/index.ts` (4): make directory required, update 31 callers
+- [ ] `bus/index.ts` (2): make directory required, update 105 callers
+- [ ] Commit: "refactor: eliminate env/plugin/bus ALS fallbacks"
 
 ## Next — Remaining TUI Tests
 
