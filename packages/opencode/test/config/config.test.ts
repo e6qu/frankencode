@@ -1,6 +1,6 @@
 import { test, expect, describe, mock, afterEach, spyOn } from "bun:test"
 import { Config } from "../../src/config/config"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { Auth } from "../../src/auth"
 import { AccessToken, Account, AccountID, OrgID } from "../../src/account"
 import { tmpdir } from "../fixture/fixture"

@@ -2,7 +2,7 @@ import { Hono } from "hono"
 import { describeRoute, resolver, validator } from "hono-openapi"
 import z from "zod"
 import { Workspace } from "../../control-plane/workspace"
-import { Instance } from "../../project/instance"
+import { InstanceALS } from "../../project/instance-als"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
 
@@ -33,9 +33,10 @@ export const WorkspaceRoutes = lazy(() =>
         }),
       ),
       async (c) => {
+        const projectID = InstanceALS.project.id
         const body = c.req.valid("json")
         const workspace = await Workspace.create({
-          projectID: Instance.project.id,
+          projectID,
           ...body,
         })
         return c.json(workspace)
@@ -59,7 +60,8 @@ export const WorkspaceRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        return c.json(Workspace.list(Instance.project))
+        const project = InstanceALS.project
+        return c.json(Workspace.list(project))
       },
     )
     .delete(

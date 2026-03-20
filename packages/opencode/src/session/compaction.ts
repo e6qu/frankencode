@@ -2,7 +2,6 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Session } from "."
 import { SessionID, MessageID, PartID } from "./schema"
-import { Instance } from "../project/instance"
 import { Provider } from "../provider/provider"
 import { MessageV2 } from "./message-v2"
 import z from "zod"
@@ -12,6 +11,7 @@ import { SessionProcessor } from "./processor"
 import { fn } from "@/util/fn"
 import { Agent } from "@/agent/agent"
 import { Plugin } from "@/plugin"
+import { InstanceALS } from "@/project/instance-als"
 import { Config } from "@/config/config"
 import { ProviderTransform } from "@/provider/transform"
 import { ModelID, ProviderID } from "@/provider/schema"
@@ -110,6 +110,9 @@ export namespace SessionCompaction {
     abort: AbortSignal
     auto: boolean
     overflow?: boolean
+    directory: string
+    worktree: string
+    projectID: string
   }) {
     const userMessage = input.messages.findLast((m) => m.info.id === input.parentID)!.info as MessageV2.User
 
@@ -147,8 +150,8 @@ export namespace SessionCompaction {
       variant: userMessage.variant,
       summary: true,
       path: {
-        cwd: Instance.directory,
-        root: Instance.worktree,
+        cwd: input.directory,
+        root: input.worktree,
       },
       cost: 0,
       tokens: {
@@ -174,6 +177,7 @@ export namespace SessionCompaction {
       "experimental.session.compacting",
       { sessionID: input.sessionID },
       { context: [], prompt: undefined },
+      InstanceALS.directory,
     )
     const defaultPrompt = `Provide a detailed prompt for continuing our conversation above.
 Focus on information that would be helpful for continuing the conversation, including what we did, what we're doing, which files we're working on, and what we're going to do next.
@@ -205,12 +209,13 @@ When constructing the summary, try to stick to this template:
 
     const promptText = compacting.prompt ?? [defaultPrompt, ...compacting.context].join("\n\n")
     const msgs = structuredClone(messages)
-    await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
+    await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs }, InstanceALS.directory)
     const result = await processor.process({
       user: userMessage,
       agent,
       abort: input.abort,
       sessionID: input.sessionID,
+      projectID: input.projectID,
       tools: {},
       system: [],
       messages: [
@@ -296,7 +301,7 @@ When constructing the summary, try to stick to this template:
       }
     }
     if (processor.message.error) return "stop"
-    Bus.publish(Event.Compacted, { sessionID: input.sessionID })
+    Bus.publish(Event.Compacted, { sessionID: input.sessionID }, input.directory)
     return "continue"
   }
 

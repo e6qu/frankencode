@@ -8,7 +8,6 @@
 - [x] Integration (system prompt injection, plugin hooks, lifecycle sweeper)
 - [x] v2: query/toolName targeting, classifier_threads, distill_threads, /btw, /focus, /reset-context
 - [x] Config-based control (no feature toggles)
-- [x] Documentation (README, docs/context-editing, docs/schema, docs/agents, AGENTS.md)
 - [x] Ephemeral commands (/threads, /history, /tree, /deref, /classify)
 - [x] /cost TUI command with usage dialog
 - [x] Verify tool (test/lint/typecheck with circuit breaker)
@@ -16,26 +15,27 @@
 - [x] Script discovery and execution from skills
 - [x] 40 bugs fixed (code review audits + ephemeral fixes)
 - [x] 25 regression tests for bug fixes
-- [x] Upstream backport Phase 1 — 9 bug fixes (B1-B9) in [#16](https://github.com/e6qu/frankencode/pull/16)
-- [x] Upstream backport Phase 2 — 6 bug fixes (B10-B16) in [#17](https://github.com/e6qu/frankencode/pull/17)
+- [x] Upstream backport Phase 1-4 (bug fixes + full rebase)
+- [x] Effect-ification B1-B10g: Instance decoupled, deleted from src/, test shim created
+- [x] ALS fallback elimination: 23 of 59 patterns removed (15 leaf state() + 8 non-state)
+- [x] TUI tests: 81 component tests + tmux integration harness (5 flows)
+- [x] Manual TUI testing: home, command palette, agent cycling, message submit, cost dialog — all pass
 
-## Next — Upstream Backport Phase 3
+## Next — PR to dev
 
-Remaining cherry-pickable upstream commits. Requires fresh analysis of upstream since last sync.
+- [ ] PR `effect/complete-effectification` → `dev` (27 commits)
 
-- [ ] Re-scan upstream for new commits since Phase 2 analysis
-- [ ] Identify any remaining cherry-pickable fixes
-- [ ] Apply and test
+## Done — All 59 ALS Fallbacks Eliminated
 
-## Next — Upstream Full Rebase (Phase 4)
+- [x] Batch A: Session modules (20 fallbacks) — system, instruction, compaction, llm, index, prompt
+- [x] Batch B: Worktree + Pty + Bash (6 fallbacks) — ctx required, directory required
+- [x] Batch C: Wide-caller modules (10 fallbacks) — env (25 callers), plugin (31 callers), bus (78 callers)
 
-After all backports are merged, rebase onto `upstream/dev` to pick up the Effect-ification wave.
+## Next — Remaining TUI Tests
 
-- [ ] **Rebase onto upstream/dev** — resolve conflicts in `skill.ts`, `prompt.ts`, `message-v2.ts`, `instance.ts`
-- [ ] **Adapt `Instance.state()` calls** — upstream deleted `instance-state.ts`; our CAS, EditGraph, SideThread, Objective, Skill cache, Command state all use it
-- [ ] **Wrap event handlers with `Instance.bind()`** — upstream requires this for ALS context in callbacks
-- [ ] **Reimplement skill content cache** — upstream rewrote `skill.ts` to `SkillService` (Effect)
-- [ ] **Test after rebase** — run full suite, fix breakage
+- [ ] 9 dialog tests: command, provider, session-rename, stash, status, tag, workspace-list, mcp, cost (enhance)
+- [ ] Route tests: home, session
+- [ ] Interaction tests: dialog-select keyboard nav, prompt input, command palette
 
 ## Backlog — Testing
 
@@ -45,8 +45,6 @@ After all backports are merged, rebase onto `upstream/dev` to pick up the Effect
 - [ ] Unit tests for SideThread CRUD
 - [ ] Unit tests for ContextEdit validation (ownership, budget, recency, privileged agents)
 - [ ] Unit tests for lifecycle sweeper (discardable auto-hide, ephemeral auto-externalize)
-- [ ] Test classifier_threads + distill_threads with a real session
-- [ ] Test /btw command (verify it forks, doesn't pollute main thread)
 
 ## Backlog — Features
 
@@ -54,8 +52,3 @@ After all backports are merged, rebase onto `upstream/dev` to pick up the Effect
 - [ ] TUI rendering of edit indicators (hidden/replaced/annotated parts)
 - [ ] Session.remove() cleanup of EditGraph rows (add CASCADE or explicit delete)
 - [ ] CAS.store() ownership: stop overwriting session_id on hash collision
-
-## Backlog — Design Decisions
-
-- [ ] Explore: make /btw use Session.fork() for true message-level isolation
-- [ ] Evaluate upstream's `tools` deprecation and migration to permission-only model

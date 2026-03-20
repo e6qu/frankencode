@@ -3,7 +3,8 @@ import { UI } from "@/cli/ui"
 import { tui } from "./app"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { TuiConfig } from "@/config/tui"
-import { Instance } from "@/project/instance"
+import { InstanceLifecycle } from "@/project/lifecycle"
+import { InstanceALS } from "@/project/instance-als"
 import { existsSync } from "fs"
 
 export const AttachCommand = cmd({
@@ -66,10 +67,9 @@ export const AttachCommand = cmd({
         const auth = `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`
         return { Authorization: auth }
       })()
-      const config = await Instance.provide({
-        directory: directory && existsSync(directory) ? directory : process.cwd(),
-        fn: () => TuiConfig.get(),
-      })
+      const attachDir = directory && existsSync(directory) ? directory : process.cwd()
+      const ctx = await InstanceLifecycle.boot(attachDir)
+      const config = await InstanceALS.run(ctx, () => TuiConfig.get())
       await tui({
         url: args.url,
         config,

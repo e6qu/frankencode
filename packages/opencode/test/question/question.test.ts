@@ -1,6 +1,6 @@
 import { afterEach, test, expect } from "bun:test"
 import { Question } from "../../src/question"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { QuestionID } from "../../src/question/schema"
 import { tmpdir } from "../fixture/fixture"
 import { SessionID } from "../../src/session/schema"

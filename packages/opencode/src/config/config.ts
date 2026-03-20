@@ -20,7 +20,8 @@ import {
   parse as parseJsonc,
   printParseErrorCode,
 } from "jsonc-parser"
-import { Instance } from "../project/instance"
+import { InstanceLifecycle } from "../project/lifecycle"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { LSPServer } from "../lsp/server"
 import { BunProc } from "@/bun"
@@ -82,17 +83,18 @@ export namespace Config {
     return merged
   }
 
-  function state(): Promise<ConfigStateResult> {
-    const dir = Instance.directory
-    let s = configStates.get(dir)
+  function state(directory: string): Promise<ConfigStateResult> {
+    let s = configStates.get(directory)
     if (!s) {
       s = initConfig()
-      configStates.set(dir, s)
+      configStates.set(directory, s)
     }
     return s
   }
 
   async function initConfig(): Promise<ConfigStateResult> {
+    const directory = InstanceALS.directory
+    const worktree = InstanceALS.worktree
     const auth = await Auth.all()
 
     // Config loading order (low -> high precedence): https://opencode.ai/docs/config#precedence-order
@@ -139,7 +141,7 @@ export namespace Config {
 
     // Project config overrides global and remote config.
     if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
-      for (const file of await ConfigPaths.projectFiles("opencode", Instance.directory, Instance.worktree)) {
+      for (const file of await ConfigPaths.projectFiles("opencode", directory, worktree)) {
         result = mergeConfigConcatArrays(result, await loadFile(file))
       }
     }
@@ -148,7 +150,7 @@ export namespace Config {
     result.mode = result.mode || {}
     result.plugin = result.plugin || []
 
-    const directories = await ConfigPaths.directories(Instance.directory, Instance.worktree)
+    const directories = await ConfigPaths.directories(directory, worktree)
 
     // .opencode directory config overrides (project and global) config sources.
     if (Flag.OPENCODE_CONFIG_DIR) {
@@ -187,7 +189,7 @@ export namespace Config {
       result = mergeConfigConcatArrays(
         result,
         await load(process.env.OPENCODE_CONFIG_CONTENT, {
-          dir: Instance.directory,
+          dir: directory,
           source: "OPENCODE_CONFIG_CONTENT",
         }),
       )
@@ -203,7 +205,7 @@ export namespace Config {
         ])
         if (token) {
           process.env["OPENCODE_CONSOLE_TOKEN"] = token
-          Env.set("OPENCODE_CONSOLE_TOKEN", token)
+          Env.set("OPENCODE_CONSOLE_TOKEN", token, InstanceALS.directory)
         }
 
         if (config) {
@@ -283,7 +285,7 @@ export namespace Config {
   }
 
   export async function waitForDependencies() {
-    const deps = await state().then((x) => x.deps)
+    const deps = await state(InstanceALS.directory).then((x) => x.deps)
     await Promise.all(deps)
   }
 
@@ -411,7 +413,11 @@ export namespace Config {
           ? err.data.message
           : `Failed to parse command ${item}`
         const { Session } = await import("@/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        Bus.publish(
+          Session.Event.Error,
+          { error: new NamedError.Unknown({ message }).toObject() },
+          InstanceALS.directory,
+        )
         log.error("failed to load command", { command: item, err })
         return undefined
       })
@@ -450,7 +456,11 @@ export namespace Config {
           ? err.data.message
           : `Failed to parse agent ${item}`
         const { Session } = await import("@/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        Bus.publish(
+          Session.Event.Error,
+          { error: new NamedError.Unknown({ message }).toObject() },
+          InstanceALS.directory,
+        )
         log.error("failed to load agent", { agent: item, err })
         return undefined
       })
@@ -488,7 +498,11 @@ export namespace Config {
           ? err.data.message
           : `Failed to parse mode ${item}`
         const { Session } = await import("@/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        Bus.publish(
+          Session.Event.Error,
+          { error: new NamedError.Unknown({ message }).toObject() },
+          InstanceALS.directory,
+        )
         log.error("failed to load mode", { mode: item, err })
         return undefined
       })
@@ -1408,7 +1422,7 @@ export namespace Config {
   )
 
   export async function get() {
-    return state().then((x) => x.config)
+    return state(InstanceALS.directory).then((x) => x.config)
   }
 
   export async function getGlobal() {
@@ -1416,11 +1430,11 @@ export namespace Config {
   }
 
   export async function update(config: Info) {
-    const filepath = path.join(Instance.directory, "config.json")
+    const filepath = path.join(InstanceALS.directory, "config.json")
     const existing = await loadFile(filepath)
     await Filesystem.writeJson(filepath, mergeDeep(existing, config))
-    configStates.delete(Instance.directory)
-    await Instance.dispose()
+    configStates.delete(InstanceALS.directory)
+    await InstanceLifecycle.dispose(InstanceALS.directory)
   }
 
   function globalConfigFile() {
@@ -1511,7 +1525,7 @@ export namespace Config {
 
     global.reset()
 
-    void Instance.disposeAll()
+    void InstanceLifecycle.disposeAll()
       .catch(() => undefined)
       .finally(() => {
         GlobalBus.emit("event", {
@@ -1527,6 +1541,6 @@ export namespace Config {
   }
 
   export async function directories() {
-    return state().then((x) => x.directories)
+    return state(InstanceALS.directory).then((x) => x.directories)
   }
 }

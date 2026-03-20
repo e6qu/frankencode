@@ -2,7 +2,7 @@ import { describe, expect, test, beforeEach } from "bun:test"
 import path from "path"
 import { LSPClient } from "../../src/lsp/client"
 import { LSPServer } from "../../src/lsp/server"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { Log } from "../../src/util/log"
 
 // Minimal fake LSP server that speaks JSON-RPC over stdio
@@ -31,6 +31,7 @@ describe("LSPClient interop", () => {
           serverID: "fake",
           server: handle as unknown as LSPServer.Handle,
           root: process.cwd(),
+          directory: process.cwd(),
         }),
     })
 
@@ -55,6 +56,7 @@ describe("LSPClient interop", () => {
           serverID: "fake",
           server: handle as unknown as LSPServer.Handle,
           root: process.cwd(),
+          directory: process.cwd(),
         }),
     })
 
@@ -79,6 +81,7 @@ describe("LSPClient interop", () => {
           serverID: "fake",
           server: handle as unknown as LSPServer.Handle,
           root: process.cwd(),
+          directory: process.cwd(),
         }),
     })
 

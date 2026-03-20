@@ -11,6 +11,10 @@ const ctx = {
   agent: "test-agent",
   abort: AbortSignal.any([]),
   messages: [],
+  directory: "",
+  worktree: "",
+  projectID: "",
+  containsPath: () => true,
   metadata: () => {},
   ask: async () => {},
 }

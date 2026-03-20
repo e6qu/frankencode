@@ -15,6 +15,23 @@ All bugs tracked here. Do not create per-package bug files.
 
 ---
 
+## Manual TUI Testing (2026-03-20)
+
+Tested on branch `effect/complete-effectification` (27 commits ahead of `dev`) using tmux-based test harness and manual interaction. Model: GLM-5 Z.AI Coding.
+
+| Flow | Result | Notes |
+| --- | --- | --- |
+| Home screen | ✅ Pass | Logo, prompt, tips, status bar render correctly |
+| Command palette (Ctrl+P) | ✅ Pass | Opens, shows Session/Skills/Open editor/Switch session |
+| Agent cycling (Tab) | ✅ Pass | Cycles through Build/Plan/Docs agents |
+| Message submission | ✅ Pass | Enter submits, streaming dots visible, response renders with token/cost metadata |
+| Cost dialog (/cost) | ✅ Pass | Shows Sess/☼-ly/☽-ly rows with cache hit %, esc dismisses |
+| Status bar | ✅ Pass | Shows branch, agent, model, hints |
+
+No new bugs found during manual testing.
+
+---
+
 ## False Positives / Intentional
 
 | Issue | Resolution |
@@ -73,4 +90,4 @@ All bugs tracked here. Do not create per-package bug files.
 
 ## Notes
 
-**TUI Testing:** Playwright not feasible (OpenTUI+SolidJS). Use `createTestRenderer()`, `@solidjs/testing-library`, or Termwright. Keep Playwright for `packages/app` only.
+**TUI Testing:** Playwright not feasible (OpenTUI+SolidJS). Use `testRender()` from `@opentui/solid` for unit tests. tmux-based integration harness at `test/cli/tui/tmux-tui-test.ts` for E2E flows.

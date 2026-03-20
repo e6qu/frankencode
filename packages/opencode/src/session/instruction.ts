@@ -3,12 +3,12 @@ import os from "os"
 import { Global } from "../global"
 import { Filesystem } from "../util/filesystem"
 import { Config } from "../config/config"
-import { Instance } from "../project/instance"
 import { Flag } from "@/flag/flag"
 import { Log } from "../util/log"
 import { Glob } from "../util/glob"
 import type { MessageV2 } from "./message-v2"
 import { Effect, Layer, ServiceMap } from "effect"
+import { InstanceContext } from "@/effect/instance-context"
 
 const log = Log.create({ service: "instruction" })
 
@@ -30,9 +30,9 @@ function globalFiles() {
   return files
 }
 
-async function resolveRelative(instruction: string): Promise<string[]> {
+async function resolveRelative(instruction: string, directory: string, worktree: string): Promise<string[]> {
   if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
-    return Filesystem.globUp(instruction, Instance.directory, Instance.worktree).catch(() => [])
+    return Filesystem.globUp(instruction, directory, worktree).catch(() => [])
   }
   if (!Flag.OPENCODE_CONFIG_DIR) {
     log.warn(
@@ -45,8 +45,8 @@ async function resolveRelative(instruction: string): Promise<string[]> {
 
 const states = new Map<string, { claims: Map<string, Set<string>> }>()
 
-function state() {
-  const dir = Instance.directory
+function state(directory: string) {
+  const dir = directory
   let s = states.get(dir)
   if (!s) {
     s = { claims: new Map() }
@@ -56,14 +56,14 @@ function state() {
 }
 
 export namespace InstructionPrompt {
-  function isClaimed(messageID: string, filepath: string) {
-    const claimed = state().claims.get(messageID)
+  function isClaimed(directory: string, messageID: string, filepath: string) {
+    const claimed = state(directory).claims.get(messageID)
     if (!claimed) return false
     return claimed.has(filepath)
   }
 
-  function claim(messageID: string, filepath: string) {
-    const current = state()
+  function claim(directory: string, messageID: string, filepath: string) {
+    const current = state(directory)
     let claimed = current.claims.get(messageID)
     if (!claimed) {
       claimed = new Set()
@@ -72,17 +72,19 @@ export namespace InstructionPrompt {
     claimed.add(filepath)
   }
 
-  export function clear(messageID: string) {
-    state().claims.delete(messageID)
+  export function clear(directory: string, messageID: string) {
+    state(directory).claims.delete(messageID)
   }
 
-  export async function systemPaths() {
+  export async function systemPaths(directory: string, worktree: string) {
+    const dir = directory
+    const wt = worktree
     const config = await Config.get()
     const paths = new Set<string>()
 
     if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
       for (const file of FILES) {
-        const matches = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
+        const matches = await Filesystem.findUp(file, dir, wt)
         if (matches.length > 0) {
           matches.forEach((p) => {
             paths.add(path.resolve(p))
@@ -111,7 +113,7 @@ export namespace InstructionPrompt {
               absolute: true,
               include: "file",
             }).catch(() => [])
-          : await resolveRelative(instruction)
+          : await resolveRelative(instruction, dir, wt)
         matches.forEach((p) => {
           paths.add(path.resolve(p))
         })
@@ -121,9 +123,9 @@ export namespace InstructionPrompt {
     return paths
   }
 
-  export async function system() {
+  export async function system(directory: string, worktree: string) {
     const config = await Config.get()
-    const paths = await systemPaths()
+    const paths = await systemPaths(directory, worktree)
 
     const files = Array.from(paths).map(async (p) => {
       const content = await Filesystem.readText(p).catch(() => "")
@@ -172,20 +174,27 @@ export namespace InstructionPrompt {
     }
   }
 
-  export async function resolve(messages: MessageV2.WithParts[], filepath: string, messageID: string) {
-    const system = await systemPaths()
+  export async function resolve(
+    messages: MessageV2.WithParts[],
+    filepath: string,
+    messageID: string,
+    directory: string,
+    worktree: string,
+  ) {
+    const dir = directory
+    const system = await systemPaths(dir, worktree)
     const already = loaded(messages)
     const results: { filepath: string; content: string }[] = []
 
     const target = path.resolve(filepath)
     let current = path.dirname(target)
-    const root = path.resolve(Instance.directory)
+    const root = path.resolve(dir)
 
     while (current.startsWith(root) && current !== root) {
       const found = await find(current)
 
-      if (found && found !== target && !system.has(found) && !already.has(found) && !isClaimed(messageID, found)) {
-        claim(messageID, found)
+      if (found && found !== target && !system.has(found) && !already.has(found) && !isClaimed(dir, messageID, found)) {
+        claim(dir, messageID, found)
         const content = await Filesystem.readText(found).catch(() => undefined)
         if (content) {
           results.push({ filepath: found, content: "Instructions from: " + found + "\n" + content })
@@ -210,7 +219,8 @@ export class InstructionService extends ServiceMap.Service<InstructionService, I
   static readonly layer = Layer.effect(
     InstructionService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const ctx = yield* InstanceContext
+      const dir = ctx.directory
       let s = states.get(dir)
       if (!s) {
         s = { claims: new Map() }

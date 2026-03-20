@@ -1,4 +1,5 @@
 import { runPromiseInstance } from "@/effect/runtime"
+import { InstanceALS } from "@/project/instance-als"
 import { Config } from "@/config/config"
 import { fn } from "@/util/fn"
 import { Wildcard } from "@/util/wildcard"
@@ -54,15 +55,24 @@ export namespace PermissionNext {
   }
 
   export const ask = fn(S.AskInput, async (input) =>
-    runPromiseInstance(S.PermissionService.use((service) => service.ask(input))),
+    runPromiseInstance(
+      S.PermissionService.use((service) => service.ask(input)),
+      InstanceALS.directory,
+    ),
   )
 
   export const reply = fn(S.ReplyInput, async (input) =>
-    runPromiseInstance(S.PermissionService.use((service) => service.reply(input))),
+    runPromiseInstance(
+      S.PermissionService.use((service) => service.reply(input)),
+      InstanceALS.directory,
+    ),
   )
 
   export async function list() {
-    return runPromiseInstance(S.PermissionService.use((service) => service.list()))
+    return runPromiseInstance(
+      S.PermissionService.use((service) => service.list()),
+      InstanceALS.directory,
+    )
   }
 
   export function evaluate(permission: string, pattern: string, ...rulesets: Ruleset[]): Rule {

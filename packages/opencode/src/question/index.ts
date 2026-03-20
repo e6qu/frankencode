@@ -1,4 +1,5 @@
 import { runPromiseInstance } from "@/effect/runtime"
+import { InstanceALS } from "@/project/instance-als"
 import * as S from "./service"
 import type { QuestionID } from "./schema"
 import type { SessionID, MessageID } from "@/session/schema"
@@ -22,18 +23,30 @@ export namespace Question {
     questions: Info[]
     tool?: { messageID: MessageID; callID: string }
   }): Promise<Answer[]> {
-    return runPromiseInstance(S.QuestionService.use((service) => service.ask(input)))
+    return runPromiseInstance(
+      S.QuestionService.use((service) => service.ask(input)),
+      InstanceALS.directory,
+    )
   }
 
   export async function reply(input: { requestID: QuestionID; answers: Answer[] }): Promise<void> {
-    return runPromiseInstance(S.QuestionService.use((service) => service.reply(input)))
+    return runPromiseInstance(
+      S.QuestionService.use((service) => service.reply(input)),
+      InstanceALS.directory,
+    )
   }
 
   export async function reject(requestID: QuestionID): Promise<void> {
-    return runPromiseInstance(S.QuestionService.use((service) => service.reject(requestID)))
+    return runPromiseInstance(
+      S.QuestionService.use((service) => service.reject(requestID)),
+      InstanceALS.directory,
+    )
   }
 
   export async function list(): Promise<Request[]> {
-    return runPromiseInstance(S.QuestionService.use((service) => service.list()))
+    return runPromiseInstance(
+      S.QuestionService.use((service) => service.list()),
+      InstanceALS.directory,
+    )
   }
 }

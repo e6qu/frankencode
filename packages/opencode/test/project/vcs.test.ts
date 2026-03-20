@@ -6,7 +6,7 @@ import { Layer, ManagedRuntime } from "effect"
 import { tmpdir } from "../fixture/fixture"
 import { watcherConfigLayer, withServices } from "../fixture/instance"
 import { FileWatcher, FileWatcherService } from "../../src/file/watcher"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { GlobalBus } from "../../src/bus/global"
 import { Vcs, VcsService } from "../../src/project/vcs"
 

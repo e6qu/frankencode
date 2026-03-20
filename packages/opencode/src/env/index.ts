@@ -1,32 +1,31 @@
 import { Effect, Layer, ServiceMap } from "effect"
-import { Instance } from "../project/instance"
+import { InstanceContext } from "../effect/instance-context"
 
 const states = new Map<string, Record<string, string | undefined>>()
 
 export namespace Env {
-  export function get(key: string) {
-    return state()[key]
+  export function get(key: string, directory: string) {
+    return state(directory)[key]
   }
 
-  export function all() {
-    return state()
+  export function all(directory: string) {
+    return state(directory)
   }
 
-  export function set(key: string, value: string) {
-    state()[key] = value
+  export function set(key: string, value: string, directory: string) {
+    state(directory)[key] = value
   }
 
-  export function remove(key: string) {
-    delete state()[key]
+  export function remove(key: string, directory: string) {
+    delete state(directory)[key]
   }
 }
 
-function state() {
-  const dir = Instance.directory
-  let s = states.get(dir)
+function state(directory: string) {
+  let s = states.get(directory)
   if (!s) {
     s = { ...process.env } as Record<string, string | undefined>
-    states.set(dir, s)
+    states.set(directory, s)
   }
   return s
 }
@@ -44,7 +43,8 @@ export class EnvService extends ServiceMap.Service<EnvService, EnvService.Servic
   static readonly layer = Layer.effect(
     EnvService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const ctx = yield* InstanceContext
+      const dir = ctx.directory
       let env = states.get(dir)
       if (!env) {
         env = { ...process.env } as Record<string, string | undefined>

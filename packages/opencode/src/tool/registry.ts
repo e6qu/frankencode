@@ -14,7 +14,7 @@ import { InvalidTool } from "./invalid"
 import { SkillTool } from "./skill"
 import type { Agent } from "../agent/agent"
 import { Tool } from "./tool"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Config } from "../config/config"
 import path from "path"
@@ -52,12 +52,11 @@ registerDisposer(async (directory) => {
 export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
 
-  function state() {
-    const dir = Instance.directory
-    let s = toolRegistryStates.get(dir)
+  function state(directory: string) {
+    let s = toolRegistryStates.get(directory)
     if (!s) {
       s = initRegistry()
-      toolRegistryStates.set(dir, s)
+      toolRegistryStates.set(directory, s)
     }
     return s
   }
@@ -79,7 +78,7 @@ export namespace ToolRegistry {
       }
     }
 
-    const plugins = await Plugin.list()
+    const plugins = await Plugin.list(InstanceALS.directory)
     for (const plugin of plugins) {
       for (const [id, def] of Object.entries(plugin.tool ?? {})) {
         custom.push(fromPlugin(id, def))
@@ -103,8 +102,8 @@ export namespace ToolRegistry {
         execute: async (args, ctx) => {
           const pluginCtx = {
             ...ctx,
-            directory: Instance.directory,
-            worktree: Instance.worktree,
+            directory: ctx.directory,
+            worktree: ctx.worktree,
           } as unknown as PluginToolContext
           const result = await def.execute(args as any, pluginCtx)
           const out = await Truncate.output(result, {}, initCtx?.agent)
@@ -119,7 +118,7 @@ export namespace ToolRegistry {
   }
 
   export async function register(tool: Tool.Info) {
-    const { custom } = await state()
+    const { custom } = await state(InstanceALS.directory)
     const idx = custom.findIndex((t) => t.id === tool.id)
     if (idx >= 0) {
       custom.splice(idx, 1, tool)
@@ -129,7 +128,7 @@ export namespace ToolRegistry {
   }
 
   async function all(): Promise<Tool.Info[]> {
-    const custom = await state().then((x) => x.custom)
+    const custom = await state(InstanceALS.directory).then((x) => x.custom)
     const config = await Config.get()
     const question = ["app", "cli", "desktop"].includes(Flag.OPENCODE_CLIENT) || Flag.OPENCODE_ENABLE_QUESTION_TOOL
 
@@ -198,12 +197,14 @@ export namespace ToolRegistry {
         })
         .map(async (t) => {
           using _ = log.time(t.id)
-          const tool = await t.init({ agent })
+          const dir = InstanceALS.directory
+          const wt = InstanceALS.worktree
+          const tool = await t.init({ agent, directory: dir, worktree: wt })
           const output = {
             description: tool.description,
             parameters: tool.parameters,
           }
-          await Plugin.trigger("tool.definition", { toolID: t.id }, output)
+          await Plugin.trigger("tool.definition", { toolID: t.id }, output, InstanceALS.directory)
           return {
             id: t.id,
             ...tool,

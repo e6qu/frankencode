@@ -4,7 +4,6 @@ import { Tool } from "./tool"
 import path from "path"
 import DESCRIPTION from "./bash.txt"
 import { Log } from "../util/log"
-import { Instance } from "../project/instance"
 import { lazy } from "@/util/lazy"
 import { Language } from "web-tree-sitter"
 import fs from "fs/promises"
@@ -17,6 +16,7 @@ import { Shell } from "@/shell/shell"
 import { BashArity } from "@/permission/arity"
 import { Truncate } from "./truncation"
 import { Plugin } from "@/plugin"
+import { InstanceALS } from "@/project/instance-als"
 
 const MAX_METADATA_LENGTH = 30_000
 const DEFAULT_TIMEOUT = Flag.OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
@@ -52,12 +52,16 @@ const parser = lazy(async () => {
 })
 
 // TODO: we may wanna rename this tool so it works better on other shells
-export const BashTool = Tool.define("bash", async () => {
+export const BashTool = Tool.define("bash", async (initCtx?: Tool.InitContext) => {
   const shell = Shell.acceptable()
   log.info("bash tool using shell", { shell })
+  if (!initCtx?.directory) {
+    throw new Error("BashTool.init requires initCtx.directory")
+  }
+  const directory = initCtx.directory
 
   return {
-    description: DESCRIPTION.replaceAll("${directory}", Instance.directory)
+    description: DESCRIPTION.replaceAll("${directory}", directory)
       .replaceAll("${maxLines}", String(Truncate.MAX_LINES))
       .replaceAll("${maxBytes}", String(Truncate.MAX_BYTES)),
     parameters: z.object({
@@ -66,7 +70,7 @@ export const BashTool = Tool.define("bash", async () => {
       workdir: z
         .string()
         .describe(
-          `The working directory to run the command in. Defaults to ${Instance.directory}. Use this instead of 'cd' commands.`,
+          `The working directory to run the command in. Defaults to ${directory}. Use this instead of 'cd' commands.`,
         )
         .optional(),
       description: z
@@ -76,7 +80,7 @@ export const BashTool = Tool.define("bash", async () => {
         ),
     }),
     async execute(params, ctx) {
-      const cwd = params.workdir || Instance.directory
+      const cwd = params.workdir || ctx.directory
       if (params.timeout !== undefined && params.timeout < 0) {
         throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
       }
@@ -86,7 +90,7 @@ export const BashTool = Tool.define("bash", async () => {
         throw new Error("Failed to parse command")
       }
       const directories = new Set<string>()
-      if (!Instance.containsPath(cwd)) directories.add(cwd)
+      if (!ctx.containsPath(cwd)) directories.add(cwd)
       const patterns = new Set<string>()
       const always = new Set<string>()
 
@@ -121,7 +125,7 @@ export const BashTool = Tool.define("bash", async () => {
             if (resolved) {
               const normalized =
                 process.platform === "win32" ? Filesystem.windowsPath(resolved).replace(/\//g, "\\") : resolved
-              if (!Instance.containsPath(normalized)) {
+              if (!ctx.containsPath(normalized)) {
                 const dir = (await Filesystem.isDir(normalized)) ? normalized : path.dirname(normalized)
                 directories.add(dir)
               }
@@ -163,6 +167,7 @@ export const BashTool = Tool.define("bash", async () => {
         "shell.env",
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
+        InstanceALS.directory,
       )
       const proc = spawn(params.command, {
         shell,

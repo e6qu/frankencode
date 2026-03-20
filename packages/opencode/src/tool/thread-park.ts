@@ -1,6 +1,5 @@
 import { Tool } from "./tool"
 import { SideThread } from "@/session/side-thread"
-import { Instance } from "@/project/instance"
 import z from "zod"
 
 export const ThreadParkTool = Tool.define("thread_park", {
@@ -27,7 +26,7 @@ Examples of when to park:
 
   async execute(args, ctx) {
     const thread = SideThread.create({
-      projectID: Instance.project.id,
+      projectID: ctx.projectID,
       title: args.title,
       description: args.description,
       priority: args.priority,

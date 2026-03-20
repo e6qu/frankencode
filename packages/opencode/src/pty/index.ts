@@ -3,7 +3,7 @@ import { Bus } from "@/bus"
 import { type IPty } from "bun-pty"
 import z from "zod"
 import { Log } from "../util/log"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { lazy } from "@opencode-ai/util/lazy"
 import { Shell } from "@/shell/shell"
@@ -11,10 +11,10 @@ import { Plugin } from "@/plugin"
 import { PtyID } from "./schema"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const stateMap = new Map<string, Map<PtyID, any>>()
+export const ptyStateMap = new Map<string, Map<PtyID, any>>()
 
 registerDisposer(async (directory) => {
-  const sessions = stateMap.get(directory)
+  const sessions = ptyStateMap.get(directory)
   if (sessions) {
     for (const session of sessions.values()) {
       try {
@@ -30,7 +30,7 @@ registerDisposer(async (directory) => {
     }
     sessions.clear()
   }
-  stateMap.delete(directory)
+  ptyStateMap.delete(directory)
 })
 
 export namespace Pty {
@@ -114,22 +114,21 @@ export namespace Pty {
     subscribers: Map<unknown, Socket>
   }
 
-  function state() {
-    const directory = Instance.directory
-    let sessions = stateMap.get(directory)
+  function state(directory: string) {
+    let sessions = ptyStateMap.get(directory)
     if (!sessions) {
       sessions = new Map<PtyID, ActiveSession>()
-      stateMap.set(directory, sessions)
+      ptyStateMap.set(directory, sessions)
     }
     return sessions
   }
 
   export function list() {
-    return Array.from(state().values()).map((s) => s.info)
+    return Array.from(state(InstanceALS.directory).values()).map((s) => s.info)
   }
 
   export function get(id: PtyID) {
-    return state().get(id)?.info
+    return state(InstanceALS.directory).get(id)?.info
   }
 
   export async function create(input: CreateInput) {
@@ -140,8 +139,9 @@ export namespace Pty {
       args.push("-l")
     }
 
-    const cwd = input.cwd || Instance.directory
-    const shellEnv = await Plugin.trigger("shell.env", { cwd }, { env: {} })
+    const directory = InstanceALS.directory
+    const cwd = input.cwd || directory
+    const shellEnv = await Plugin.trigger("shell.env", { cwd }, { env: {} }, InstanceALS.directory)
     const env = {
       ...process.env,
       ...input.env,
@@ -181,51 +181,47 @@ export namespace Pty {
       cursor: 0,
       subscribers: new Map(),
     }
-    state().set(id, session)
-    ptyProcess.onData(
-      Instance.bind((chunk) => {
-        session.cursor += chunk.length
+    state(InstanceALS.directory).set(id, session)
+    ptyProcess.onData((chunk) => {
+      session.cursor += chunk.length
 
-        for (const [key, ws] of session.subscribers.entries()) {
-          if (ws.readyState !== 1) {
-            session.subscribers.delete(key)
-            continue
-          }
-
-          if (ws.data !== key) {
-            session.subscribers.delete(key)
-            continue
-          }
-
-          try {
-            ws.send(chunk)
-          } catch {
-            session.subscribers.delete(key)
-          }
+      for (const [key, ws] of session.subscribers.entries()) {
+        if (ws.readyState !== 1) {
+          session.subscribers.delete(key)
+          continue
         }
 
-        session.buffer += chunk
-        if (session.buffer.length <= BUFFER_LIMIT) return
-        const excess = session.buffer.length - BUFFER_LIMIT
-        session.buffer = session.buffer.slice(excess)
-        session.bufferCursor += excess
-      }),
-    )
-    ptyProcess.onExit(
-      Instance.bind(({ exitCode }) => {
-        if (session.info.status === "exited") return
-        log.info("session exited", { id, exitCode })
-        session.info.status = "exited"
-        Bus.publish(Event.Exited, { id, exitCode })
-        remove(id)
-      }),
-    )
-    Bus.publish(Event.Created, { info })
+        if (ws.data !== key) {
+          session.subscribers.delete(key)
+          continue
+        }
+
+        try {
+          ws.send(chunk)
+        } catch {
+          session.subscribers.delete(key)
+        }
+      }
+
+      session.buffer += chunk
+      if (session.buffer.length <= BUFFER_LIMIT) return
+      const excess = session.buffer.length - BUFFER_LIMIT
+      session.buffer = session.buffer.slice(excess)
+      session.bufferCursor += excess
+    })
+    ptyProcess.onExit(({ exitCode }) => {
+      if (session.info.status === "exited") return
+      log.info("session exited", { id, exitCode })
+      session.info.status = "exited"
+      Bus.publish(Event.Exited, { id, exitCode }, directory)
+      remove(id, directory)
+    })
+    Bus.publish(Event.Created, { info }, InstanceALS.directory)
     return info
   }
 
   export async function update(id: PtyID, input: UpdateInput) {
-    const session = state().get(id)
+    const session = state(InstanceALS.directory).get(id)
     if (!session) return
     if (input.title) {
       session.info.title = input.title
@@ -233,14 +229,15 @@ export namespace Pty {
     if (input.size) {
       session.process.resize(input.size.cols, input.size.rows)
     }
-    Bus.publish(Event.Updated, { info: session.info })
+    Bus.publish(Event.Updated, { info: session.info }, InstanceALS.directory)
     return session.info
   }
 
-  export async function remove(id: PtyID) {
-    const session = state().get(id)
+  export async function remove(id: PtyID, directory: string = InstanceALS.directory) {
+    const dir = directory
+    const session = state(dir).get(id)
     if (!session) return
-    state().delete(id)
+    state(dir).delete(id)
     log.info("removing session", { id })
     try {
       session.process.kill()
@@ -253,25 +250,25 @@ export namespace Pty {
       }
     }
     session.subscribers.clear()
-    Bus.publish(Event.Deleted, { id: session.info.id })
+    Bus.publish(Event.Deleted, { id: session.info.id }, directory)
   }
 
   export function resize(id: PtyID, cols: number, rows: number) {
-    const session = state().get(id)
+    const session = state(InstanceALS.directory).get(id)
     if (session && session.info.status === "running") {
       session.process.resize(cols, rows)
     }
   }
 
   export function write(id: PtyID, data: string) {
-    const session = state().get(id)
+    const session = state(InstanceALS.directory).get(id)
     if (session && session.info.status === "running") {
       session.process.write(data)
     }
   }
 
   export function connect(id: PtyID, ws: Socket, cursor?: number) {
-    const session = state().get(id)
+    const session = state(InstanceALS.directory).get(id)
     if (!session) {
       ws.close()
       return

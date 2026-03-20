@@ -6,7 +6,7 @@ import { SessionRevert } from "../../src/session/revert"
 import { SessionCompaction } from "../../src/session/compaction"
 import { MessageV2 } from "../../src/session/message-v2"
 import { Log } from "../../src/util/log"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { MessageID, PartID } from "../../src/session/schema"
 import { tmpdir } from "../fixture/fixture"
 

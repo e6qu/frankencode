@@ -1,7 +1,7 @@
 import path from "path"
 import { describe, expect, test } from "bun:test"
 import { fileURLToPath } from "url"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Session } from "../../src/session"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -122,7 +122,7 @@ describe("session.prompt special characters", () => {
       fn: async () => {
         const session = await Session.create({})
         const template = "Read @file#name.txt"
-        const parts = await SessionPrompt.resolvePromptParts(template)
+        const parts = await SessionPrompt.resolvePromptParts(template, tmp.path)
         const fileParts = parts.filter((part) => part.type === "file")
 
         expect(fileParts.length).toBe(1)

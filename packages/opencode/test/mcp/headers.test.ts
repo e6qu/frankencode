@@ -44,7 +44,7 @@ beforeEach(() => {
 
 // Import MCP after mocking
 const { MCP } = await import("../../src/mcp/index")
-const { Instance } = await import("../../src/project/instance")
+const { Instance } = await import("../fixture/instance-shim")
 const { tmpdir } = await import("../fixture/fixture")
 
 test("headers are passed to transports when oauth is enabled (default)", async () => {

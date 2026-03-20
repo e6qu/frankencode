@@ -13,7 +13,7 @@ import { Provider } from "../provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { type Tool as AITool, tool, jsonSchema, type ToolCallOptions, asSchema } from "ai"
 import { SessionCompaction } from "./compaction"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Bus } from "../bus"
 import { ProviderTransform } from "../provider/transform"
@@ -77,7 +77,7 @@ type PromptState = Record<
   }
 >
 
-const promptStates = new Map<string, PromptState>()
+export const promptStates = new Map<string, PromptState>()
 
 registerDisposer(async (directory) => {
   const current = promptStates.get(directory)
@@ -92,18 +92,17 @@ registerDisposer(async (directory) => {
 export namespace SessionPrompt {
   const log = Log.create({ service: "session.prompt" })
 
-  function state(): PromptState {
-    const dir = Instance.directory
-    let s = promptStates.get(dir)
+  function state(directory: string): PromptState {
+    let s = promptStates.get(directory)
     if (!s) {
       s = {}
-      promptStates.set(dir, s)
+      promptStates.set(directory, s)
     }
     return s
   }
 
   export function assertNotBusy(sessionID: SessionID) {
-    const match = state()[sessionID]
+    const match = state(InstanceALS.directory)[sessionID]
     if (match) throw new Session.BusyError(sessionID)
   }
 
@@ -203,7 +202,7 @@ export namespace SessionPrompt {
     return loop({ sessionID: input.sessionID })
   })
 
-  export async function resolvePromptParts(template: string): Promise<PromptInput["parts"]> {
+  export async function resolvePromptParts(template: string, worktree: string): Promise<PromptInput["parts"]> {
     const parts: PromptInput["parts"] = [
       {
         type: "text",
@@ -217,9 +216,7 @@ export namespace SessionPrompt {
         const name = match[1]
         if (seen.has(name)) return
         seen.add(name)
-        const filepath = name.startsWith("~/")
-          ? path.join(os.homedir(), name.slice(2))
-          : path.resolve(Instance.worktree, name)
+        const filepath = name.startsWith("~/") ? path.join(os.homedir(), name.slice(2)) : path.resolve(worktree, name)
 
         const stats = await fs.stat(filepath).catch(() => undefined)
         if (!stats) {
@@ -254,8 +251,8 @@ export namespace SessionPrompt {
     return parts
   }
 
-  function start(sessionID: SessionID) {
-    const s = state()
+  function start(sessionID: SessionID, directory: string) {
+    const s = state(directory)
     if (s[sessionID]) return
     const controller = new AbortController()
     s[sessionID] = {
@@ -265,24 +262,25 @@ export namespace SessionPrompt {
     return controller.signal
   }
 
-  function resume(sessionID: SessionID) {
-    const s = state()
+  function resume(sessionID: SessionID, directory: string) {
+    const s = state(directory)
     if (!s[sessionID]) return
 
     return s[sessionID].abort.signal
   }
 
-  export function cancel(sessionID: SessionID) {
+  export function cancel(sessionID: SessionID, directory: string) {
+    const dir = directory
     log.info("cancel", { sessionID })
-    const s = state()
+    const s = state(dir)
     const match = s[sessionID]
     if (!match) {
-      SessionStatus.set(sessionID, { type: "idle" })
+      SessionStatus.set(sessionID, { type: "idle" }, dir)
       return
     }
     match.abort.abort()
     delete s[sessionID]
-    SessionStatus.set(sessionID, { type: "idle" })
+    SessionStatus.set(sessionID, { type: "idle" }, dir)
     return
   }
 
@@ -293,15 +291,22 @@ export namespace SessionPrompt {
   export const loop = fn(LoopInput, async (input) => {
     const { sessionID, resume_existing } = input
 
-    const abort = resume_existing ? resume(sessionID) : start(sessionID)
+    // Capture instance context at loop entry
+    const _dir = InstanceALS.directory
+    const _wt = InstanceALS.worktree
+    const _project = InstanceALS.project
+    const _pid = _project.id
+    const _cp = InstanceALS.containsPath
+
+    const abort = resume_existing ? resume(sessionID, _dir) : start(sessionID, _dir)
     if (!abort) {
       return new Promise<MessageV2.WithParts>((resolve, reject) => {
-        const callbacks = state()[sessionID].callbacks
+        const callbacks = state(_dir)[sessionID].callbacks
         callbacks.push({ resolve, reject })
       })
     }
 
-    using _ = defer(() => cancel(sessionID))
+    using _ = defer(() => cancel(sessionID, _dir))
 
     // Structured output state
     // Note: On session resumption, state is reset but outputFormat is preserved
@@ -311,7 +316,7 @@ export namespace SessionPrompt {
     let step = 0
     const session = await Session.get(sessionID)
     while (true) {
-      SessionStatus.set(sessionID, { type: "busy" })
+      SessionStatus.set(sessionID, { type: "busy" }, _dir)
       log.info("loop", { step, sessionID })
       if (abort.aborted) break
       let msgs = await MessageV2.filterCompacted(MessageV2.stream(sessionID))
@@ -354,17 +359,22 @@ export namespace SessionPrompt {
           modelID: lastUser.model.modelID,
           providerID: lastUser.model.providerID,
           history: msgs,
+          projectID: _pid,
         })
 
       const model = await Provider.getModel(lastUser.model.providerID, lastUser.model.modelID).catch((e) => {
         if (Provider.ModelNotFoundError.isInstance(e)) {
           const hint = e.data.suggestions?.length ? ` Did you mean: ${e.data.suggestions.join(", ")}?` : ""
-          Bus.publish(Session.Event.Error, {
-            sessionID,
-            error: new NamedError.Unknown({
-              message: `Model not found: ${e.data.providerID}/${e.data.modelID}.${hint}`,
-            }).toObject(),
-          })
+          Bus.publish(
+            Session.Event.Error,
+            {
+              sessionID,
+              error: new NamedError.Unknown({
+                message: `Model not found: ${e.data.providerID}/${e.data.modelID}.${hint}`,
+              }).toObject(),
+            },
+            _dir,
+          )
         }
         throw e
       })
@@ -384,8 +394,8 @@ export namespace SessionPrompt {
           agent: task.agent,
           variant: lastUser.variant,
           path: {
-            cwd: Instance.directory,
-            root: Instance.worktree,
+            cwd: _dir,
+            root: _wt,
           },
           cost: 0,
           tokens: {
@@ -434,6 +444,7 @@ export namespace SessionPrompt {
             callID: part.id,
           },
           { args: taskArgs },
+          InstanceALS.directory,
         )
         let executionError: Error | undefined
         const taskAgent = await Agent.get(task.agent)
@@ -445,6 +456,10 @@ export namespace SessionPrompt {
           callID: part.callID,
           extra: { bypassAgentCheck: true },
           messages: msgs,
+          directory: _dir,
+          worktree: _wt,
+          projectID: _pid,
+          containsPath: _cp,
           async metadata(input) {
             part = (await Session.updatePart({
               ...part,
@@ -483,6 +498,7 @@ export namespace SessionPrompt {
             args: taskArgs,
           },
           result,
+          InstanceALS.directory,
         )
         assistantMessage.finish = "tool-calls"
         assistantMessage.time.completed = Date.now()
@@ -557,6 +573,9 @@ export namespace SessionPrompt {
           sessionID,
           auto: task.auto,
           overflow: task.overflow,
+          directory: _dir,
+          worktree: _wt,
+          projectID: _pid,
         })
         if (result === "stop") break
         continue
@@ -585,6 +604,8 @@ export namespace SessionPrompt {
         messages: msgs,
         agent,
         session,
+        worktree: _wt,
+        vcs: _project.vcs,
       })
 
       const processor = SessionProcessor.create({
@@ -596,8 +617,8 @@ export namespace SessionPrompt {
           agent: agent.name,
           variant: lastUser.variant,
           path: {
-            cwd: Instance.directory,
-            root: Instance.worktree,
+            cwd: _dir,
+            root: _wt,
           },
           cost: 0,
           tokens: {
@@ -617,7 +638,7 @@ export namespace SessionPrompt {
         model,
         abort,
       })
-      using _ = defer(() => InstructionPrompt.clear(processor.message.id))
+      using _ = defer(() => InstructionPrompt.clear(_dir, processor.message.id))
 
       // Check if user explicitly invoked an agent via @ in this turn
       const lastUserMsg = msgs.findLast((m) => m.info.role === "user")
@@ -631,6 +652,9 @@ export namespace SessionPrompt {
         processor,
         bypassAgentCheck,
         messages: msgs,
+        directory: _dir,
+        worktree: _wt,
+        projectID: _pid,
       })
 
       // Inject StructuredOutput tool if JSON schema mode enabled
@@ -669,14 +693,14 @@ export namespace SessionPrompt {
         }
       }
 
-      await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
+      await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs }, InstanceALS.directory)
 
       // Build system prompt, adding structured output instruction if needed
       const skills = await SystemPrompt.skills(agent)
       const system = [
-        ...(await SystemPrompt.environment(model)),
+        ...(await SystemPrompt.environment(model, { directory: _dir, worktree: _wt, project: _project })),
         ...(skills ? [skills] : []),
-        ...(await InstructionPrompt.system()),
+        ...(await InstructionPrompt.system(_dir, _wt)),
       ]
       const format = lastUser.format ?? { type: "text" }
       if (format.type === "json_schema") {
@@ -688,7 +712,7 @@ export namespace SessionPrompt {
         const parts: string[] = []
         const objective = await Objective.get(sessionID)
         if (objective) parts.push(`**Objective:** ${objective}`)
-        const { threads } = SideThread.list({ projectID: Instance.project.id, status: "parked" })
+        const { threads } = SideThread.list({ projectID: _pid, status: "parked" })
         if (threads.length > 0) {
           parts.push(`**Parked side threads (${threads.length}):**`)
           for (const t of threads.slice(0, 5)) {
@@ -710,6 +734,7 @@ export namespace SessionPrompt {
         permission: session.permission,
         abort,
         sessionID,
+        projectID: _pid,
         system,
         messages: [
           ...MessageV2.toModelMessages(msgs, model),
@@ -767,7 +792,7 @@ export namespace SessionPrompt {
     SessionCompaction.prune({ sessionID })
     for await (const item of MessageV2.stream(sessionID)) {
       if (item.info.role === "user") continue
-      const queued = state()[sessionID]?.callbacks ?? []
+      const queued = state(_dir)[sessionID]?.callbacks ?? []
       for (const q of queued) {
         q.resolve(item)
       }
@@ -792,9 +817,17 @@ export namespace SessionPrompt {
     processor: SessionProcessor.Info
     bypassAgentCheck: boolean
     messages: MessageV2.WithParts[]
+    directory: string
+    worktree: string
+    projectID: string
   }) {
     using _ = log.time("resolveTools")
     const tools: Record<string, AITool> = {}
+
+    // Capture instance context for tool execution
+    const _directory = input.directory
+    const _worktree = input.worktree
+    const _projectID = input.projectID
 
     const context = (args: any, options: ToolCallOptions): Tool.Context => ({
       sessionID: input.session.id,
@@ -804,6 +837,14 @@ export namespace SessionPrompt {
       extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck },
       agent: input.agent.name,
       messages: input.messages,
+      directory: _directory,
+      worktree: _worktree,
+      projectID: _projectID,
+      containsPath(filepath: string) {
+        if (Filesystem.contains(_directory, filepath)) return true
+        if (_worktree === "/") return false
+        return Filesystem.contains(_worktree, filepath)
+      },
       metadata: async (val: { title?: string; metadata?: any }) => {
         const match = input.processor.partFromToolCall(options.toolCallId)
         if (match && match.state.status === "running") {
@@ -852,6 +893,7 @@ export namespace SessionPrompt {
             {
               args,
             },
+            InstanceALS.directory,
           )
           const result = await item.execute(args, ctx)
           const output = {
@@ -872,6 +914,7 @@ export namespace SessionPrompt {
               args,
             },
             output,
+            InstanceALS.directory,
           )
           return output
         },
@@ -898,6 +941,7 @@ export namespace SessionPrompt {
           {
             args,
           },
+          InstanceALS.directory,
         )
 
         await ctx.ask({
@@ -918,6 +962,7 @@ export namespace SessionPrompt {
             args,
           },
           result,
+          InstanceALS.directory,
         )
 
         const textParts: string[] = []
@@ -1005,6 +1050,9 @@ export namespace SessionPrompt {
   }
 
   async function createUserMessage(input: PromptInput) {
+    const _dir = InstanceALS.directory
+    const _wt = InstanceALS.worktree
+    const _pid = InstanceALS.project.id
     const agent = await Agent.get(input.agent ?? (await Agent.defaultAgent()))
 
     const model = input.model ?? agent.model ?? (await lastModel(input.sessionID))
@@ -1032,7 +1080,7 @@ export namespace SessionPrompt {
       variant,
       objective: currentObjective ?? undefined,
     }
-    using _ = defer(() => InstructionPrompt.clear(info.id))
+    using _ = defer(() => InstructionPrompt.clear(_dir, info.id))
 
     type Draft<T> = T extends MessageV2.Part ? Omit<T, "id"> & { id?: string } : never
     const assign = (part: Draft<MessageV2.Part>): MessageV2.Part =>
@@ -1206,6 +1254,14 @@ export namespace SessionPrompt {
                       messageID: info.id,
                       extra: { bypassCwdCheck: true, model },
                       messages: [],
+                      directory: _dir,
+                      worktree: _wt,
+                      projectID: _pid,
+                      containsPath(filepath: string) {
+                        if (Filesystem.contains(_dir, filepath)) return true
+                        if (_wt === "/") return false
+                        return Filesystem.contains(_wt, filepath)
+                      },
                       metadata: async () => {},
                       ask: async () => {},
                     }
@@ -1238,12 +1294,16 @@ export namespace SessionPrompt {
                   .catch((error) => {
                     log.error("failed to read file", { error })
                     const message = error instanceof Error ? error.message : error.toString()
-                    Bus.publish(Session.Event.Error, {
-                      sessionID: input.sessionID,
-                      error: new NamedError.Unknown({
-                        message,
-                      }).toObject(),
-                    })
+                    Bus.publish(
+                      Session.Event.Error,
+                      {
+                        sessionID: input.sessionID,
+                        error: new NamedError.Unknown({
+                          message,
+                        }).toObject(),
+                      },
+                      _dir,
+                    )
                     pieces.push({
                       messageID: info.id,
                       sessionID: input.sessionID,
@@ -1265,6 +1325,14 @@ export namespace SessionPrompt {
                   messageID: info.id,
                   extra: { bypassCwdCheck: true },
                   messages: [],
+                  directory: _dir,
+                  worktree: _wt,
+                  projectID: _pid,
+                  containsPath(filepath: string) {
+                    if (Filesystem.contains(_dir, filepath)) return true
+                    if (_wt === "/") return false
+                    return Filesystem.contains(_wt, filepath)
+                  },
                   metadata: async () => {},
                   ask: async () => {},
                 }
@@ -1363,6 +1431,7 @@ export namespace SessionPrompt {
         message: info,
         parts,
       },
+      InstanceALS.directory,
     )
 
     const parsedInfo = MessageV2.Info.safeParse(info)
@@ -1401,7 +1470,13 @@ export namespace SessionPrompt {
     }
   }
 
-  async function insertReminders(input: { messages: MessageV2.WithParts[]; agent: Agent.Info; session: Session.Info }) {
+  async function insertReminders(input: {
+    messages: MessageV2.WithParts[]
+    agent: Agent.Info
+    session: Session.Info
+    worktree: string
+    vcs?: string
+  }) {
     const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
     if (!userMessage) return input.messages
 
@@ -1410,7 +1485,7 @@ export namespace SessionPrompt {
 
     // Switching from plan mode to build mode
     if (input.agent.name !== "plan" && assistantMessage?.info.agent === "plan") {
-      const plan = Session.plan(input.session)
+      const plan = Session.plan({ ...input.session, worktree: input.worktree, vcs: input.vcs })
       const exists = await Filesystem.exists(plan)
       if (exists) {
         const part = await Session.updatePart({
@@ -1429,7 +1504,7 @@ export namespace SessionPrompt {
 
     // Entering plan mode
     if (input.agent.name === "plan" && assistantMessage?.info.agent !== "plan") {
-      const plan = Session.plan(input.session)
+      const plan = Session.plan({ ...input.session, worktree: input.worktree, vcs: input.vcs })
       const exists = await Filesystem.exists(plan)
       if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
       const part = await Session.updatePart({
@@ -1528,16 +1603,18 @@ NOTE: At any point in time through this workflow you should feel free to ask the
   })
   export type ShellInput = z.infer<typeof ShellInput>
   export async function shell(input: ShellInput) {
-    const abort = start(input.sessionID)
+    const _dir = InstanceALS.directory
+    const _wt = InstanceALS.worktree
+    const abort = start(input.sessionID, _dir)
     if (!abort) {
       throw new Session.BusyError(input.sessionID)
     }
 
     using _ = defer(() => {
       // If no queued callbacks, cancel (the default)
-      const callbacks = state()[input.sessionID]?.callbacks ?? []
+      const callbacks = state(_dir)[input.sessionID]?.callbacks ?? []
       if (callbacks.length === 0) {
-        cancel(input.sessionID)
+        cancel(input.sessionID, _dir)
       } else {
         // Otherwise, trigger the session loop to process queued items
         loop({ sessionID: input.sessionID, resume_existing: true }).catch((error) => {
@@ -1584,8 +1661,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       agent: input.agent,
       cost: 0,
       path: {
-        cwd: Instance.directory,
-        root: Instance.worktree,
+        cwd: _dir,
+        root: _wt,
       },
       time: {
         created: Date.now(),
@@ -1674,11 +1751,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     const matchingInvocation = invocations[shellName] ?? invocations[""]
     const args = matchingInvocation?.args
 
-    const cwd = Instance.directory
+    const cwd = _dir
     const shellEnv = await Plugin.trigger(
       "shell.env",
       { cwd, sessionID: input.sessionID, callID: part.callID },
       { env: {} },
+      InstanceALS.directory,
     )
     const proc = spawn(shell, args, {
       cwd,
@@ -1801,7 +1879,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
   export async function command(input: CommandInput) {
     log.info("command", input)
-    const command = await Command.get(input.command)
+    const command = await Command.get(input.command, InstanceALS.directory)
     const agentName = command.agent ?? input.agent ?? (await Agent.defaultAgent())
 
     const raw = input.arguments.match(argsRegex) ?? []
@@ -1869,10 +1947,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       if (Provider.ModelNotFoundError.isInstance(e)) {
         const { providerID, modelID, suggestions } = e.data
         const hint = suggestions?.length ? ` Did you mean: ${suggestions.join(", ")}?` : ""
-        Bus.publish(Session.Event.Error, {
-          sessionID: input.sessionID,
-          error: new NamedError.Unknown({ message: `Model not found: ${providerID}/${modelID}.${hint}` }).toObject(),
-        })
+        Bus.publish(
+          Session.Event.Error,
+          {
+            sessionID: input.sessionID,
+            error: new NamedError.Unknown({ message: `Model not found: ${providerID}/${modelID}.${hint}` }).toObject(),
+          },
+          InstanceALS.directory,
+        )
       }
       throw e
     }
@@ -1881,14 +1963,18 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const available = await Agent.list().then((agents) => agents.filter((a) => !a.hidden).map((a) => a.name))
       const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
       const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-      Bus.publish(Session.Event.Error, {
-        sessionID: input.sessionID,
-        error: error.toObject(),
-      })
+      Bus.publish(
+        Session.Event.Error,
+        {
+          sessionID: input.sessionID,
+          error: error.toObject(),
+        },
+        InstanceALS.directory,
+      )
       throw error
     }
 
-    const templateParts = await resolvePromptParts(template)
+    const templateParts = await resolvePromptParts(template, InstanceALS.worktree)
     const isSubtask = (agent.mode === "subagent" && command.subtask !== false) || command.subtask === true
     const parts = isSubtask
       ? [
@@ -1922,6 +2008,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         arguments: input.arguments,
       },
       { parts },
+      InstanceALS.directory,
     )
 
     if (command.ephemeral) {
@@ -1936,12 +2023,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           variant: input.variant,
         })
 
-        Bus.publish(Command.Event.Executed, {
-          name: input.command,
-          sessionID: input.sessionID,
-          arguments: input.arguments,
-          messageID: forkedResult.info.id,
-        })
+        Bus.publish(
+          Command.Event.Executed,
+          {
+            name: input.command,
+            sessionID: input.sessionID,
+            arguments: input.arguments,
+            messageID: forkedResult.info.id,
+          },
+          InstanceALS.directory,
+        )
 
         // forkedResult IDs reference the now-deleted fork — intentional,
         // ephemeral results are transient and not meant to be dereferenced later
@@ -1960,12 +2051,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       variant: input.variant,
     })) as MessageV2.WithParts
 
-    Bus.publish(Command.Event.Executed, {
-      name: input.command,
-      sessionID: input.sessionID,
-      arguments: input.arguments,
-      messageID: result.info.id,
-    })
+    Bus.publish(
+      Command.Event.Executed,
+      {
+        name: input.command,
+        sessionID: input.sessionID,
+        arguments: input.arguments,
+        messageID: result.info.id,
+      },
+      InstanceALS.directory,
+    )
 
     return result
   }
@@ -1975,6 +2070,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     history: MessageV2.WithParts[]
     providerID: ProviderID
     modelID: ModelID
+    projectID: string
   }) {
     if (input.session.parentID) return
     if (!Session.isDefaultTitle(input.session.title)) return
@@ -2017,6 +2113,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       model,
       abort: new AbortController().signal,
       sessionID: input.session.id,
+      projectID: input.projectID,
       retries: 2,
       messages: [
         {

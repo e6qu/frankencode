@@ -1,7 +1,6 @@
 import z from "zod"
 import { Skill } from "../skill"
 import { Tool } from "@/tool/tool"
-import { Instance } from "../project/instance"
 import { Process } from "@/util/process"
 import path from "path"
 import { Glob } from "../util/glob"
@@ -88,7 +87,7 @@ export namespace Scripts {
           }
 
           const result = await Process.text(cmd, {
-            cwd: Instance.directory,
+            cwd: ctx.directory,
             timeout: 60000,
             nothrow: true,
           })

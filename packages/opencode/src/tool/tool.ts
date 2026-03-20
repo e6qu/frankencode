@@ -12,6 +12,8 @@ export namespace Tool {
 
   export interface InitContext {
     agent?: Agent.Info
+    directory?: string
+    worktree?: string
   }
 
   export type Context<M extends Metadata = Metadata> = {
@@ -22,6 +24,14 @@ export namespace Tool {
     callID?: string
     extra?: { [key: string]: any }
     messages: MessageV2.WithParts[]
+    /** Resolved project directory (absolute path) */
+    directory: string
+    /** Git worktree or sandbox directory */
+    worktree: string
+    /** Project ID */
+    projectID: string
+    /** Check if a path is within the project boundary */
+    containsPath(filepath: string): boolean
     metadata(input: { title?: string; metadata?: M }): void
     ask(input: Omit<PermissionNext.Request, "id" | "sessionID" | "tool">): Promise<void>
   }

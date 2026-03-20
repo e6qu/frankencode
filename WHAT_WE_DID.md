@@ -168,6 +168,31 @@ Root-level: `PLAN.md`, `WHAT_WE_DID.md`, `DO_NEXT.md`
 
 ---
 
+## Phase 7: Effect-ification — Remove Instance ALS
+
+Goal: eliminate the `Instance` AsyncLocalStorage singleton entirely. The Effect runtime already has a per-directory `LayerMap` with 24+ services via `InstanceContext`.
+
+### Completed stages (B1-B8):
+
+| Stage | Commit | What changed |
+|-------|--------|-------------|
+| B1 | PR #20 | 16 modules converted from `Instance.state()` to module-level state maps with `registerDisposer` |
+| B2 | `14e5c7e60` | 17 tool files + 12 test files: `Tool.Context` extended with directory/worktree/projectID/containsPath |
+| B3 | `0e9915688` | 9 leaf modules (env, bus, command, provider, plugin, mcp, pty, agent): `state()` parameterized |
+| B4 | `f573d0511` | 5 `Instance.bind()` sites replaced with captured closures (watcher, vcs, format, pty) |
+| B5 | `893745855` | 25 formatter `enabled()` functions: accept (directory, worktree) params |
+| B6 | `184abfa24` | LSP module: 37 spawn + root functions accept directory/worktree; Instance removed from server.ts, client.ts |
+| B7 | `632cd4f88` | Session leaf helpers (system, instruction, compaction, status, llm): parameterized with ALS fallback |
+| B8 | `464c13cf1` | Worktree (21→9 refs) + Config (state() parameterized, initConfig captures at entry) |
+
+**Progress:** 221 → 172 `Instance.*` references (49 removed). All inner modules accept explicit parameters.
+
+### Remaining stages (B9-B10):
+- **B9:** Server + CLI entry points (~18 files, ~45 occurrences) — capture Instance values at handler top, pass down
+- **B10:** ALS elimination — parameterize runtime, delete Instance module
+
+---
+
 ## Upstream Sync Status (2026-03-18)
 
 **Upstream:** `anomalyco/opencode` (`dev` branch)

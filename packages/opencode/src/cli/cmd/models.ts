@@ -1,5 +1,6 @@
 import type { Argv } from "yargs"
-import { Instance } from "../../project/instance"
+import { InstanceLifecycle } from "../../project/lifecycle"
+import { InstanceALS } from "../../project/instance-als"
 import { Provider } from "../../provider/provider"
 import { ProviderID } from "../../provider/schema"
 import { ModelsDev } from "../../provider/models"
@@ -32,47 +33,45 @@ export const ModelsCommand = cmd({
       UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Models cache refreshed" + UI.Style.TEXT_NORMAL)
     }
 
-    await Instance.provide({
-      directory: process.cwd(),
-      async fn() {
-        const providers = await Provider.list()
+    const ctx = await InstanceLifecycle.boot(process.cwd())
+    return InstanceALS.run(ctx, async () => {
+      const providers = await Provider.list()
 
-        function printModels(providerID: ProviderID, verbose?: boolean) {
-          const provider = providers[providerID]
-          const sortedModels = Object.entries(provider.models).sort(([a], [b]) => a.localeCompare(b))
-          for (const [modelID, model] of sortedModels) {
-            process.stdout.write(`${providerID}/${modelID}`)
+      function printModels(providerID: ProviderID, verbose?: boolean) {
+        const provider = providers[providerID]
+        const sortedModels = Object.entries(provider.models).sort(([a], [b]) => a.localeCompare(b))
+        for (const [modelID, model] of sortedModels) {
+          process.stdout.write(`${providerID}/${modelID}`)
+          process.stdout.write(EOL)
+          if (verbose) {
+            process.stdout.write(JSON.stringify(model, null, 2))
             process.stdout.write(EOL)
-            if (verbose) {
-              process.stdout.write(JSON.stringify(model, null, 2))
-              process.stdout.write(EOL)
-            }
           }
         }
+      }
 
-        if (args.provider) {
-          const provider = providers[args.provider]
-          if (!provider) {
-            UI.error(`Provider not found: ${args.provider}`)
-            return
-          }
-
-          printModels(ProviderID.make(args.provider), args.verbose)
+      if (args.provider) {
+        const provider = providers[args.provider]
+        if (!provider) {
+          UI.error(`Provider not found: ${args.provider}`)
           return
         }
 
-        const providerIDs = Object.keys(providers).sort((a, b) => {
-          const aIsOpencode = a.startsWith("opencode")
-          const bIsOpencode = b.startsWith("opencode")
-          if (aIsOpencode && !bIsOpencode) return -1
-          if (!aIsOpencode && bIsOpencode) return 1
-          return a.localeCompare(b)
-        })
+        printModels(ProviderID.make(args.provider), args.verbose)
+        return
+      }
 
-        for (const providerID of providerIDs) {
-          printModels(ProviderID.make(providerID), args.verbose)
-        }
-      },
+      const providerIDs = Object.keys(providers).sort((a, b) => {
+        const aIsOpencode = a.startsWith("opencode")
+        const bIsOpencode = b.startsWith("opencode")
+        if (aIsOpencode && !bIsOpencode) return -1
+        if (!aIsOpencode && bIsOpencode) return 1
+        return a.localeCompare(b)
+      })
+
+      for (const providerID of providerIDs) {
+        printModels(ProviderID.make(providerID), args.verbose)
+      }
     })
   },
 })

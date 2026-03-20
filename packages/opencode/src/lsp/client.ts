@@ -10,8 +10,8 @@ import z from "zod"
 import type { LSPServer } from "./server"
 import { NamedError } from "@opencode-ai/util/error"
 import { withTimeout } from "../util/timeout"
-import { Instance } from "../project/instance"
 import { Filesystem } from "../util/filesystem"
+import { InstanceALS } from "@/project/instance-als"
 
 const DIAGNOSTICS_DEBOUNCE_MS = 150
 
@@ -39,7 +39,7 @@ export namespace LSPClient {
     ),
   }
 
-  export async function create(input: { serverID: string; server: LSPServer.Handle; root: string }) {
+  export async function create(input: { serverID: string; server: LSPServer.Handle; root: string; directory: string }) {
     const l = log.clone().tag("serverID", input.serverID)
     l.info("starting client")
 
@@ -58,7 +58,7 @@ export namespace LSPClient {
       const exists = diagnostics.has(filePath)
       diagnostics.set(filePath, params.diagnostics)
       if (!exists && input.serverID === "typescript") return
-      Bus.publish(Event.Diagnostics, { path: filePath, serverID: input.serverID })
+      Bus.publish(Event.Diagnostics, { path: filePath, serverID: input.serverID }, InstanceALS.directory)
     })
     connection.onRequest("window/workDoneProgress/create", (params) => {
       l.info("window/workDoneProgress/create", params)
@@ -138,6 +138,7 @@ export namespace LSPClient {
 
     const result = {
       root: input.root,
+      directory: input.directory,
       get serverID() {
         return input.serverID
       },
@@ -146,7 +147,7 @@ export namespace LSPClient {
       },
       notify: {
         async open(input: { path: string }) {
-          input.path = path.isAbsolute(input.path) ? input.path : path.resolve(Instance.directory, input.path)
+          input.path = path.isAbsolute(input.path) ? input.path : path.resolve(result.directory, input.path)
           const text = await Filesystem.readText(input.path)
           const extension = path.extname(input.path)
           const languageId = LANGUAGE_EXTENSIONS[extension] ?? "plaintext"
@@ -208,24 +209,28 @@ export namespace LSPClient {
       },
       async waitForDiagnostics(input: { path: string }) {
         const normalizedPath = Filesystem.normalizePath(
-          path.isAbsolute(input.path) ? input.path : path.resolve(Instance.directory, input.path),
+          path.isAbsolute(input.path) ? input.path : path.resolve(result.directory, input.path),
         )
         log.info("waiting for diagnostics", { path: normalizedPath })
         let unsub: () => void
         let debounceTimer: ReturnType<typeof setTimeout> | undefined
         return await withTimeout(
           new Promise<void>((resolve) => {
-            unsub = Bus.subscribe(Event.Diagnostics, (event) => {
-              if (event.properties.path === normalizedPath && event.properties.serverID === result.serverID) {
-                // Debounce to allow LSP to send follow-up diagnostics (e.g., semantic after syntax)
-                if (debounceTimer) clearTimeout(debounceTimer)
-                debounceTimer = setTimeout(() => {
-                  log.info("got diagnostics", { path: normalizedPath })
-                  unsub?.()
-                  resolve()
-                }, DIAGNOSTICS_DEBOUNCE_MS)
-              }
-            })
+            unsub = Bus.subscribe(
+              Event.Diagnostics,
+              (event) => {
+                if (event.properties.path === normalizedPath && event.properties.serverID === result.serverID) {
+                  // Debounce to allow LSP to send follow-up diagnostics (e.g., semantic after syntax)
+                  if (debounceTimer) clearTimeout(debounceTimer)
+                  debounceTimer = setTimeout(() => {
+                    log.info("got diagnostics", { path: normalizedPath })
+                    unsub?.()
+                    resolve()
+                  }, DIAGNOSTICS_DEBOUNCE_MS)
+                }
+              },
+              InstanceALS.directory,
+            )
           }),
           3000,
         )

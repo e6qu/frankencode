@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { Pty } from "../../src/pty"
 import { tmpdir } from "../fixture/fixture"
 import { setTimeout as sleep } from "node:timers/promises"

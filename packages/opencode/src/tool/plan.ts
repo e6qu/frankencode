@@ -5,7 +5,6 @@ import { Question } from "../question"
 import { Session } from "../session"
 import { MessageV2 } from "../session/message-v2"
 import { Provider } from "../provider/provider"
-import { Instance } from "../project/instance"
 import { type SessionID, MessageID, PartID } from "../session/schema"
 import EXIT_DESCRIPTION from "./plan-exit.txt"
 import ENTER_DESCRIPTION from "./plan-enter.txt"
@@ -22,7 +21,7 @@ export const PlanExitTool = Tool.define("plan_exit", {
   parameters: z.object({}),
   async execute(_params, ctx) {
     const session = await Session.get(ctx.sessionID)
-    const plan = path.relative(Instance.worktree, Session.plan(session))
+    const plan = path.relative(ctx.worktree, Session.plan({ ...session, worktree: ctx.worktree }))
     const answers = await Question.ask({
       sessionID: ctx.sessionID,
       questions: [
@@ -77,7 +76,7 @@ export const PlanEnterTool = Tool.define("plan_enter", {
   parameters: z.object({}),
   async execute(_params, ctx) {
     const session = await Session.get(ctx.sessionID)
-    const plan = path.relative(Instance.worktree, Session.plan(session))
+    const plan = path.relative(ctx.worktree, Session.plan({ ...session, worktree: ctx.worktree }))
 
     const answers = await Question.ask({
       sessionID: ctx.sessionID,

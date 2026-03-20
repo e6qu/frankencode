@@ -17,6 +17,7 @@ import { PermissionNext } from "@/permission/next"
 import { InstanceContext } from "@/effect/instance-context"
 import { Effect, Layer, ServiceMap } from "effect"
 import { runPromiseInstance } from "@/effect/runtime"
+import { InstanceALS } from "@/project/instance-als"
 
 const log = Log.create({ service: "skill" })
 
@@ -61,23 +62,38 @@ export namespace Skill {
   )
 
   export async function get(name: string) {
-    return runPromiseInstance(SkillService.use((s) => s.get(name)))
+    return runPromiseInstance(
+      SkillService.use((s) => s.get(name)),
+      InstanceALS.directory,
+    )
   }
 
   export async function meta(name: string) {
-    return runPromiseInstance(SkillService.use((s) => s.meta(name)))
+    return runPromiseInstance(
+      SkillService.use((s) => s.meta(name)),
+      InstanceALS.directory,
+    )
   }
 
   export async function all() {
-    return runPromiseInstance(SkillService.use((s) => s.all()))
+    return runPromiseInstance(
+      SkillService.use((s) => s.all()),
+      InstanceALS.directory,
+    )
   }
 
   export async function dirs() {
-    return runPromiseInstance(SkillService.use((s) => s.dirs()))
+    return runPromiseInstance(
+      SkillService.use((s) => s.dirs()),
+      InstanceALS.directory,
+    )
   }
 
   export async function available(agent?: Agent.Info) {
-    return runPromiseInstance(SkillService.use((s) => s.available(agent)))
+    return runPromiseInstance(
+      SkillService.use((s) => s.available(agent)),
+      InstanceALS.directory,
+    )
   }
 
   export function fmt(list: Meta[], opts: { verbose: boolean }) {
@@ -128,7 +144,11 @@ export class SkillService extends ServiceMap.Service<SkillService, SkillService.
             ? err.data.message
             : `Failed to parse skill ${match}`
           const { Session } = await import("@/session")
-          Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+          Bus.publish(
+            Session.Event.Error,
+            { error: new NamedError.Unknown({ message }).toObject() },
+            InstanceALS.directory,
+          )
           log.error("failed to load skill", { skill: match, err })
           return undefined
         })

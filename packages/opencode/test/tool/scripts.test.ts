@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { Scripts } from "../../src/skill/scripts"
 
 describe("skill.scripts", () => {

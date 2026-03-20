@@ -1,7 +1,6 @@
 import { Tool } from "./tool"
 import z from "zod"
 import path from "path"
-import { Instance } from "../project/instance"
 import { Log } from "@/util/log"
 import { Config } from "../config/config"
 import { Process } from "@/util/process"
@@ -114,7 +113,7 @@ The tool runs test, lint, and typecheck commands (auto-detected from package.jso
 
   parameters,
   async execute(args, ctx) {
-    const config = await loadConfig()
+    const config = await loadConfig(ctx.directory)
     const breaker =
       args.circuitBreaker && config.circuitBreaker.enabled ? new CircuitBreaker(config.circuitBreaker) : null
     const results: CheckResult[] = []
@@ -126,7 +125,7 @@ The tool runs test, lint, and typecheck commands (auto-detected from package.jso
         continue
       }
 
-      const result = await runCheck(name, command, args, config, breaker)
+      const result = await runCheck(name, command, args, config, breaker, ctx.directory)
       results.push(result)
     }
 
@@ -153,13 +152,13 @@ The tool runs test, lint, and typecheck commands (auto-detected from package.jso
   },
 })
 
-async function loadConfig(): Promise<VerifyConfig> {
+async function loadConfig(directory: string): Promise<VerifyConfig> {
   const config = await Config.get()
   if (config.verification) {
     return mergeDeep(defaultConfig, config.verification) as VerifyConfig
   }
 
-  const pkgPath = path.join(Instance.directory, "package.json")
+  const pkgPath = path.join(directory, "package.json")
   try {
     const pkg = await Bun.file(pkgPath).json()
     return {
@@ -182,13 +181,14 @@ async function runCheck(
   args: z.infer<typeof parameters>,
   config: VerifyConfig,
   breaker: CircuitBreaker | null,
+  directory: string,
 ): Promise<CheckResult> {
   const startTime = Date.now()
   const timeout = args.timeout ?? config.timeout
 
   try {
     const result = await Process.text(["bash", "-c", command], {
-      cwd: Instance.directory,
+      cwd: directory,
       timeout,
       nothrow: true,
     })

@@ -10,6 +10,7 @@ import { Wildcard } from "@/util/wildcard"
 import { Deferred, Effect, Layer, Schema, ServiceMap } from "effect"
 import z from "zod"
 import { PermissionID } from "./schema"
+import { InstanceALS } from "@/project/instance-als"
 
 const log = Log.create({ service: "permission" })
 
@@ -161,7 +162,7 @@ export class PermissionService extends ServiceMap.Service<PermissionService, Per
 
         const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
         pending.set(id, { info, deferred })
-        void Bus.publish(Event.Asked, info)
+        void Bus.publish(Event.Asked, info, InstanceALS.directory)
         return yield* Effect.ensuring(
           Deferred.await(deferred),
           Effect.sync(() => {
@@ -175,11 +176,15 @@ export class PermissionService extends ServiceMap.Service<PermissionService, Per
         if (!existing) return
 
         pending.delete(input.requestID)
-        void Bus.publish(Event.Replied, {
-          sessionID: existing.info.sessionID,
-          requestID: existing.info.id,
-          reply: input.reply,
-        })
+        void Bus.publish(
+          Event.Replied,
+          {
+            sessionID: existing.info.sessionID,
+            requestID: existing.info.id,
+            reply: input.reply,
+          },
+          InstanceALS.directory,
+        )
 
         if (input.reply === "reject") {
           yield* Deferred.fail(
@@ -190,11 +195,15 @@ export class PermissionService extends ServiceMap.Service<PermissionService, Per
           for (const [id, item] of pending.entries()) {
             if (item.info.sessionID !== existing.info.sessionID) continue
             pending.delete(id)
-            void Bus.publish(Event.Replied, {
-              sessionID: item.info.sessionID,
-              requestID: item.info.id,
-              reply: "reject",
-            })
+            void Bus.publish(
+              Event.Replied,
+              {
+                sessionID: item.info.sessionID,
+                requestID: item.info.id,
+                reply: "reject",
+              },
+              InstanceALS.directory,
+            )
             yield* Deferred.fail(item.deferred, new RejectedError())
           }
           return
@@ -218,11 +227,15 @@ export class PermissionService extends ServiceMap.Service<PermissionService, Per
           )
           if (!ok) continue
           pending.delete(id)
-          void Bus.publish(Event.Replied, {
-            sessionID: item.info.sessionID,
-            requestID: item.info.id,
-            reply: "always",
-          })
+          void Bus.publish(
+            Event.Replied,
+            {
+              sessionID: item.info.sessionID,
+              requestID: item.info.id,
+              reply: "always",
+            },
+            InstanceALS.directory,
+          )
           yield* Deferred.succeed(item.deferred, undefined)
         }
 

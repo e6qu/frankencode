@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { Project } from "../../src/project/project"
 import { Session } from "../../src/session"
 import { Log } from "../../src/util/log"

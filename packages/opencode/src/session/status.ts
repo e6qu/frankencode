@@ -1,18 +1,18 @@
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
-import { Instance } from "@/project/instance"
+import { InstanceContext } from "@/effect/instance-context"
 import { SessionID } from "./schema"
 import z from "zod"
 import { Effect, Layer, ServiceMap } from "effect"
+import { InstanceALS } from "@/project/instance-als"
 
 const states = new Map<string, Record<string, SessionStatus.Info>>()
 
-function state() {
-  const dir = Instance.directory
-  let s = states.get(dir)
+function state(directory: string) {
+  let s = states.get(directory)
   if (!s) {
     s = {}
-    states.set(dir, s)
+    states.set(directory, s)
   }
   return s
 }
@@ -55,32 +55,41 @@ export namespace SessionStatus {
     ),
   }
 
-  export function get(sessionID: SessionID) {
+  export function get(sessionID: SessionID, directory: string) {
     return (
-      state()[sessionID] ?? {
+      state(directory)[sessionID] ?? {
         type: "idle",
       }
     )
   }
 
-  export function list() {
-    return state()
+  export function list(directory: string) {
+    return state(directory)
   }
 
-  export function set(sessionID: SessionID, status: Info) {
-    Bus.publish(Event.Status, {
-      sessionID,
-      status,
-    })
+  export function set(sessionID: SessionID, status: Info, directory: string) {
+    const dir = directory
+    Bus.publish(
+      Event.Status,
+      {
+        sessionID,
+        status,
+      },
+      dir,
+    )
     if (status.type === "idle") {
       // deprecated
-      Bus.publish(Event.Idle, {
-        sessionID,
-      })
-      delete state()[sessionID]
+      Bus.publish(
+        Event.Idle,
+        {
+          sessionID,
+        },
+        dir,
+      )
+      delete state(dir)[sessionID]
       return
     }
-    state()[sessionID] = status
+    state(dir)[sessionID] = status
   }
 }
 
@@ -98,7 +107,8 @@ export class SessionStatusService extends ServiceMap.Service<SessionStatusServic
   static readonly layer = Layer.effect(
     SessionStatusService,
     Effect.gen(function* () {
-      const dir = Instance.directory
+      const ctx = yield* InstanceContext
+      const dir = ctx.directory
       let data = states.get(dir)
       if (!data) {
         data = {}
@@ -116,9 +126,9 @@ export class SessionStatusService extends ServiceMap.Service<SessionStatusServic
           },
         list: () => data,
         set: (sessionID, status) => {
-          Bus.publish(SessionStatus.Event.Status, { sessionID, status })
+          Bus.publish(SessionStatus.Event.Status, { sessionID, status }, InstanceALS.directory)
           if (status.type === "idle") {
-            Bus.publish(SessionStatus.Event.Idle, { sessionID })
+            Bus.publish(SessionStatus.Event.Idle, { sessionID }, InstanceALS.directory)
             delete data[sessionID]
             return
           }

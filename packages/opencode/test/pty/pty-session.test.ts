@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Bus } from "../../src/bus"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { Pty } from "../../src/pty"
 import type { PtyID } from "../../src/pty/schema"
 import { tmpdir } from "../fixture/fixture"
@@ -25,7 +25,7 @@ function waitForBus(predicate: () => boolean, ms = 5000): Promise<void> {
         off()
         resolve()
       }
-    })
+    }, Instance.directory)
   })
 }
 
@@ -44,9 +44,9 @@ describe("pty", () => {
       fn: async () => {
         const log: Array<{ type: "created" | "exited" | "deleted"; id: PtyID }> = []
         const off = [
-          Bus.subscribe(Pty.Event.Created, (evt) => log.push({ type: "created", id: evt.properties.info.id })),
-          Bus.subscribe(Pty.Event.Exited, (evt) => log.push({ type: "exited", id: evt.properties.id })),
-          Bus.subscribe(Pty.Event.Deleted, (evt) => log.push({ type: "deleted", id: evt.properties.id })),
+          Bus.subscribe(Pty.Event.Created, (evt) => log.push({ type: "created", id: evt.properties.info.id }), Instance.directory),
+          Bus.subscribe(Pty.Event.Exited, (evt) => log.push({ type: "exited", id: evt.properties.id }), Instance.directory),
+          Bus.subscribe(Pty.Event.Deleted, (evt) => log.push({ type: "deleted", id: evt.properties.id }), Instance.directory),
         ]
 
         let id: PtyID | undefined
@@ -81,9 +81,9 @@ describe("pty", () => {
       fn: async () => {
         const log: Array<{ type: "created" | "exited" | "deleted"; id: PtyID }> = []
         const off = [
-          Bus.subscribe(Pty.Event.Created, (evt) => log.push({ type: "created", id: evt.properties.info.id })),
-          Bus.subscribe(Pty.Event.Exited, (evt) => log.push({ type: "exited", id: evt.properties.id })),
-          Bus.subscribe(Pty.Event.Deleted, (evt) => log.push({ type: "deleted", id: evt.properties.id })),
+          Bus.subscribe(Pty.Event.Created, (evt) => log.push({ type: "created", id: evt.properties.info.id }), Instance.directory),
+          Bus.subscribe(Pty.Event.Exited, (evt) => log.push({ type: "exited", id: evt.properties.id }), Instance.directory),
+          Bus.subscribe(Pty.Event.Deleted, (evt) => log.push({ type: "deleted", id: evt.properties.id }), Instance.directory),
         ]
 
         let id: PtyID | undefined

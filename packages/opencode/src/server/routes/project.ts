@@ -1,7 +1,8 @@
 import { Hono } from "hono"
 import { describeRoute, validator } from "hono-openapi"
 import { resolver } from "hono-openapi"
-import { Instance } from "../../project/instance"
+import { InstanceALS } from "../../project/instance-als"
+import { InstanceLifecycle } from "../../project/lifecycle"
 import { Project } from "../../project/project"
 import z from "zod"
 import { ProjectID } from "../../project/schema"
@@ -51,7 +52,8 @@ export const ProjectRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        return c.json(Instance.project)
+        const project = InstanceALS.project
+        return c.json(project)
       },
     )
     .post(
@@ -72,14 +74,14 @@ export const ProjectRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        const dir = Instance.directory
-        const prev = Instance.project
+        const dir = InstanceALS.directory
+        const prev = InstanceALS.project
         const next = await Project.initGit({
           directory: dir,
           project: prev,
         })
         if (next.id === prev.id && next.vcs === prev.vcs && next.worktree === prev.worktree) return c.json(next)
-        await Instance.reload({
+        await InstanceLifecycle.reload({
           directory: dir,
           worktree: dir,
           project: next,

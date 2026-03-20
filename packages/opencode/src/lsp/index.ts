@@ -8,7 +8,7 @@ import { LSPServer } from "./server"
 import z from "zod"
 import { Config } from "../config/config"
 import { spawn } from "child_process"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { Flag } from "@/flag/flag"
 import { registerDisposer } from "@/effect/instance-registry"
 
@@ -19,14 +19,14 @@ interface LSPState {
   spawning: Map<string, Promise<LSPClient.Info | undefined>>
 }
 
-const stateMap = new Map<string, Promise<LSPState>>()
+export const lspStateMap = new Map<string, Promise<LSPState>>()
 registerDisposer(async (directory) => {
-  const s = stateMap.get(directory)
+  const s = lspStateMap.get(directory)
   if (s) {
     const resolved = await s
     await Promise.all(resolved.clients.map((client) => client.shutdown()))
   }
-  stateMap.delete(directory)
+  lspStateMap.delete(directory)
 })
 
 export namespace LSP {
@@ -94,9 +94,8 @@ export namespace LSP {
     }
   }
 
-  function state(): Promise<LSPState> {
-    const directory = Instance.directory
-    let existing = stateMap.get(directory)
+  function state(directory: string): Promise<LSPState> {
+    let existing = lspStateMap.get(directory)
     if (existing) return existing
     existing = (async () => {
       const clients: LSPClient.Info[] = []
@@ -129,9 +128,9 @@ export namespace LSP {
         servers[name] = {
           ...existing,
           id: name,
-          root: existing?.root ?? (async () => Instance.directory),
+          root: existing?.root ?? (async (_file, directory) => directory),
           extensions: item.extensions ?? existing?.extensions ?? [],
-          spawn: async (root) => {
+          spawn: async (root, _directory, _worktree) => {
             return {
               process: spawn(item.command[0], item.command.slice(1), {
                 cwd: root,
@@ -160,12 +159,12 @@ export namespace LSP {
         spawning: new Map<string, Promise<LSPClient.Info | undefined>>(),
       }
     })()
-    stateMap.set(directory, existing)
+    lspStateMap.set(directory, existing)
     return existing
   }
 
   export async function init() {
-    return state()
+    return state(InstanceALS.directory)
   }
 
   export const Status = z
@@ -181,13 +180,14 @@ export namespace LSP {
   export type Status = z.infer<typeof Status>
 
   export async function status() {
-    return state().then((x) => {
+    const dir = InstanceALS.directory
+    return state(dir).then((x) => {
       const result: Status[] = []
       for (const client of x.clients) {
         result.push({
           id: client.serverID,
           name: x.servers[client.serverID].id,
-          root: path.relative(Instance.directory, client.root),
+          root: path.relative(dir, client.root),
           status: "connected",
         })
       }
@@ -196,13 +196,15 @@ export namespace LSP {
   }
 
   async function getClients(file: string) {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const extension = path.parse(file).ext || file
     const result: LSPClient.Info[] = []
+    const directory = InstanceALS.directory
+    const worktree = InstanceALS.worktree
 
     async function schedule(server: LSPServer.Info, root: string, key: string) {
       const handle = await server
-        .spawn(root)
+        .spawn(root, directory, worktree)
         .then((value) => {
           if (!value) s.broken.add(key)
           return value
@@ -220,6 +222,7 @@ export namespace LSP {
         serverID: server.id,
         server: handle,
         root,
+        directory,
       }).catch((err) => {
         s.broken.add(key)
         handle.process.kill()
@@ -245,7 +248,7 @@ export namespace LSP {
     for (const server of Object.values(s.servers)) {
       if (server.extensions.length && !server.extensions.includes(extension)) continue
 
-      const root = await server.root(file)
+      const root = await server.root(file, directory, worktree)
       if (!root) continue
       if (s.broken.has(root + server.id)) continue
 
@@ -276,18 +279,20 @@ export namespace LSP {
       if (!client) continue
 
       result.push(client)
-      Bus.publish(Event.Updated, {})
+      Bus.publish(Event.Updated, {}, InstanceALS.directory)
     }
 
     return result
   }
 
   export async function hasClients(file: string) {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const extension = path.parse(file).ext || file
+    const directory = InstanceALS.directory
+    const worktree = InstanceALS.worktree
     for (const server of Object.values(s.servers)) {
       if (server.extensions.length && !server.extensions.includes(extension)) continue
-      const root = await server.root(file)
+      const root = await server.root(file, directory, worktree)
       if (!root) continue
       if (s.broken.has(root + server.id)) continue
       return true
@@ -476,7 +481,7 @@ export namespace LSP {
   }
 
   async function runAll<T>(input: (client: LSPClient.Info) => Promise<T>): Promise<T[]> {
-    const clients = await state().then((x) => x.clients)
+    const clients = await state(InstanceALS.directory).then((x) => x.clients)
     const tasks = clients.map((x) => input(x))
     return Promise.all(tasks)
   }

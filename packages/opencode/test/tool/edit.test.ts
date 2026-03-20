@@ -2,7 +2,7 @@ import { describe, test, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { EditTool } from "../../src/tool/edit"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { tmpdir } from "../fixture/fixture"
 import { FileTime } from "../../src/file/time"
 import { SessionID, MessageID } from "../../src/session/schema"
@@ -14,6 +14,10 @@ const ctx = {
   agent: "build",
   abort: AbortSignal.any([]),
   messages: [],
+  get directory() { return Instance.directory },
+  get worktree() { return Instance.worktree },
+  get projectID() { return Instance.project.id },
+  containsPath: (fp: string) => Instance.containsPath(fp),
   metadata: () => {},
   ask: async () => {},
 }
@@ -85,8 +89,8 @@ describe("tool.edit", () => {
           const { FileWatcher } = await import("../../src/file/watcher")
 
           const events: string[] = []
-          const unsubEdited = Bus.subscribe(File.Event.Edited, () => events.push("edited"))
-          const unsubUpdated = Bus.subscribe(FileWatcher.Event.Updated, () => events.push("updated"))
+          const unsubEdited = Bus.subscribe(File.Event.Edited, () => events.push("edited"), Instance.directory)
+          const unsubUpdated = Bus.subscribe(FileWatcher.Event.Updated, () => events.push("updated"), Instance.directory)
 
           const edit = await EditTool.init()
           await edit.execute(
@@ -305,8 +309,8 @@ describe("tool.edit", () => {
           const { FileWatcher } = await import("../../src/file/watcher")
 
           const events: string[] = []
-          const unsubEdited = Bus.subscribe(File.Event.Edited, () => events.push("edited"))
-          const unsubUpdated = Bus.subscribe(FileWatcher.Event.Updated, () => events.push("updated"))
+          const unsubEdited = Bus.subscribe(File.Event.Edited, () => events.push("edited"), Instance.directory)
+          const unsubUpdated = Bus.subscribe(FileWatcher.Event.Updated, () => events.push("updated"), Instance.directory)
 
           const edit = await EditTool.init()
           await edit.execute(

@@ -16,7 +16,7 @@ import { ProjectTable } from "../project/project.sql"
 import { Storage } from "@/storage/storage"
 import { Log } from "../util/log"
 import { MessageV2 } from "./message-v2"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { SessionPrompt } from "./prompt"
 import { fn } from "@/util/fn"
 import { Command } from "../command"
@@ -228,9 +228,12 @@ export namespace Session {
       })
       .optional(),
     async (input) => {
+      const directory = InstanceALS.directory
+      const projectID = InstanceALS.project.id
       return createNext({
         parentID: input?.parentID,
-        directory: Instance.directory,
+        directory,
+        projectID,
         title: input?.title,
         permission: input?.permission,
         workspaceID: input?.workspaceID,
@@ -247,8 +250,11 @@ export namespace Session {
       const original = await get(input.sessionID)
       if (!original) throw new Error("session not found")
       const title = getForkedTitle(original.title)
+      const directory = InstanceALS.directory
+      const projectID = InstanceALS.project.id
       const session = await createNext({
-        directory: Instance.directory,
+        directory,
+        projectID,
         workspaceID: original.workspaceID,
         title,
       })
@@ -292,7 +298,7 @@ export namespace Session {
         .get()
       if (!row) throw new NotFoundError({ message: `Session not found: ${sessionID}` })
       const info = fromRow(row)
-      Database.effect(() => Bus.publish(Event.Updated, { info }))
+      Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
     })
   })
 
@@ -303,12 +309,14 @@ export namespace Session {
     workspaceID?: WorkspaceID
     directory: string
     permission?: PermissionNext.Ruleset
+    projectID: ProjectID
   }) {
+    const projectID = input.projectID
     const result: Info = {
       id: SessionID.descending(input.id),
       slug: Slug.create(),
       version: Installation.VERSION,
-      projectID: Instance.project.id,
+      projectID,
       directory: input.directory,
       workspaceID: input.workspaceID,
       parentID: input.parentID,
@@ -323,9 +331,13 @@ export namespace Session {
     Database.use((db) => {
       db.insert(SessionTable).values(toRow(result)).run()
       Database.effect(() =>
-        Bus.publish(Event.Created, {
-          info: result,
-        }),
+        Bus.publish(
+          Event.Created,
+          {
+            info: result,
+          },
+          result.directory,
+        ),
       )
     })
     const cfg = await Config.get()
@@ -333,16 +345,20 @@ export namespace Session {
       share(result.id).catch(() => {
         // Silently ignore sharing errors during session creation
       })
-    Bus.publish(Event.Updated, {
-      info: result,
-    })
+    Bus.publish(
+      Event.Updated,
+      {
+        info: result,
+      },
+      result.directory,
+    )
     return result
   }
 
-  export function plan(input: { slug: string; time: { created: number } }) {
-    const base = Instance.project.vcs
-      ? path.join(Instance.worktree, ".opencode", "plans")
-      : path.join(Global.Path.data, "plans")
+  export function plan(input: { slug: string; time: { created: number }; worktree: string; vcs?: string }) {
+    const vcs = input.vcs
+    const worktree = input.worktree
+    const base = vcs ? path.join(worktree, ".opencode", "plans") : path.join(Global.Path.data, "plans")
     return path.join(base, [input.time.created, input.slug].join("-") + ".md")
   }
 
@@ -363,7 +379,7 @@ export namespace Session {
       const row = db.update(SessionTable).set({ share_url: share.url }).where(eq(SessionTable.id, id)).returning().get()
       if (!row) throw new NotFoundError({ message: `Session not found: ${id}` })
       const info = fromRow(row)
-      Database.effect(() => Bus.publish(Event.Updated, { info }))
+      Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
     })
     return share
   })
@@ -376,7 +392,7 @@ export namespace Session {
       const row = db.update(SessionTable).set({ share_url: null }).where(eq(SessionTable.id, id)).returning().get()
       if (!row) throw new NotFoundError({ message: `Session not found: ${id}` })
       const info = fromRow(row)
-      Database.effect(() => Bus.publish(Event.Updated, { info }))
+      Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
     })
   })
 
@@ -395,7 +411,7 @@ export namespace Session {
           .get()
         if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
         const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
+        Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
         return info
       })
     },
@@ -416,7 +432,7 @@ export namespace Session {
           .get()
         if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
         const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
+        Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
         return info
       })
     },
@@ -437,7 +453,7 @@ export namespace Session {
           .get()
         if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
         const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
+        Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
         return info
       })
     },
@@ -465,7 +481,7 @@ export namespace Session {
           .get()
         if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
         const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
+        Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
         return info
       })
     },
@@ -484,7 +500,7 @@ export namespace Session {
         .get()
       if (!row) throw new NotFoundError({ message: `Session not found: ${sessionID}` })
       const info = fromRow(row)
-      Database.effect(() => Bus.publish(Event.Updated, { info }))
+      Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
       return info
     })
   })
@@ -509,7 +525,7 @@ export namespace Session {
           .get()
         if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
         const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
+        Database.effect(() => Bus.publish(Event.Updated, { info }, info.directory))
         return info
       })
     },
@@ -546,8 +562,9 @@ export namespace Session {
     start?: number
     search?: string
     limit?: number
+    project: { id: ProjectID }
   }) {
-    const project = Instance.project
+    const project = input!.project
     const conditions = [eq(SessionTable.project_id, project.id)]
 
     if (WorkspaceContext.workspaceID) {
@@ -652,7 +669,7 @@ export namespace Session {
   }
 
   export const children = fn(SessionID.zod, async (parentID) => {
-    const project = Instance.project
+    const project = InstanceALS.project
     const rows = Database.use((db) =>
       db
         .select()
@@ -664,7 +681,6 @@ export namespace Session {
   })
 
   export const remove = fn(SessionID.zod, async (sessionID) => {
-    const project = Instance.project
     try {
       const session = await get(sessionID)
       for (const child of await children(sessionID)) {
@@ -681,9 +697,13 @@ export namespace Session {
       Database.use((db) => {
         db.delete(SessionTable).where(eq(SessionTable.id, sessionID)).run()
         Database.effect(() =>
-          Bus.publish(Event.Deleted, {
-            info: session,
-          }),
+          Bus.publish(
+            Event.Deleted,
+            {
+              info: session,
+            },
+            session.directory,
+          ),
         )
       })
     } catch (e) {
@@ -705,9 +725,13 @@ export namespace Session {
         .onConflictDoUpdate({ target: MessageTable.id, set: { data } })
         .run()
       Database.effect(() =>
-        Bus.publish(MessageV2.Event.Updated, {
-          info: msg,
-        }),
+        Bus.publish(
+          MessageV2.Event.Updated,
+          {
+            info: msg,
+          },
+          InstanceALS.directory,
+        ),
       )
     })
     return msg
@@ -725,10 +749,14 @@ export namespace Session {
           .where(and(eq(MessageTable.id, input.messageID), eq(MessageTable.session_id, input.sessionID)))
           .run()
         Database.effect(() =>
-          Bus.publish(MessageV2.Event.Removed, {
-            sessionID: input.sessionID,
-            messageID: input.messageID,
-          }),
+          Bus.publish(
+            MessageV2.Event.Removed,
+            {
+              sessionID: input.sessionID,
+              messageID: input.messageID,
+            },
+            InstanceALS.directory,
+          ),
         )
       })
       return input.messageID
@@ -747,11 +775,15 @@ export namespace Session {
           .where(and(eq(PartTable.id, input.partID), eq(PartTable.session_id, input.sessionID)))
           .run()
         Database.effect(() =>
-          Bus.publish(MessageV2.Event.PartRemoved, {
-            sessionID: input.sessionID,
-            messageID: input.messageID,
-            partID: input.partID,
-          }),
+          Bus.publish(
+            MessageV2.Event.PartRemoved,
+            {
+              sessionID: input.sessionID,
+              messageID: input.messageID,
+              partID: input.partID,
+            },
+            InstanceALS.directory,
+          ),
         )
       })
       return input.partID
@@ -775,9 +807,13 @@ export namespace Session {
         .onConflictDoUpdate({ target: PartTable.id, set: { data } })
         .run()
       Database.effect(() =>
-        Bus.publish(MessageV2.Event.PartUpdated, {
-          part: structuredClone(part),
-        }),
+        Bus.publish(
+          MessageV2.Event.PartUpdated,
+          {
+            part: structuredClone(part),
+          },
+          InstanceALS.directory,
+        ),
       )
     })
     return part
@@ -792,7 +828,7 @@ export namespace Session {
       delta: z.string(),
     }),
     async (input) => {
-      Bus.publish(MessageV2.Event.PartDelta, input)
+      Bus.publish(MessageV2.Event.PartDelta, input, InstanceALS.directory)
     },
   )
 

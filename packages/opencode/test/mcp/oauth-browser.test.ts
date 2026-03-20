@@ -102,7 +102,7 @@ beforeEach(() => {
 const { MCP } = await import("../../src/mcp/index")
 const { Bus } = await import("../../src/bus")
 const { McpOAuthCallback } = await import("../../src/mcp/oauth-callback")
-const { Instance } = await import("../../src/project/instance")
+const { Instance } = await import("../fixture/instance-shim")
 const { tmpdir } = await import("../fixture/fixture")
 
 test("BrowserOpenFailed event is published when open() throws", async () => {
@@ -131,7 +131,7 @@ test("BrowserOpenFailed event is published when open() throws", async () => {
       const events: Array<{ mcpName: string; url: string }> = []
       const unsubscribe = Bus.subscribe(MCP.BrowserOpenFailed, (evt) => {
         events.push(evt.properties)
-      })
+      }, Instance.directory)
 
       // Run authenticate with a timeout to avoid waiting forever for the callback
       // Attach a handler immediately so callback shutdown rejections
@@ -182,7 +182,7 @@ test("BrowserOpenFailed event is NOT published when open() succeeds", async () =
       const events: Array<{ mcpName: string; url: string }> = []
       const unsubscribe = Bus.subscribe(MCP.BrowserOpenFailed, (evt) => {
         events.push(evt.properties)
-      })
+      }, Instance.directory)
 
       // Run authenticate with a timeout to avoid waiting forever for the callback
       const authPromise = MCP.authenticate("test-oauth-server-2").catch(() => undefined)

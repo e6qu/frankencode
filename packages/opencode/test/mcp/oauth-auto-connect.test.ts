@@ -98,7 +98,7 @@ beforeEach(() => {
 
 // Import modules after mocking
 const { MCP } = await import("../../src/mcp/index")
-const { Instance } = await import("../../src/project/instance")
+const { Instance } = await import("../fixture/instance-shim")
 const { tmpdir } = await import("../fixture/fixture")
 
 test("first connect to OAuth server shows needs_auth instead of failed", async () => {

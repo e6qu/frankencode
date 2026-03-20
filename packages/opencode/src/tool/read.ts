@@ -7,7 +7,6 @@ import { Tool } from "./tool"
 import { LSP } from "../lsp"
 import { FileTime } from "../file/time"
 import DESCRIPTION from "./read.txt"
-import { Instance } from "../project/instance"
 import { assertExternalDirectory } from "./external-directory"
 import { InstructionPrompt } from "../session/instruction"
 import { Filesystem } from "../util/filesystem"
@@ -31,9 +30,9 @@ export const ReadTool = Tool.define("read", {
     }
     let filepath = params.filePath
     if (!path.isAbsolute(filepath)) {
-      filepath = path.resolve(Instance.directory, filepath)
+      filepath = path.resolve(ctx.directory, filepath)
     }
-    const title = path.relative(Instance.worktree, filepath)
+    const title = path.relative(ctx.worktree, filepath)
 
     const stat = Filesystem.stat(filepath)
 
@@ -115,7 +114,13 @@ export const ReadTool = Tool.define("read", {
       }
     }
 
-    const instructions = await InstructionPrompt.resolve(ctx.messages, filepath, ctx.messageID)
+    const instructions = await InstructionPrompt.resolve(
+      ctx.messages,
+      filepath,
+      ctx.messageID,
+      ctx.directory,
+      ctx.worktree,
+    )
 
     // Exclude SVG (XML-based) and vnd.fastbidsheet (.fbs extension, commonly FlatBuffers schema files)
     const mime = Filesystem.mimeType(filepath)

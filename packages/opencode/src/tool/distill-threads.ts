@@ -1,7 +1,6 @@
 import { Tool } from "./tool"
 import { SideThread } from "@/session/side-thread"
 import { Storage } from "@/storage/storage"
-import { Instance } from "@/project/instance"
 import { Session } from "@/session"
 import { SessionID } from "@/session/schema"
 import { SessionPrompt } from "@/session/prompt"
@@ -120,7 +119,7 @@ Optionally specify mainTopics to override objective detection.`,
     const entries = Array.from(sideGroups.entries())
     for (const [topic, messageIDs] of entries) {
       const thread = SideThread.create({
-        projectID: Instance.project.id,
+        projectID: ctx.projectID,
         title: topic,
         description: `Distilled from ${messageIDs.length} message(s)`,
         priority: "medium",

@@ -3,7 +3,6 @@ import { Tool } from "./tool"
 import path from "path"
 import { LSP } from "../lsp"
 import DESCRIPTION from "./lsp.txt"
-import { Instance } from "../project/instance"
 import { pathToFileURL } from "url"
 import { assertExternalDirectory } from "./external-directory"
 import { Filesystem } from "../util/filesystem"
@@ -29,7 +28,7 @@ export const LspTool = Tool.define("lsp", {
     character: z.number().int().min(1).describe("The character offset (1-based, as shown in editors)"),
   }),
   execute: async (args, ctx) => {
-    const file = path.isAbsolute(args.filePath) ? args.filePath : path.join(Instance.directory, args.filePath)
+    const file = path.isAbsolute(args.filePath) ? args.filePath : path.join(ctx.directory, args.filePath)
     await assertExternalDirectory(ctx, file)
 
     await ctx.ask({
@@ -45,7 +44,7 @@ export const LspTool = Tool.define("lsp", {
       character: args.character - 1,
     }
 
-    const relPath = path.relative(Instance.worktree, file)
+    const relPath = path.relative(ctx.worktree, file)
     const title = `${args.operation} ${relPath}:${args.line}:${args.character}`
 
     const exists = await Filesystem.exists(file)

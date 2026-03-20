@@ -154,6 +154,10 @@ Use `context_history` to navigate the edit DAG:
 - Test actual implementation, do not duplicate logic into tests
 - Tests cannot run from repo root (guard: `do-not-run-tests-from-root`); run from package dirs like `packages/opencode`.
 
+## Pre-existing Failures and Bugs
+
+**IMPORTANT:** Pre-existing failures, bugs, and issues MUST be fixed too — always. Do not ignore typecheck errors, lint warnings, unused variables, broken imports, or failing tests just because they existed before your changes. If you encounter a pre-existing issue during your work, fix it as part of your changes. This applies to all types of issues: type errors, dead code, incorrect logic, missing exports, stale references, etc.
+
 ## Git Workflow
 
 - **NEVER commit or push directly to `dev`.** Always work on a feature/fix/docs branch and create a PR.

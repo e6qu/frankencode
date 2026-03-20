@@ -7,6 +7,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Database } from "@/storage/db"
 import { Plugin } from "@/plugin"
+import { InstanceALS } from "@/project/instance-als"
 import { Log } from "@/util/log"
 import { Token } from "@/util/token"
 import z from "zod"
@@ -35,6 +36,7 @@ export namespace ContextEdit {
         agent: input.agent,
       },
       { allow: true, reason: undefined },
+      InstanceALS.directory,
     )
     if (!result.allow) return { success: false, error: result.reason ?? "Blocked by plugin" }
     return null
@@ -56,6 +58,7 @@ export namespace ContextEdit {
         success,
       },
       {},
+      InstanceALS.directory,
     )
   }
 
@@ -218,12 +221,16 @@ export namespace ContextEdit {
       })
 
       Database.effect(() =>
-        Bus.publish(Event.PartHidden, {
-          sessionID: input.sessionID,
-          partID: input.partID,
-          casHash: casHash!,
-          agent: input.agent,
-        }),
+        Bus.publish(
+          Event.PartHidden,
+          {
+            sessionID: input.sessionID,
+            partID: input.partID,
+            casHash: casHash!,
+            agent: input.agent,
+          },
+          InstanceALS.directory,
+        ),
       )
     })
 
@@ -258,11 +265,15 @@ export namespace ContextEdit {
       })
 
       Database.effect(() =>
-        Bus.publish(Event.PartUnhidden, {
-          sessionID: input.sessionID,
-          partID: input.partID,
-          agent: input.agent,
-        }),
+        Bus.publish(
+          Event.PartUnhidden,
+          {
+            sessionID: input.sessionID,
+            partID: input.partID,
+            agent: input.agent,
+          },
+          InstanceALS.directory,
+        ),
       )
     })
 
@@ -347,13 +358,17 @@ export namespace ContextEdit {
       } as any)
 
       Database.effect(() =>
-        Bus.publish(Event.PartReplaced, {
-          sessionID: input.sessionID,
-          oldPartID: input.partID,
-          newPartID,
-          casHash: casHash!,
-          agent: input.agent,
-        }),
+        Bus.publish(
+          Event.PartReplaced,
+          {
+            sessionID: input.sessionID,
+            oldPartID: input.partID,
+            newPartID,
+            casHash: casHash!,
+            agent: input.agent,
+          },
+          InstanceALS.directory,
+        ),
       )
     })
 
@@ -402,12 +417,16 @@ export namespace ContextEdit {
       })
 
       Database.effect(() =>
-        Bus.publish(Event.PartAnnotated, {
-          sessionID: input.sessionID,
-          partID: input.partID,
-          annotation: input.annotation,
-          agent: input.agent,
-        }),
+        Bus.publish(
+          Event.PartAnnotated,
+          {
+            sessionID: input.sessionID,
+            partID: input.partID,
+            annotation: input.annotation,
+            agent: input.agent,
+          },
+          InstanceALS.directory,
+        ),
       )
     })
 
@@ -527,12 +546,16 @@ export namespace ContextEdit {
       }
 
       Database.effect(() =>
-        Bus.publish(Event.ContentExternalized, {
-          sessionID: input.sessionID,
-          partID: input.partID,
-          casHash: casHash!,
-          agent: input.agent,
-        }),
+        Bus.publish(
+          Event.ContentExternalized,
+          {
+            sessionID: input.sessionID,
+            partID: input.partID,
+            casHash: casHash!,
+            agent: input.agent,
+          },
+          InstanceALS.directory,
+        ),
       )
     })
 

@@ -5,13 +5,13 @@ import { Config } from "./config"
 import { ConfigPaths } from "./paths"
 import { migrateTuiConfig } from "./migrate-tui-config"
 import { TuiInfo } from "./tui-schema"
-import { Instance } from "@/project/instance"
+import { InstanceALS } from "@/project/instance-als"
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util/log"
 import { Global } from "@/global"
 import { registerDisposer } from "@/effect/instance-registry"
 
-const tuiStates = new Map<string, Promise<{ config: TuiConfig.Info }>>()
+export const tuiStates = new Map<string, Promise<{ config: TuiConfig.Info }>>()
 registerDisposer(async (directory) => {
   tuiStates.delete(directory)
 })
@@ -31,28 +31,29 @@ export namespace TuiConfig {
     return Flag.OPENCODE_TUI_CONFIG
   }
 
-  function state() {
-    const dir = Instance.directory
-    let s = tuiStates.get(dir)
+  function state(directory: string) {
+    let s = tuiStates.get(directory)
     if (!s) {
       s = initTuiConfig()
-      tuiStates.set(dir, s)
+      tuiStates.set(directory, s)
     }
     return s
   }
 
   async function initTuiConfig() {
+    const directory = InstanceALS.directory
+    const worktree = InstanceALS.worktree
     let projectFiles = Flag.OPENCODE_DISABLE_PROJECT_CONFIG
       ? []
-      : await ConfigPaths.projectFiles("tui", Instance.directory, Instance.worktree)
-    const directories = await ConfigPaths.directories(Instance.directory, Instance.worktree)
+      : await ConfigPaths.projectFiles("tui", directory, worktree)
+    const directories = await ConfigPaths.directories(directory, worktree)
     const custom = customPath()
     const managed = Config.managedConfigDir()
-    await migrateTuiConfig({ directories, custom, managed })
+    await migrateTuiConfig({ directories, custom, managed, directory, worktree })
     // Re-compute after migration since migrateTuiConfig may have created new tui.json files
     projectFiles = Flag.OPENCODE_DISABLE_PROJECT_CONFIG
       ? []
-      : await ConfigPaths.projectFiles("tui", Instance.directory, Instance.worktree)
+      : await ConfigPaths.projectFiles("tui", directory, worktree)
 
     let result: Info = {}
 
@@ -90,7 +91,7 @@ export namespace TuiConfig {
   }
 
   export async function get() {
-    return state().then((x) => x.config)
+    return state(InstanceALS.directory).then((x) => x.config)
   }
 
   async function loadFile(filepath: string): Promise<Info> {

@@ -1,7 +1,6 @@
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { InstanceContext } from "@/effect/instance-context"
-import { Instance } from "@/project/instance"
 import z from "zod"
 import { Log } from "../util/log"
 import { FileIgnore } from "./ignore"
@@ -90,14 +89,15 @@ export class FileWatcherService extends ServiceMap.Service<FileWatcherService, F
       const subs: ParcelWatcher.AsyncSubscription[] = []
       yield* Effect.addFinalizer(() => Effect.promise(() => Promise.allSettled(subs.map((sub) => sub.unsubscribe()))))
 
-      const cb: ParcelWatcher.SubscribeCallback = Instance.bind((err, evts) => {
+      const directory = instance.directory
+      const cb: ParcelWatcher.SubscribeCallback = (err, evts) => {
         if (err) return
         for (const evt of evts) {
-          if (evt.type === "create") Bus.publish(event.Updated, { file: evt.path, event: "add" })
-          if (evt.type === "update") Bus.publish(event.Updated, { file: evt.path, event: "change" })
-          if (evt.type === "delete") Bus.publish(event.Updated, { file: evt.path, event: "unlink" })
+          if (evt.type === "create") Bus.publish(event.Updated, { file: evt.path, event: "add" }, directory)
+          if (evt.type === "update") Bus.publish(event.Updated, { file: evt.path, event: "change" }, directory)
+          if (evt.type === "delete") Bus.publish(event.Updated, { file: evt.path, event: "unlink" }, directory)
         }
-      })
+      }
 
       const subscribe = (dir: string, ignore: string[]) => {
         const pending = w.subscribe(dir, cb, { ignore, backend })

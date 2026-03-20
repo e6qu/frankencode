@@ -13,7 +13,7 @@ import { Config } from "../config/config"
 import { Log } from "../util/log"
 import { NamedError } from "@opencode-ai/util/error"
 import z from "zod/v4"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Installation } from "../installation"
 import { withTimeout } from "@/util/timeout"
@@ -29,7 +29,7 @@ import open from "open"
 type TransportWithAuth = StreamableHTTPClientTransport | SSEClientTransport
 const pendingOAuthTransports = new Map<string, TransportWithAuth>()
 
-async function descendants(pid: number): Promise<number[]> {
+export async function descendants(pid: number): Promise<number[]> {
   if (process.platform === "win32") return []
   const pids: number[] = []
   const queue = [pid]
@@ -56,10 +56,10 @@ type MCPState = Promise<{
   clients: Record<string, Client>
 }>
 
-const stateMap = new Map<string, MCPState>()
+export const mcpStateMap = new Map<string, MCPState>()
 
 registerDisposer(async (directory) => {
-  const s = stateMap.get(directory)
+  const s = mcpStateMap.get(directory)
   if (s) {
     const state = await s
     // The MCP SDK only signals the direct child process on close.
@@ -86,7 +86,7 @@ registerDisposer(async (directory) => {
     )
     pendingOAuthTransports.clear()
   }
-  stateMap.delete(directory)
+  mcpStateMap.delete(directory)
 })
 
 export namespace MCP {
@@ -177,7 +177,7 @@ export namespace MCP {
   function registerNotificationHandlers(client: MCPClient, serverName: string) {
     client.setNotificationHandler(ToolListChangedNotificationSchema, async () => {
       log.info("tools list changed notification received", { server: serverName })
-      Bus.publish(ToolsChanged, { server: serverName })
+      Bus.publish(ToolsChanged, { server: serverName }, InstanceALS.directory)
     })
   }
 
@@ -221,9 +221,8 @@ export namespace MCP {
     return typeof entry === "object" && entry !== null && "type" in entry
   }
 
-  function state(): MCPState {
-    const directory = Instance.directory
-    let existing = stateMap.get(directory)
+  function state(directory: string): MCPState {
+    let existing = mcpStateMap.get(directory)
     if (existing) return existing
     const promise = (async () => {
       const cfg = await Config.get()
@@ -244,7 +243,7 @@ export namespace MCP {
             return
           }
 
-          const result = await create(key, mcp).catch(() => undefined)
+          const result = await create(key, mcp, directory).catch(() => undefined)
           if (!result) return
 
           status[key] = result.status
@@ -259,7 +258,7 @@ export namespace MCP {
         clients,
       }
     })()
-    stateMap.set(directory, promise)
+    mcpStateMap.set(directory, promise)
     return promise
   }
 
@@ -309,8 +308,8 @@ export namespace MCP {
   }
 
   export async function add(name: string, mcp: Config.Mcp) {
-    const s = await state()
-    const result = await create(name, mcp)
+    const s = await state(InstanceALS.directory)
+    const result = await create(name, mcp, InstanceALS.directory)
     if (!result) {
       const status = {
         status: "failed" as const,
@@ -342,7 +341,7 @@ export namespace MCP {
     }
   }
 
-  async function create(key: string, mcp: Config.Mcp) {
+  async function create(key: string, mcp: Config.Mcp, directory: string) {
     if (mcp.enabled === false) {
       log.info("mcp server disabled", { key })
       return {
@@ -430,23 +429,31 @@ export namespace MCP {
                 error: "Server does not support dynamic client registration. Please provide clientId in config.",
               }
               // Show toast for needs_client_registration
-              Bus.publish(TuiEvent.ToastShow, {
-                title: "MCP Authentication Required",
-                message: `Server "${key}" requires a pre-registered client ID. Add clientId to your config.`,
-                variant: "warning",
-                duration: 8000,
-              }).catch((e) => log.debug("failed to show toast", { error: e }))
+              Bus.publish(
+                TuiEvent.ToastShow,
+                {
+                  title: "MCP Authentication Required",
+                  message: `Server "${key}" requires a pre-registered client ID. Add clientId to your config.`,
+                  variant: "warning",
+                  duration: 8000,
+                },
+                InstanceALS.directory,
+              ).catch((e) => log.debug("failed to show toast", { error: e }))
             } else {
               // Store transport for later finishAuth call
               pendingOAuthTransports.set(key, transport)
               status = { status: "needs_auth" as const }
               // Show toast for needs_auth
-              Bus.publish(TuiEvent.ToastShow, {
-                title: "MCP Authentication Required",
-                message: `Server "${key}" requires authentication. Run: opencode mcp auth ${key}`,
-                variant: "warning",
-                duration: 8000,
-              }).catch((e) => log.debug("failed to show toast", { error: e }))
+              Bus.publish(
+                TuiEvent.ToastShow,
+                {
+                  title: "MCP Authentication Required",
+                  message: `Server "${key}" requires authentication. Run: opencode mcp auth ${key}`,
+                  variant: "warning",
+                  duration: 8000,
+                },
+                InstanceALS.directory,
+              ).catch((e) => log.debug("failed to show toast", { error: e }))
             }
             break
           }
@@ -467,7 +474,7 @@ export namespace MCP {
 
     if (mcp.type === "local") {
       const [cmd, ...args] = mcp.command
-      const cwd = Instance.directory
+      const cwd = directory
       const transport = new StdioClientTransport({
         stderr: "pipe",
         command: cmd,
@@ -554,7 +561,7 @@ export namespace MCP {
   }
 
   export async function status() {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const cfg = await Config.get()
     const config = cfg.mcp ?? {}
     const result: Record<string, Status> = {}
@@ -569,7 +576,7 @@ export namespace MCP {
   }
 
   export async function clients() {
-    return state().then((state) => state.clients)
+    return state(InstanceALS.directory).then((state) => state.clients)
   }
 
   export async function connect(name: string) {
@@ -586,10 +593,10 @@ export namespace MCP {
       return
     }
 
-    const result = await create(name, { ...mcp, enabled: true })
+    const result = await create(name, { ...mcp, enabled: true }, InstanceALS.directory)
 
     if (!result) {
-      const s = await state()
+      const s = await state(InstanceALS.directory)
       s.status[name] = {
         status: "failed",
         error: "Unknown error during connection",
@@ -597,7 +604,7 @@ export namespace MCP {
       return
     }
 
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     s.status[name] = result.status
     if (result.mcpClient) {
       // Close existing client if present to prevent memory leaks
@@ -612,7 +619,7 @@ export namespace MCP {
   }
 
   export async function disconnect(name: string) {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const client = s.clients[name]
     if (client) {
       await client.close().catch((error) => {
@@ -625,7 +632,7 @@ export namespace MCP {
 
   export async function tools() {
     const result: Record<string, Tool> = {}
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const cfg = await Config.get()
     const config = cfg.mcp ?? {}
     const clientsSnapshot = await clients()
@@ -666,7 +673,7 @@ export namespace MCP {
   }
 
   export async function prompts() {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const clientsSnapshot = await clients()
 
     const prompts = Object.fromEntries<PromptInfo & { client: string }>(
@@ -687,7 +694,7 @@ export namespace MCP {
   }
 
   export async function resources() {
-    const s = await state()
+    const s = await state(InstanceALS.directory)
     const clientsSnapshot = await clients()
 
     const result = Object.fromEntries<ResourceInfo & { client: string }>(
@@ -848,7 +855,7 @@ export namespace MCP {
 
     if (!authorizationUrl) {
       // Already authenticated
-      const s = await state()
+      const s = await state(InstanceALS.directory)
       return s.status[mcpName] ?? { status: "connected" }
     }
 
@@ -890,7 +897,7 @@ export namespace MCP {
       // Browser opening failed (e.g., in remote/headless sessions like SSH, devcontainers)
       // Emit event so CLI can display the URL for manual opening
       log.warn("failed to open browser, user must open URL manually", { mcpName, error })
-      Bus.publish(BrowserOpenFailed, { mcpName, url: authorizationUrl })
+      Bus.publish(BrowserOpenFailed, { mcpName, url: authorizationUrl }, InstanceALS.directory)
     }
 
     // Wait for callback using the already-registered promise

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Bus } from "../../src/bus"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { tmpdir } from "../fixture/fixture"
 import z from "zod"
 
@@ -24,24 +24,24 @@ describe("bus", () => {
             events.push(event.properties.value)
           }
 
-          const unsub1 = Bus.subscribe(TestEvent, callback)
-          const unsub2 = Bus.subscribe(TestEvent, callback)
-          const unsub3 = Bus.subscribe(TestEvent, callback)
+          const unsub1 = Bus.subscribe(TestEvent, callback, Instance.directory)
+          const unsub2 = Bus.subscribe(TestEvent, callback, Instance.directory)
+          const unsub3 = Bus.subscribe(TestEvent, callback, Instance.directory)
 
-          await Bus.publish(TestEvent, { value: 1 })
+          await Bus.publish(TestEvent, { value: 1 }, Instance.directory)
           expect(events.length).toBe(3)
           expect(events).toEqual([1, 1, 1])
 
           unsub1()
-          await Bus.publish(TestEvent, { value: 2 })
+          await Bus.publish(TestEvent, { value: 2 }, Instance.directory)
           expect(events.length).toBe(5)
 
           unsub2()
-          await Bus.publish(TestEvent, { value: 3 })
+          await Bus.publish(TestEvent, { value: 3 }, Instance.directory)
           expect(events.length).toBe(6)
 
           unsub3()
-          await Bus.publish(TestEvent, { value: 4 })
+          await Bus.publish(TestEvent, { value: 4 }, Instance.directory)
           expect(events.length).toBe(6)
         },
       })
@@ -54,7 +54,7 @@ describe("bus", () => {
         directory: tmp.path,
         fn: async () => {
           const callback = () => {}
-          const unsub = Bus.subscribe(TestEvent, callback)
+          const unsub = Bus.subscribe(TestEvent, callback, Instance.directory)
           unsub()
           unsub()
         },

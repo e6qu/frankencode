@@ -13,6 +13,7 @@ import { SessionSummary } from "@/session/summary"
 import { Todo } from "../../session/todo"
 import { Agent } from "../../agent/agent"
 import { Snapshot } from "@/snapshot"
+import { InstanceALS } from "@/project/instance-als"
 import { Log } from "../../util/log"
 import { PermissionNext } from "@/permission/next"
 import { PermissionID } from "@/permission/schema"
@@ -64,6 +65,7 @@ export const SessionRoutes = lazy(() =>
           start: query.start,
           search: query.search,
           limit: query.limit,
+          project: InstanceALS.project,
         })) {
           sessions.push(session)
         }
@@ -89,7 +91,7 @@ export const SessionRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        const result = SessionStatus.list()
+        const result = SessionStatus.list(InstanceALS.directory)
         return c.json(result)
       },
     )
@@ -410,7 +412,7 @@ export const SessionRoutes = lazy(() =>
         }),
       ),
       async (c) => {
-        SessionPrompt.cancel(c.req.valid("param").sessionID)
+        SessionPrompt.cancel(c.req.valid("param").sessionID, InstanceALS.directory)
         return c.json(true)
       },
     )

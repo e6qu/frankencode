@@ -1,6 +1,5 @@
 import { text } from "node:stream/consumers"
 import { BunProc } from "../bun"
-import { Instance } from "../project/instance"
 import { Filesystem } from "../util/filesystem"
 import { Process } from "../util/process"
 import { which } from "../util/which"
@@ -11,14 +10,14 @@ export interface Info {
   command: string[]
   environment?: Record<string, string>
   extensions: string[]
-  enabled(): Promise<boolean>
+  enabled(directory: string, worktree: string): Promise<boolean>
 }
 
 export const gofmt: Info = {
   name: "gofmt",
   command: ["gofmt", "-w", "$FILE"],
   extensions: [".go"],
-  async enabled() {
+  async enabled(_directory: string, _worktree: string) {
     return which("gofmt") !== null
   },
 }
@@ -27,7 +26,7 @@ export const mix: Info = {
   name: "mix",
   command: ["mix", "format", "$FILE"],
   extensions: [".ex", ".exs", ".eex", ".heex", ".leex", ".neex", ".sface"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("mix") !== null
   },
 }
@@ -66,8 +65,8 @@ export const prettier: Info = {
     ".graphql",
     ".gql",
   ],
-  async enabled() {
-    const items = await Filesystem.findUp("package.json", Instance.directory, Instance.worktree)
+  async enabled(directory: string, worktree: string) {
+    const items = await Filesystem.findUp("package.json", directory, worktree)
     for (const item of items) {
       const json = await Filesystem.readJson<{
         dependencies?: Record<string, string>
@@ -87,9 +86,9 @@ export const oxfmt: Info = {
     BUN_BE_BUN: "1",
   },
   extensions: [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     if (!Flag.OPENCODE_EXPERIMENTAL_OXFMT) return false
-    const items = await Filesystem.findUp("package.json", Instance.directory, Instance.worktree)
+    const items = await Filesystem.findUp("package.json", directory, worktree)
     for (const item of items) {
       const json = await Filesystem.readJson<{
         dependencies?: Record<string, string>
@@ -136,10 +135,10 @@ export const biome: Info = {
     ".graphql",
     ".gql",
   ],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     const configs = ["biome.json", "biome.jsonc"]
     for (const config of configs) {
-      const found = await Filesystem.findUp(config, Instance.directory, Instance.worktree)
+      const found = await Filesystem.findUp(config, directory, worktree)
       if (found.length > 0) {
         return true
       }
@@ -152,7 +151,7 @@ export const zig: Info = {
   name: "zig",
   command: ["zig", "fmt", "$FILE"],
   extensions: [".zig", ".zon"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("zig") !== null
   },
 }
@@ -161,8 +160,8 @@ export const clang: Info = {
   name: "clang-format",
   command: ["clang-format", "-i", "$FILE"],
   extensions: [".c", ".cc", ".cpp", ".cxx", ".c++", ".h", ".hh", ".hpp", ".hxx", ".h++", ".ino", ".C", ".H"],
-  async enabled() {
-    const items = await Filesystem.findUp(".clang-format", Instance.directory, Instance.worktree)
+  async enabled(directory: string, worktree: string) {
+    const items = await Filesystem.findUp(".clang-format", directory, worktree)
     return items.length > 0
   },
 }
@@ -171,7 +170,7 @@ export const ktlint: Info = {
   name: "ktlint",
   command: ["ktlint", "-F", "$FILE"],
   extensions: [".kt", ".kts"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("ktlint") !== null
   },
 }
@@ -180,11 +179,11 @@ export const ruff: Info = {
   name: "ruff",
   command: ["ruff", "format", "$FILE"],
   extensions: [".py", ".pyi"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     if (!which("ruff")) return false
     const configs = ["pyproject.toml", "ruff.toml", ".ruff.toml"]
     for (const config of configs) {
-      const found = await Filesystem.findUp(config, Instance.directory, Instance.worktree)
+      const found = await Filesystem.findUp(config, directory, worktree)
       if (found.length > 0) {
         if (config === "pyproject.toml") {
           const content = await Filesystem.readText(found[0])
@@ -196,7 +195,7 @@ export const ruff: Info = {
     }
     const deps = ["requirements.txt", "pyproject.toml", "Pipfile"]
     for (const dep of deps) {
-      const found = await Filesystem.findUp(dep, Instance.directory, Instance.worktree)
+      const found = await Filesystem.findUp(dep, directory, worktree)
       if (found.length > 0) {
         const content = await Filesystem.readText(found[0])
         if (content.includes("ruff")) return true
@@ -210,7 +209,7 @@ export const rlang: Info = {
   name: "air",
   command: ["air", "format", "$FILE"],
   extensions: [".R"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     const airPath = which("air")
     if (airPath == null) return false
 
@@ -238,8 +237,8 @@ export const uvformat: Info = {
   name: "uv",
   command: ["uv", "format", "--", "$FILE"],
   extensions: [".py", ".pyi"],
-  async enabled() {
-    if (await ruff.enabled()) return false
+  async enabled(directory: string, worktree: string) {
+    if (await ruff.enabled(directory, worktree)) return false
     if (which("uv") !== null) {
       const proc = Process.spawn(["uv", "format", "--help"], { stderr: "pipe", stdout: "pipe" })
       const code = await proc.exited
@@ -253,7 +252,7 @@ export const rubocop: Info = {
   name: "rubocop",
   command: ["rubocop", "--autocorrect", "$FILE"],
   extensions: [".rb", ".rake", ".gemspec", ".ru"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("rubocop") !== null
   },
 }
@@ -262,7 +261,7 @@ export const standardrb: Info = {
   name: "standardrb",
   command: ["standardrb", "--fix", "$FILE"],
   extensions: [".rb", ".rake", ".gemspec", ".ru"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("standardrb") !== null
   },
 }
@@ -271,7 +270,7 @@ export const htmlbeautifier: Info = {
   name: "htmlbeautifier",
   command: ["htmlbeautifier", "$FILE"],
   extensions: [".erb", ".html.erb"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("htmlbeautifier") !== null
   },
 }
@@ -280,7 +279,7 @@ export const dart: Info = {
   name: "dart",
   command: ["dart", "format", "$FILE"],
   extensions: [".dart"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("dart") !== null
   },
 }
@@ -289,9 +288,9 @@ export const ocamlformat: Info = {
   name: "ocamlformat",
   command: ["ocamlformat", "-i", "$FILE"],
   extensions: [".ml", ".mli"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     if (!which("ocamlformat")) return false
-    const items = await Filesystem.findUp(".ocamlformat", Instance.directory, Instance.worktree)
+    const items = await Filesystem.findUp(".ocamlformat", directory, worktree)
     return items.length > 0
   },
 }
@@ -300,7 +299,7 @@ export const terraform: Info = {
   name: "terraform",
   command: ["terraform", "fmt", "$FILE"],
   extensions: [".tf", ".tfvars"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("terraform") !== null
   },
 }
@@ -309,7 +308,7 @@ export const latexindent: Info = {
   name: "latexindent",
   command: ["latexindent", "-w", "-s", "$FILE"],
   extensions: [".tex"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("latexindent") !== null
   },
 }
@@ -318,7 +317,7 @@ export const gleam: Info = {
   name: "gleam",
   command: ["gleam", "format", "$FILE"],
   extensions: [".gleam"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("gleam") !== null
   },
 }
@@ -327,7 +326,7 @@ export const shfmt: Info = {
   name: "shfmt",
   command: ["shfmt", "-w", "$FILE"],
   extensions: [".sh", ".bash"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("shfmt") !== null
   },
 }
@@ -336,7 +335,7 @@ export const nixfmt: Info = {
   name: "nixfmt",
   command: ["nixfmt", "$FILE"],
   extensions: [".nix"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("nixfmt") !== null
   },
 }
@@ -345,7 +344,7 @@ export const rustfmt: Info = {
   name: "rustfmt",
   command: ["rustfmt", "$FILE"],
   extensions: [".rs"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("rustfmt") !== null
   },
 }
@@ -354,8 +353,8 @@ export const pint: Info = {
   name: "pint",
   command: ["./vendor/bin/pint", "$FILE"],
   extensions: [".php"],
-  async enabled() {
-    const items = await Filesystem.findUp("composer.json", Instance.directory, Instance.worktree)
+  async enabled(directory: string, worktree: string) {
+    const items = await Filesystem.findUp("composer.json", directory, worktree)
     for (const item of items) {
       const json = await Filesystem.readJson<{
         require?: Record<string, string>
@@ -372,7 +371,7 @@ export const ormolu: Info = {
   name: "ormolu",
   command: ["ormolu", "-i", "$FILE"],
   extensions: [".hs"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("ormolu") !== null
   },
 }
@@ -381,7 +380,7 @@ export const cljfmt: Info = {
   name: "cljfmt",
   command: ["cljfmt", "fix", "--quiet", "$FILE"],
   extensions: [".clj", ".cljs", ".cljc", ".edn"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("cljfmt") !== null
   },
 }
@@ -390,7 +389,7 @@ export const dfmt: Info = {
   name: "dfmt",
   command: ["dfmt", "-i", "$FILE"],
   extensions: [".d"],
-  async enabled() {
+  async enabled(directory: string, worktree: string) {
     return which("dfmt") !== null
   },
 }

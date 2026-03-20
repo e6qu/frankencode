@@ -4,7 +4,7 @@ import z from "zod"
 import { File } from "../../file"
 import { Ripgrep } from "../../file/ripgrep"
 import { LSP } from "../../lsp"
-import { Instance } from "../../project/instance"
+import { InstanceALS } from "../../project/instance-als"
 import { lazy } from "../../util/lazy"
 
 export const FileRoutes = lazy(() =>
@@ -33,9 +33,10 @@ export const FileRoutes = lazy(() =>
         }),
       ),
       async (c) => {
+        const directory = InstanceALS.directory
         const pattern = c.req.valid("query").pattern
         const result = await Ripgrep.search({
-          cwd: Instance.directory,
+          cwd: directory,
           pattern,
           limit: 10,
         })

@@ -74,12 +74,18 @@ mock.module("@/config/tui", () => ({
   },
 }))
 
-mock.module("@/project/instance", () => ({
-  Instance: {
-    provide: async (input: { directory: string; fn: () => Promise<unknown> | unknown }) => {
-      seen.inst.push(input.directory)
-      return input.fn()
+mock.module("@/project/lifecycle", () => ({
+  InstanceLifecycle: {
+    boot: async (directory: string) => {
+      seen.inst.push(directory)
+      return { directory, worktree: directory, project: {} }
     },
+  },
+}))
+
+mock.module("@/project/instance-als", () => ({
+  InstanceALS: {
+    run: <R>(_ctx: unknown, fn: () => R) => fn(),
   },
 }))
 

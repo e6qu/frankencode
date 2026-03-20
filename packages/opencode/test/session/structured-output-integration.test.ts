@@ -3,7 +3,7 @@ import path from "path"
 import { Session } from "../../src/session"
 import { SessionPrompt } from "../../src/session/prompt"
 import { Log } from "../../src/util/log"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { MessageV2 } from "../../src/session/message-v2"
 
 const projectRoot = path.join(__dirname, "../..")

@@ -112,7 +112,7 @@ Returns final evaluation with score and any remaining issues.`,
         const messageID = MessageID.ascending()
 
         function cancel() {
-          SessionPrompt.cancel(session.id)
+          SessionPrompt.cancel(session.id, ctx.directory)
         }
         ctx.abort.addEventListener("abort", cancel)
         using _ = defer(() => ctx.abort.removeEventListener("abort", cancel))
@@ -165,7 +165,7 @@ Returns final evaluation with score and any remaining issues.`,
           const optMessageID = MessageID.ascending()
 
           function optCancel() {
-            SessionPrompt.cancel(optSession.id)
+            SessionPrompt.cancel(optSession.id, ctx.directory)
           }
           ctx.abort.addEventListener("abort", optCancel)
           using _opt = defer(() => ctx.abort.removeEventListener("abort", optCancel))

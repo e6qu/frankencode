@@ -3,7 +3,8 @@ import path from "path"
 import { GlobalBus } from "../../src/bus/global"
 import { Snapshot } from "../../src/snapshot"
 import { InstanceBootstrap } from "../../src/project/bootstrap"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
+import { InstanceLifecycle } from "../../src/project/lifecycle"
 import { Server } from "../../src/server/server"
 import { Filesystem } from "../../src/util/filesystem"
 import { Log } from "../../src/util/log"
@@ -24,8 +25,8 @@ describe("project.initGit endpoint", () => {
     const fn = (evt: { directory?: string; payload: { type: string } }) => {
       seen.push(evt)
     }
-    const reload = Instance.reload
-    const reloadSpy = spyOn(Instance, "reload").mockImplementation((input) => reload(input))
+    const reload = InstanceLifecycle.reload
+    const reloadSpy = spyOn(InstanceLifecycle, "reload").mockImplementation((input) => reload(input))
     GlobalBus.on("event", fn)
 
     try {
@@ -80,8 +81,8 @@ describe("project.initGit endpoint", () => {
     const fn = (evt: { directory?: string; payload: { type: string } }) => {
       seen.push(evt)
     }
-    const reload = Instance.reload
-    const reloadSpy = spyOn(Instance, "reload").mockImplementation((input) => reload(input))
+    const reload = InstanceLifecycle.reload
+    const reloadSpy = spyOn(InstanceLifecycle, "reload").mockImplementation((input) => reload(input))
     GlobalBus.on("event", fn)
 
     try {

@@ -4,7 +4,7 @@ import { Provider } from "../provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { generateObject, streamObject, type ModelMessage } from "ai"
 import { SystemPrompt } from "../session/system"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Truncate } from "../tool/truncation"
 import { Auth } from "../auth"
@@ -60,18 +60,18 @@ export namespace Agent {
     })
   export type Info = z.infer<typeof Info>
 
-  function state(): Promise<Record<string, Info>> {
-    const dir = Instance.directory
-    let s = agentStates.get(dir)
+  function state(directory: string): Promise<Record<string, Info>> {
+    let s = agentStates.get(directory)
     if (!s) {
       s = initAgents()
-      agentStates.set(dir, s)
+      agentStates.set(directory, s)
     }
     return s
   }
 
   async function initAgents(): Promise<Record<string, Info>> {
     const cfg = await Config.get()
+    const worktree = InstanceALS.worktree
 
     const skillDirs = await Skill.dirs()
     const whitelistedDirs = [Truncate.GLOB, ...skillDirs.map((dir) => path.join(dir, "*"))]
@@ -126,7 +126,7 @@ export namespace Agent {
             edit: {
               "*": "deny",
               [path.join(".opencode", "plans", "*.md")]: "allow",
-              [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
+              [path.relative(worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
             },
           }),
           user,
@@ -380,13 +380,13 @@ export namespace Agent {
   }
 
   export async function get(agent: string) {
-    return state().then((x) => x[agent])
+    return state(InstanceALS.directory).then((x) => x[agent])
   }
 
   export async function list() {
     const cfg = await Config.get()
     return pipe(
-      await state(),
+      await state(InstanceALS.directory),
       values(),
       sortBy([(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "build"), "desc"]),
     )
@@ -394,7 +394,7 @@ export namespace Agent {
 
   export async function defaultAgent() {
     const cfg = await Config.get()
-    const agents = await state()
+    const agents = await state(InstanceALS.directory)
 
     if (cfg.default_agent) {
       const agent = agents[cfg.default_agent]
@@ -416,7 +416,7 @@ export namespace Agent {
     const language = await Provider.getLanguage(model)
 
     const system = [PROMPT_GENERATE]
-    await Plugin.trigger("experimental.chat.system.transform", { model }, { system })
+    await Plugin.trigger("experimental.chat.system.transform", { model }, { system }, InstanceALS.directory)
     const existing = await list()
 
     const params = {

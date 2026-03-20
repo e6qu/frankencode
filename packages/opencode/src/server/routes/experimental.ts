@@ -4,7 +4,7 @@ import z from "zod"
 import { ProviderID, ModelID } from "../../provider/schema"
 import { ToolRegistry } from "../../tool/registry"
 import { Worktree } from "../../worktree"
-import { Instance } from "../../project/instance"
+import { InstanceALS } from "../../project/instance-als"
 import { Project } from "../../project/project"
 import { MCP } from "../../mcp"
 import { Session } from "../../session"
@@ -133,7 +133,8 @@ export const ExperimentalRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        const sandboxes = await Project.sandboxes(Instance.project.id)
+        const projectID = InstanceALS.project.id
+        const sandboxes = await Project.sandboxes(projectID)
         return c.json(sandboxes)
       },
     )
@@ -159,7 +160,8 @@ export const ExperimentalRoutes = lazy(() =>
       async (c) => {
         const body = c.req.valid("json")
         await Worktree.remove(body)
-        await Project.removeSandbox(Instance.project.id, body.directory)
+        const projectID = InstanceALS.project.id
+        await Project.removeSandbox(projectID, body.directory)
         return c.json(true)
       },
     )
@@ -423,14 +425,15 @@ export const ExperimentalRoutes = lazy(() =>
       async (c) => {
         const { status, limit, offset } = c.req.valid("json")
         const { SideThread } = await import("../../session/side-thread")
+        const projectID = InstanceALS.project.id
         const result = SideThread.list({
-          projectID: Instance.project.id,
+          projectID,
           status: status as any,
           limit,
           offset,
         })
         return c.json({
-          projectID: Instance.project.id,
+          projectID,
           ...result,
         })
       },

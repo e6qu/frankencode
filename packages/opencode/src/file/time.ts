@@ -3,6 +3,7 @@ import { Flag } from "@/flag/flag"
 import { Filesystem } from "../util/filesystem"
 import { Effect, Layer, ServiceMap, Semaphore } from "effect"
 import { runPromiseInstance } from "@/effect/runtime"
+import { InstanceALS } from "@/project/instance-als"
 import type { SessionID } from "@/session/schema"
 
 const log = Log.create({ service: "file.time" })
@@ -98,18 +99,30 @@ export class FileTimeService extends ServiceMap.Service<FileTimeService, FileTim
 
 export namespace FileTime {
   export function read(sessionID: SessionID, file: string) {
-    return runPromiseInstance(FileTimeService.use((s) => s.read(sessionID, file)))
+    return runPromiseInstance(
+      FileTimeService.use((s) => s.read(sessionID, file)),
+      InstanceALS.directory,
+    )
   }
 
   export function get(sessionID: SessionID, file: string) {
-    return runPromiseInstance(FileTimeService.use((s) => s.get(sessionID, file)))
+    return runPromiseInstance(
+      FileTimeService.use((s) => s.get(sessionID, file)),
+      InstanceALS.directory,
+    )
   }
 
   export async function assert(sessionID: SessionID, filepath: string) {
-    return runPromiseInstance(FileTimeService.use((s) => s.assert(sessionID, filepath)))
+    return runPromiseInstance(
+      FileTimeService.use((s) => s.assert(sessionID, filepath)),
+      InstanceALS.directory,
+    )
   }
 
   export async function withLock<T>(filepath: string, fn: () => Promise<T>): Promise<T> {
-    return runPromiseInstance(FileTimeService.use((s) => s.withLock(filepath, fn)))
+    return runPromiseInstance(
+      FileTimeService.use((s) => s.withLock(filepath, fn)),
+      InstanceALS.directory,
+    )
   }
 }

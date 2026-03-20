@@ -7,11 +7,11 @@ import z from "zod"
 import * as Formatter from "./formatter"
 import { Config } from "../config/config"
 import { mergeDeep } from "remeda"
-import { Instance } from "../project/instance"
 import { Process } from "../util/process"
 import { InstanceContext } from "@/effect/instance-context"
 import { Effect, Layer, ServiceMap } from "effect"
 import { runPromiseInstance } from "@/effect/runtime"
+import { InstanceALS } from "@/project/instance-als"
 
 const log = Log.create({ service: "format" })
 
@@ -28,11 +28,17 @@ export namespace Format {
   export type Status = z.infer<typeof Status>
 
   export async function init() {
-    return runPromiseInstance(FormatService.use((s) => s.init()))
+    return runPromiseInstance(
+      FormatService.use((s) => s.init()),
+      InstanceALS.directory,
+    )
   }
 
   export async function status() {
-    return runPromiseInstance(FormatService.use((s) => s.status()))
+    return runPromiseInstance(
+      FormatService.use((s) => s.status()),
+      InstanceALS.directory,
+    )
   }
 }
 
@@ -71,7 +77,7 @@ export class FormatService extends ServiceMap.Service<FormatService, FormatServi
 
           if (result.command.length === 0) continue
 
-          result.enabled = async () => true
+          result.enabled = async (_directory: string, _worktree: string) => true
           result.name = name
           formatters[name] = result
         }
@@ -82,7 +88,7 @@ export class FormatService extends ServiceMap.Service<FormatService, FormatServi
       async function isEnabled(item: Formatter.Info) {
         let status = enabled[item.name]
         if (status === undefined) {
-          status = await item.enabled()
+          status = await item.enabled(instance.directory, instance.project.worktree)
           enabled[item.name] = status
         }
         return status
@@ -100,9 +106,10 @@ export class FormatService extends ServiceMap.Service<FormatService, FormatServi
         return result
       }
 
+      const directory = instance.directory
       const unsubscribe = Bus.subscribe(
         File.Event.Edited,
-        Instance.bind(async (payload) => {
+        async (payload) => {
           const file = payload.properties.file
           log.info("formatting", { file })
           const ext = path.extname(file)
@@ -134,7 +141,8 @@ export class FormatService extends ServiceMap.Service<FormatService, FormatServi
               })
             }
           }
-        }),
+        },
+        directory,
       )
 
       yield* Effect.addFinalizer(() => Effect.sync(unsubscribe))

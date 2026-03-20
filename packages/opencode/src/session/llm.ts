@@ -14,10 +14,10 @@ import {
 import { mergeDeep, pipe } from "remeda"
 import { ProviderTransform } from "@/provider/transform"
 import { Config } from "@/config/config"
-import { Instance } from "@/project/instance"
 import type { Agent } from "@/agent/agent"
 import type { MessageV2 } from "./message-v2"
 import { Plugin } from "@/plugin"
+import { InstanceALS } from "@/project/instance-als"
 import { SystemPrompt } from "./system"
 import { Flag } from "@/flag/flag"
 import { PermissionNext } from "@/permission/next"
@@ -40,6 +40,7 @@ export namespace LLM {
     tools: Record<string, Tool>
     retries?: number
     toolChoice?: "auto" | "required" | "none"
+    projectID: string
   }
 
   export type StreamOutput = StreamTextResult<ToolSet, unknown>
@@ -85,6 +86,7 @@ export namespace LLM {
       "experimental.chat.system.transform",
       { sessionID: input.sessionID, model: input.model },
       { system },
+      InstanceALS.directory,
     )
     // rejoin to maintain 2-part structure for caching if header unchanged
     if (system.length > 2 && system[0] === header) {
@@ -129,6 +131,7 @@ export namespace LLM {
         topK: ProviderTransform.topK(input.model),
         options,
       },
+      InstanceALS.directory,
     )
 
     const { headers } = await Plugin.trigger(
@@ -143,6 +146,7 @@ export namespace LLM {
       {
         headers: {},
       },
+      InstanceALS.directory,
     )
 
     const maxOutputTokens =
@@ -209,7 +213,7 @@ export namespace LLM {
       headers: {
         ...(input.model.providerID.startsWith("opencode")
           ? {
-              "x-opencode-project": Instance.project.id,
+              "x-opencode-project": input.projectID,
               "x-opencode-session": input.sessionID,
               "x-opencode-request": input.user.id,
               "x-opencode-client": Flag.OPENCODE_CLIENT,

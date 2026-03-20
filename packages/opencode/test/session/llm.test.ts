@@ -4,7 +4,7 @@ import { tool, type ModelMessage } from "ai"
 import z from "zod"
 import { LLM } from "../../src/session/llm"
 import { Global } from "../../src/global"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { Provider } from "../../src/provider/provider"
 import { ProviderTransform } from "../../src/provider/transform"
 import { ModelsDev } from "../../src/provider/models"
@@ -291,6 +291,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
+          projectID: "test",
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
@@ -390,6 +391,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
+          projectID: "test",
           model: resolved,
           agent,
           permission: [{ permission: "question", pattern: "*", action: "allow" }],
@@ -509,6 +511,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
+          projectID: "test",
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
@@ -631,6 +634,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
+          projectID: "test",
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
@@ -732,6 +736,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
+          projectID: "test",
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],

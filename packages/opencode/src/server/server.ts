@@ -13,7 +13,8 @@ import { NamedError } from "@opencode-ai/util/error"
 import { LSP } from "../lsp"
 import { Format } from "../format"
 import { TuiRoutes } from "./routes/tui"
-import { Instance } from "../project/instance"
+import { InstanceLifecycle } from "../project/lifecycle"
+import { InstanceALS } from "../project/instance-als"
 import { Vcs, VcsService } from "../project/vcs"
 import { runPromiseInstance } from "@/effect/runtime"
 import { Agent } from "../agent/agent"
@@ -208,12 +209,9 @@ export namespace Server {
         return WorkspaceContext.provide({
           workspaceID: rawWorkspaceID ? WorkspaceID.make(rawWorkspaceID) : undefined,
           async fn() {
-            return Instance.provide({
-              directory,
-              init: InstanceBootstrap,
-              async fn() {
-                return next()
-              },
+            const ctx = await InstanceLifecycle.boot(directory, InstanceBootstrap)
+            return InstanceALS.run(ctx, async () => {
+              return next()
             })
           },
         })
@@ -270,7 +268,7 @@ export namespace Server {
           },
         }),
         async (c) => {
-          await Instance.dispose()
+          await InstanceLifecycle.dispose(InstanceALS.directory)
           return c.json(true)
         },
       )
@@ -304,12 +302,14 @@ export namespace Server {
           },
         }),
         async (c) => {
+          const directory = InstanceALS.directory
+          const worktree = InstanceALS.worktree
           return c.json({
             home: Global.Path.home,
             state: Global.Path.state,
             config: Global.Path.config,
-            worktree: Instance.worktree,
-            directory: Instance.directory,
+            worktree,
+            directory,
           })
         },
       )
@@ -331,7 +331,10 @@ export namespace Server {
           },
         }),
         async (c) => {
-          const branch = await runPromiseInstance(VcsService.use((s) => s.branch()))
+          const branch = await runPromiseInstance(
+            VcsService.use((s) => s.branch()),
+            InstanceALS.directory,
+          )
           return c.json({
             branch,
           })
@@ -355,7 +358,7 @@ export namespace Server {
           },
         }),
         async (c) => {
-          const commands = await Command.list()
+          const commands = await Command.list(InstanceALS.directory)
           return c.json(commands)
         },
       )
@@ -532,7 +535,7 @@ export namespace Server {
               if (event.type === Bus.InstanceDisposed.type) {
                 stream.close()
               }
-            })
+            }, InstanceALS.directory)
 
             // Send heartbeat every 10s to prevent stalled proxy streams.
             const heartbeat = setInterval(() => {

@@ -2,18 +2,18 @@ import { describe, expect, test } from "bun:test"
 import path from "path"
 import * as fs from "fs/promises"
 import { ApplyPatchTool } from "../../src/tool/apply_patch"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { tmpdir } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
 
-const baseCtx = {
+const baseFields = {
   sessionID: SessionID.make("ses_test"),
   messageID: MessageID.make(""),
   callID: "",
   agent: "build",
   abort: AbortSignal.any([]),
-  messages: [],
-  metadata: () => {},
+  messages: [] as any[],
+  metadata: (() => {}) as any,
 }
 
 type AskInput = {
@@ -37,7 +37,11 @@ type AskInput = {
   }
 }
 
-type ToolCtx = typeof baseCtx & {
+type ToolCtx = typeof baseFields & {
+  directory: string
+  worktree: string
+  projectID: string
+  containsPath: (fp: string) => boolean
   ask: (input: AskInput) => Promise<void>
 }
 
@@ -48,12 +52,16 @@ const execute = async (params: { patchText: string }, ctx: ToolCtx) => {
 
 const makeCtx = () => {
   const calls: AskInput[] = []
-  const ctx: ToolCtx = {
-    ...baseCtx,
-    ask: async (input) => {
+  const ctx = {
+    ...baseFields,
+    get directory() { return Instance.directory },
+    get worktree() { return Instance.worktree },
+    get projectID() { return Instance.project.id },
+    containsPath: (fp: string) => Instance.containsPath(fp),
+    ask: async (input: AskInput) => {
       calls.push(input)
     },
-  }
+  } as ToolCtx
 
   return { ctx, calls }
 }

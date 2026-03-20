@@ -2,7 +2,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { SessionID, MessageID } from "@/session/schema"
 import z from "zod"
 import { Config } from "../config/config"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Identifier } from "../id/id"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
@@ -86,18 +86,18 @@ export namespace Command {
     VERIFY: "verify",
   } as const
 
-  function state(): Promise<Record<string, Info>> {
-    const dir = Instance.directory
-    let s = commandStates.get(dir)
+  function state(directory: string): Promise<Record<string, Info>> {
+    let s = commandStates.get(directory)
     if (!s) {
       s = initCommands()
-      commandStates.set(dir, s)
+      commandStates.set(directory, s)
     }
     return s
   }
 
   async function initCommands(): Promise<Record<string, Info>> {
     const cfg = await Config.get()
+    const worktree = InstanceALS.worktree
 
     const result: Record<string, Info> = {
       [Default.INIT]: {
@@ -105,7 +105,7 @@ export namespace Command {
         description: "create/update AGENTS.md",
         source: "command",
         get template() {
-          return PROMPT_INITIALIZE.replace("${path}", Instance.worktree)
+          return PROMPT_INITIALIZE.replace("${path}", worktree)
         },
         hints: hints(PROMPT_INITIALIZE),
       },
@@ -114,7 +114,7 @@ export namespace Command {
         description: "review changes [commit|branch|pr], defaults to uncommitted",
         source: "command",
         get template() {
-          return PROMPT_REVIEW.replace("${path}", Instance.worktree)
+          return PROMPT_REVIEW.replace("${path}", worktree)
         },
         subtask: true,
         hints: hints(PROMPT_REVIEW),
@@ -290,11 +290,11 @@ export namespace Command {
     return result
   }
 
-  export async function get(name: string) {
-    return state().then((x) => x[name])
+  export async function get(name: string, directory: string) {
+    return state(directory).then((x) => x[name])
   }
 
-  export async function list() {
-    return state().then((x) => Object.values(x))
+  export async function list(directory: string) {
+    return state(directory).then((x) => Object.values(x))
   }
 }

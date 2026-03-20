@@ -6,7 +6,7 @@ import { File } from "../file"
 import { Project } from "./project"
 import { Bus } from "../bus"
 import { Command } from "../command"
-import { Instance } from "./instance"
+import { InstanceALS } from "./instance-als"
 import { VcsService } from "./vcs"
 import { Log } from "@/util/log"
 import { ShareNext } from "@/share/share-next"
@@ -27,20 +27,32 @@ function ensureTruncateCleanup() {
 }
 
 export async function InstanceBootstrap() {
-  Log.Default.info("bootstrapping", { directory: Instance.directory })
-  await Plugin.init()
+  const directory = InstanceALS.directory
+  const projectID = InstanceALS.project.id
+  Log.Default.info("bootstrapping", { directory })
+  await Plugin.init(directory)
   ShareNext.init()
   await Format.init()
   await LSP.init()
-  await runPromiseInstance(FileWatcherService.use((service) => service.init()))
+  await runPromiseInstance(
+    FileWatcherService.use((service) => service.init()),
+    directory,
+  )
   File.init()
-  await runPromiseInstance(VcsService.use((s) => s.init()))
+  await runPromiseInstance(
+    VcsService.use((s) => s.init()),
+    directory,
+  )
   Snapshot.init()
   ensureTruncateCleanup()
 
-  Bus.subscribe(Command.Event.Executed, async (payload) => {
-    if (payload.properties.name === Command.Default.INIT) {
-      await Project.setInitialized(Instance.project.id)
-    }
-  })
+  Bus.subscribe(
+    Command.Event.Executed,
+    async (payload) => {
+      if (payload.properties.name === Command.Default.INIT) {
+        await Project.setInitialized(projectID)
+      }
+    },
+    InstanceALS.directory,
+  )
 }

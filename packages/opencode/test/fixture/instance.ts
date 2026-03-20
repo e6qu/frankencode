@@ -1,6 +1,7 @@
 import { ConfigProvider, Layer, ManagedRuntime } from "effect"
 import { InstanceContext } from "../../src/effect/instance-context"
-import { Instance } from "../../src/project/instance"
+import { InstanceALS } from "../../src/project/instance-als"
+import { InstanceLifecycle } from "../../src/project/lifecycle"
 
 /** ConfigProvider that enables the experimental file watcher. */
 export const watcherConfigLayer = ConfigProvider.layer(
@@ -24,14 +25,13 @@ export function withServices<S>(
   body: (rt: ManagedRuntime.ManagedRuntime<S, never>) => Promise<void>,
   options?: { provide?: Layer.Layer<never>[] },
 ) {
-  return Instance.provide({
-    directory,
-    fn: async () => {
+  return InstanceLifecycle.boot(directory).then((alsCtx) =>
+    InstanceALS.run(alsCtx, async () => {
       const ctx = Layer.sync(InstanceContext, () =>
         InstanceContext.of({
-          directory: Instance.directory,
-          worktree: Instance.worktree,
-          project: Instance.project,
+          directory: InstanceALS.directory,
+          worktree: InstanceALS.worktree,
+          project: InstanceALS.project,
         }),
       )
       let resolved: Layer.Layer<S> = Layer.fresh(layer).pipe(Layer.provide(ctx)) as any
@@ -46,6 +46,6 @@ export function withServices<S>(
       } finally {
         await rt.dispose()
       }
-    },
-  })
+    }),
+  )
 }

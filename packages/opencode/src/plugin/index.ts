@@ -5,7 +5,7 @@ import { Log } from "../util/log"
 import { createOpencodeClient } from "@opencode-ai/sdk"
 import { Server } from "../server/server"
 import { BunProc } from "../bun"
-import { Instance } from "../project/instance"
+import { InstanceALS } from "../project/instance-als"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Flag } from "../flag/flag"
 import { CodexAuthPlugin } from "./codex"
@@ -27,20 +27,19 @@ export namespace Plugin {
   // Built-in plugins that are directly imported (not installed from npm)
   const INTERNAL_PLUGINS: PluginInstance[] = [CodexAuthPlugin, CopilotAuthPlugin, GitlabAuthPlugin]
 
-  function state() {
-    const dir = Instance.directory
-    let s = pluginStates.get(dir)
+  function state(directory: string) {
+    let s = pluginStates.get(directory)
     if (!s) {
-      s = initPlugins()
-      pluginStates.set(dir, s)
+      s = initPlugins(directory)
+      pluginStates.set(directory, s)
     }
     return s
   }
 
-  async function initPlugins() {
+  async function initPlugins(dir: string) {
     const client = createOpencodeClient({
       baseUrl: "http://localhost:4096",
-      directory: Instance.directory,
+      directory: dir,
       headers: Flag.OPENCODE_SERVER_PASSWORD
         ? {
             Authorization: `Basic ${Buffer.from(`${Flag.OPENCODE_SERVER_USERNAME ?? "opencode"}:${Flag.OPENCODE_SERVER_PASSWORD}`).toString("base64")}`,
@@ -52,9 +51,9 @@ export namespace Plugin {
     const hooks: Hooks[] = []
     const input: PluginInput = {
       client,
-      project: Instance.project,
-      worktree: Instance.worktree,
-      directory: Instance.directory,
+      project: InstanceALS.project,
+      worktree: InstanceALS.worktree,
+      directory: dir,
       get serverUrl(): URL {
         return Server.url ?? new URL("http://localhost:4096")
       },
@@ -87,11 +86,15 @@ export namespace Plugin {
           const cause = err instanceof Error ? err.cause : err
           const detail = cause instanceof Error ? cause.message : String(cause ?? err)
           log.error("failed to install plugin", { pkg, version, error: detail })
-          Bus.publish(Session.Event.Error, {
-            error: new NamedError.Unknown({
-              message: `Failed to install plugin ${pkg}@${version}: ${detail}`,
-            }).toObject(),
-          })
+          Bus.publish(
+            Session.Event.Error,
+            {
+              error: new NamedError.Unknown({
+                message: `Failed to install plugin ${pkg}@${version}: ${detail}`,
+              }).toObject(),
+            },
+            dir,
+          )
           return ""
         })
         if (!plugin) continue
@@ -111,11 +114,15 @@ export namespace Plugin {
         .catch((err) => {
           const message = err instanceof Error ? err.message : String(err)
           log.error("failed to load plugin", { path: plugin, error: message })
-          Bus.publish(Session.Event.Error, {
-            error: new NamedError.Unknown({
-              message: `Failed to load plugin ${plugin}: ${message}`,
-            }).toObject(),
-          })
+          Bus.publish(
+            Session.Event.Error,
+            {
+              error: new NamedError.Unknown({
+                message: `Failed to load plugin ${plugin}: ${message}`,
+              }).toObject(),
+            },
+            dir,
+          )
         })
     }
 
@@ -129,9 +136,9 @@ export namespace Plugin {
     Name extends Exclude<keyof Required<Hooks>, "auth" | "event" | "tool">,
     Input = Parameters<Required<Hooks>[Name]>[0],
     Output = Parameters<Required<Hooks>[Name]>[1],
-  >(name: Name, input: Input, output: Output): Promise<Output> {
+  >(name: Name, input: Input, output: Output, directory: string): Promise<Output> {
     if (!name) return output
-    for (const hook of await state().then((x) => x.hooks)) {
+    for (const hook of await state(directory).then((x) => x.hooks)) {
       const fn = hook[name]
       if (!fn) continue
       // @ts-expect-error if you feel adventurous, please fix the typing, make sure to bump the try-counter if you
@@ -142,24 +149,24 @@ export namespace Plugin {
     return output
   }
 
-  export async function list() {
-    return state().then((x) => x.hooks)
+  export async function list(directory: string) {
+    return state(directory).then((x) => x.hooks)
   }
 
-  export async function init() {
-    const hooks = await state().then((x) => x.hooks)
+  export async function init(directory: string) {
+    const hooks = await state(directory).then((x) => x.hooks)
     const config = await Config.get()
     for (const hook of hooks) {
       // @ts-expect-error this is because we haven't moved plugin to sdk v2
       await hook.config?.(config)
     }
     Bus.subscribeAll(async (input) => {
-      const hooks = await state().then((x) => x.hooks)
+      const hooks = await state(directory).then((x) => x.hooks)
       for (const hook of hooks) {
         hook["event"]?.({
           event: input,
         })
       }
-    })
+    }, directory)
   }
 }

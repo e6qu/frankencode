@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import { GrepTool } from "../../src/tool/grep"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { tmpdir } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
 
@@ -12,6 +12,10 @@ const ctx = {
   agent: "build",
   abort: AbortSignal.any([]),
   messages: [],
+  get directory() { return Instance.directory },
+  get worktree() { return Instance.worktree },
+  get projectID() { return Instance.project.id },
+  containsPath: (fp: string) => Instance.containsPath(fp),
   metadata: () => {},
   ask: async () => {},
 }

@@ -5,7 +5,7 @@ import { UI } from "../ui"
 import { EditGraph } from "@/cas/graph"
 import { SideThread } from "@/session/side-thread"
 import { CAS } from "@/cas"
-import { Instance } from "@/project/instance"
+import { InstanceALS } from "@/project/instance-als"
 import { Session } from "@/session"
 
 export const ContextCommand = cmd({
@@ -192,8 +192,9 @@ const ContextThreadsCommand = cmd({
       }),
   handler: async (args) => {
     await bootstrap(process.cwd(), async () => {
+      const projectID = InstanceALS.project.id
       const result = SideThread.list({
-        projectID: Instance.project.id,
+        projectID,
         status: args.status as any,
         limit: args.limit,
       })
@@ -202,7 +203,7 @@ const ContextThreadsCommand = cmd({
         console.log(
           JSON.stringify(
             {
-              projectID: Instance.project.id,
+              projectID,
               ...result,
             },
             null,
@@ -217,7 +218,7 @@ const ContextThreadsCommand = cmd({
         return
       }
 
-      UI.println(`Side threads for project ${Instance.project.id}`)
+      UI.println(`Side threads for project ${projectID}`)
       UI.println("")
       for (const t of result.threads) {
         const files = t.relatedFiles?.length ? `\n  Files: ${t.relatedFiles.join(", ")}` : ""
@@ -257,6 +258,6 @@ const ContextDerefCommand = cmd({
 
 async function resolveSession(sessionID?: string): Promise<string | undefined> {
   if (sessionID) return sessionID
-  const sessions = [...Session.list({ roots: true, limit: 1 })]
+  const sessions = [...Session.list({ roots: true, limit: 1, project: InstanceALS.project })]
   return sessions[0]?.id
 }

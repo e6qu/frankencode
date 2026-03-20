@@ -1,6 +1,6 @@
 import { EOL } from "os"
 import { Ripgrep } from "../../../file/ripgrep"
-import { Instance } from "../../../project/instance"
+import { InstanceALS } from "../../../project/instance-als"
 import { bootstrap } from "../../bootstrap"
 import { cmd } from "../cmd"
 
@@ -20,7 +20,8 @@ const TreeCommand = cmd({
     }),
   async handler(args) {
     await bootstrap(process.cwd(), async () => {
-      process.stdout.write((await Ripgrep.tree({ cwd: Instance.directory, limit: args.limit })) + EOL)
+      const directory = InstanceALS.directory
+      process.stdout.write((await Ripgrep.tree({ cwd: directory, limit: args.limit })) + EOL)
     })
   },
 })
@@ -44,9 +45,10 @@ const FilesCommand = cmd({
       }),
   async handler(args) {
     await bootstrap(process.cwd(), async () => {
+      const directory = InstanceALS.directory
       const files: string[] = []
       for await (const file of Ripgrep.files({
-        cwd: Instance.directory,
+        cwd: directory,
         glob: args.glob ? [args.glob] : undefined,
       })) {
         files.push(file)

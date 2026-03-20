@@ -2,6 +2,7 @@ import type { AuthOuathResult } from "@opencode-ai/plugin"
 import { NamedError } from "@opencode-ai/util/error"
 import * as Auth from "@/auth/service"
 import { ProviderID } from "./schema"
+import { InstanceContext } from "../effect/instance-context"
 import { Effect, Layer, Record, ServiceMap, Struct } from "effect"
 import { filter, fromEntries, map, pipe } from "remeda"
 import z from "zod"
@@ -68,10 +69,11 @@ export class ProviderAuthService extends ServiceMap.Service<ProviderAuthService,
     ProviderAuthService,
     Effect.gen(function* () {
       const auth = yield* Auth.AuthService
+      const { directory } = yield* InstanceContext
       const hooks = yield* Effect.promise(async () => {
         const mod = await import("../plugin")
         return pipe(
-          await mod.Plugin.list(),
+          await mod.Plugin.list(directory),
           filter((x) => x.auth?.provider !== undefined),
           map((x) => [x.auth!.provider, x.auth!] as const),
           fromEntries(),

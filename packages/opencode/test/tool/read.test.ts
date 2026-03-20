@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import { ReadTool } from "../../src/tool/read"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { Filesystem } from "../../src/util/filesystem"
 import { tmpdir } from "../fixture/fixture"
 import { PermissionNext } from "../../src/permission/next"
@@ -17,6 +17,10 @@ const ctx = {
   agent: "build",
   abort: AbortSignal.any([]),
   messages: [],
+  get directory() { return Instance.directory },
+  get worktree() { return Instance.worktree },
+  get projectID() { return Instance.project.id },
+  containsPath: (fp: string) => Instance.containsPath(fp),
   metadata: () => {},
   ask: async () => {},
 }

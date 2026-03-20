@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { EditGraph } from "../../src/cas/graph"
 import { SideThread } from "../../src/session/side-thread"
 import { CAS } from "../../src/cas"

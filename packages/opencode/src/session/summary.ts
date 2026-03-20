@@ -9,6 +9,7 @@ import { Snapshot } from "@/snapshot"
 
 import { Storage } from "@/storage/storage"
 import { Bus } from "@/bus"
+import { InstanceALS } from "@/project/instance-als"
 
 export namespace SessionSummary {
   function unquoteGitPath(input: string) {
@@ -92,10 +93,14 @@ export namespace SessionSummary {
       },
     })
     await Storage.write(["session_diff", input.sessionID], diffs)
-    Bus.publish(Session.Event.Diff, {
-      sessionID: input.sessionID,
-      diff: diffs,
-    })
+    Bus.publish(
+      Session.Event.Diff,
+      {
+        sessionID: input.sessionID,
+        diff: diffs,
+      },
+      InstanceALS.directory,
+    )
   }
 
   async function summarizeMessage(input: { messageID: string; messages: MessageV2.WithParts[] }) {

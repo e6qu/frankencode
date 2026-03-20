@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import type { Tool } from "../../src/tool/tool"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../fixture/instance-shim"
 import { assertExternalDirectory } from "../../src/tool/external-directory"
 import type { PermissionNext } from "../../src/permission/next"
 import { SessionID, MessageID } from "../../src/session/schema"
@@ -13,6 +13,10 @@ const baseCtx: Omit<Tool.Context, "ask"> = {
   agent: "build",
   abort: AbortSignal.any([]),
   messages: [],
+  directory: "",
+  worktree: "",
+  projectID: "",
+  containsPath: (fp: string) => Instance.containsPath(fp),
   metadata: () => {},
 }
 
