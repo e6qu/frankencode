@@ -2,7 +2,7 @@
 
 > **Frankencode** is a fork of [OpenCode](https://github.com/anomalyco/opencode) (`dev` branch) that adds context editing, content-addressable storage, and an edit graph.
 
-**Status (2026-03-19):** Features implemented. 40 bugs fixed. Upstream synced. Effect-ification B1-B10g done — Instance split into InstanceALS, InstanceLifecycle, InstanceContext. No `src/` code imports Instance (test-only shim). 1423 tests passing. See `STATUS.md`, `DO_NEXT.md`.
+**Status (2026-03-20):** Features implemented. 40 bugs fixed. Upstream synced. Effect-ification complete — `src/project/instance.ts` deleted, Instance split into InstanceALS + InstanceLifecycle + InstanceContext. 36 ALS fallbacks remain (wide-caller modules, deferred). 1447 tests passing (123 test files), 0 TS errors. See `STATUS.md`, `DO_NEXT.md`.
 
 ---
 
@@ -19,25 +19,13 @@ Upstream (`anomalyco/opencode`) has diverged by ~50 commits. Two classes of chan
 - B10: snapshot config `.describe()` | B12: Windows editor shell | B13: Copilot Enterprise removal | B14: org label scoping | B16: review comment CSS/events | B11 partial: test preload plugins
 - Skipped: B11 (most — requires Effect FileService), B15 (already fixed)
 
-### B. Effect-ification (full rebase required)
+### B. Effect-ification — ✅ Complete (on branch)
 
-These changes form a dependency chain and cannot be cherry-picked individually. They require a coordinated rebase.
+All stages B1-B10g complete on `effect/complete-effectification` (27 commits). Instance decoupled into InstanceALS (ALS context propagation), InstanceLifecycle (boot/dispose/reload), InstanceContext (Effect bridge). `src/project/instance.ts` deleted. Test shim at `test/fixture/instance-shim.ts`.
 
-**Dependency order:**
-1. `refactor(instance)` — move scoped services to LayerMap (#17544) — **foundation**
-2. `stack: effectify-file-watcher-service` (#17827)
-3. `refactor(file-time)` — effectify with Semaphore locks (#17835)
-4. `fix+refactor(vcs)` — effectify VcsService (#17829)
-5. `refactor(format)` — effectify FormatService (#17675)
-6. `refactor(file)` — effectify FileService (#17845)
-7. `refactor(skill)` — effectify SkillService (#17849)
-
-**Impact on Frankencode:**
-- `Instance.state()` → deleted; replaced by `InstanceContext` + Effect service classes
-- Our `Skill.state()` content cache → must reimplement inside `SkillService`
-- Our `Command.state()` → must adapt to new Instance API
-- Event handlers → must wrap with `Instance.bind()` for ALS context preservation
-- `CAS`, `EditGraph`, `SideThread`, `Objective` → all use `Instance.state()` or direct `Database.use()` — need review
+**Remaining work (deferred to future PR):**
+- 36 `?? InstanceALS.x` fallback patterns in wide-caller modules (env, bus, plugin, session core, worktree, pty, bash)
+- 150 direct InstanceALS reads across 40 files (correct usage at entry points, not fallbacks)
 
 ### C. Other upstream changes (informational, no action needed)
 
@@ -98,9 +86,7 @@ These appear as "deletions" in `git diff dev..upstream/dev` because upstream nev
 | Upstream Backport P3 (app fixes) | ✅ Complete (#18) |
 | Upstream Full Rebase (Phase 4) | ✅ Complete (#19) |
 | Effect-ification B1 (state maps) | ✅ Complete (#20) |
-| Effect-ification B2-B8 | ✅ Complete (on branch) |
-| Effect-ification B9 (server+CLI) | ✅ Complete (on branch) |
-| Effect-ification B10a-c (Effect runtime + service layers + prompt) | ✅ Complete (on branch) |
-| Effect-ification B10d-e (prompt/status/compaction threading) | ✅ Complete (on branch) |
-| Effect-ification B10f (InstanceLifecycle module) | ✅ Complete (on branch) |
-| Effect-ification B10g (Instance → test-only shim) | ✅ Complete (on branch) |
+| Effect-ification B2-B10g | ✅ Complete (on branch, 27 commits) |
+| Instance deletion + test migration | ✅ Complete (on branch) |
+| ALS fallback elimination (partial) | ✅ 23 of 59 eliminated (on branch) |
+| TUI component tests | ✅ 81 tests + tmux integration harness (on branch) |

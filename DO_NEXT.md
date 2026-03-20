@@ -16,36 +16,37 @@
 - [x] 40 bugs fixed (code review audits + ephemeral fixes)
 - [x] 25 regression tests for bug fixes
 - [x] Upstream backport Phase 1-4 (bug fixes + full rebase)
-- [x] Effect-ification B1: Instance.state() → module-level state maps (PR #20)
-- [x] Effect-ification B2-B8: parameterize all inner modules (tool layer, leaf modules, bind elimination, formatters, LSP, session helpers, worktree, config)
-- [x] Effect-ification B9: server + CLI entry points parameterized
-- [x] Effect-ification B10a-c: Effect runtime, service layers, prompt construction sites
-- [x] Effect-ification B10d-e: prompt/status/compaction threading
-- [x] Effect-ification B10f: InstanceLifecycle module (boot/dispose/reload)
-- [x] Effect-ification B10g: Instance reduced to test-only compatibility shim, zero src/ imports
+- [x] Effect-ification B1-B10g: Instance decoupled, deleted from src/, test shim created
+- [x] ALS fallback elimination: 23 of 59 patterns removed (15 leaf state() + 8 non-state)
+- [x] TUI tests: 81 component tests + tmux integration harness (5 flows)
+- [x] Manual TUI testing: home, command palette, agent cycling, message submit, cost dialog — all pass
 
-## Next — Phase 4: Finalize Effect-ification
+## Next — PR to dev
 
-### Stream 2: Migrate test files off Instance shim → delete Instance — DONE
+- [ ] PR `effect/complete-effectification` → `dev` (27 commits)
 
-- [x] Update test fixtures (instance.ts, db.ts) to use InstanceALS + InstanceLifecycle
-- [x] Move Instance shim to test/fixture/instance-shim.ts, update 58 test imports
-- [x] Delete `src/project/instance.ts`
+## Next — Remaining ALS Fallback Elimination
 
-### Stream 3: Eliminate ALS fallback patterns in src/ — Partial
+36 fallbacks remain in wide-caller modules. Each requires threading `directory` through many callers:
 
-- [x] Make state() directory param required in 15 leaf modules + runPromiseInstance
-- [x] Eliminate fallbacks in command, mcp, status, migrate-tui-config (8 patterns)
-- [ ] Remaining 36 fallbacks (env, bus, plugin, session core, worktree, pty, bash) — cascade too widely, defer to future PR
+- [ ] `env/index.ts` (4): Env.get/set/all/remove — 26+ callers in provider.ts alone
+- [ ] `bus/index.ts` (2): Bus.publish/subscribe — 33+ caller files
+- [ ] `plugin/index.ts` (4): Plugin.trigger/list/init — 14+ caller files
+- [ ] `session/prompt.ts` (5): resolveTools, insertReminders, ensureTitle
+- [ ] `session/instruction.ts` (5): resolveRelative, systemPaths, loadPromptInstruction
+- [ ] `session/index.ts` (4): createNext, plan, list, children
+- [ ] `session/system.ts` (3): environment() ctx parameter
+- [ ] `session/compaction.ts` (2): process() directory/worktree
+- [ ] `session/llm.ts` (1): projectID header
+- [ ] `worktree/index.ts` (4): makeWorktreeInfo, createFromInfo
+- [ ] `pty/index.ts` (1): remove() — test dependency
+- [ ] `tool/bash.ts` (1): initCtx.directory — test dependency
 
-### Stream 4: TUI component tests
+## Next — Remaining TUI Tests
 
-- [x] Test helpers + 5 dialog component tests + 3 standalone component tests (81 TUI tests total)
-- [ ] Remaining 9 dialog tests + route tests + interaction tests (deferred)
-
-## Then — PR to dev
-
-- [ ] PR `effect/complete-effectification` → `dev`
+- [ ] 9 dialog tests: command, provider, session-rename, stash, status, tag, workspace-list, mcp, cost (enhance)
+- [ ] Route tests: home, session
+- [ ] Interaction tests: dialog-select keyboard nav, prompt input, command palette
 
 ## Backlog — Testing
 
