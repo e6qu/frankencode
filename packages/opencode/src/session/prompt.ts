@@ -444,6 +444,7 @@ export namespace SessionPrompt {
             callID: part.id,
           },
           { args: taskArgs },
+          InstanceALS.directory,
         )
         let executionError: Error | undefined
         const taskAgent = await Agent.get(task.agent)
@@ -497,6 +498,7 @@ export namespace SessionPrompt {
             args: taskArgs,
           },
           result,
+          InstanceALS.directory,
         )
         assistantMessage.finish = "tool-calls"
         assistantMessage.time.completed = Date.now()
@@ -691,7 +693,7 @@ export namespace SessionPrompt {
         }
       }
 
-      await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
+      await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs }, InstanceALS.directory)
 
       // Build system prompt, adding structured output instruction if needed
       const skills = await SystemPrompt.skills(agent)
@@ -891,6 +893,7 @@ export namespace SessionPrompt {
             {
               args,
             },
+            InstanceALS.directory,
           )
           const result = await item.execute(args, ctx)
           const output = {
@@ -911,6 +914,7 @@ export namespace SessionPrompt {
               args,
             },
             output,
+            InstanceALS.directory,
           )
           return output
         },
@@ -937,6 +941,7 @@ export namespace SessionPrompt {
           {
             args,
           },
+          InstanceALS.directory,
         )
 
         await ctx.ask({
@@ -957,6 +962,7 @@ export namespace SessionPrompt {
             args,
           },
           result,
+          InstanceALS.directory,
         )
 
         const textParts: string[] = []
@@ -1425,6 +1431,7 @@ export namespace SessionPrompt {
         message: info,
         parts,
       },
+      InstanceALS.directory,
     )
 
     const parsedInfo = MessageV2.Info.safeParse(info)
@@ -1749,6 +1756,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       "shell.env",
       { cwd, sessionID: input.sessionID, callID: part.callID },
       { env: {} },
+      InstanceALS.directory,
     )
     const proc = spawn(shell, args, {
       cwd,
@@ -1939,10 +1947,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       if (Provider.ModelNotFoundError.isInstance(e)) {
         const { providerID, modelID, suggestions } = e.data
         const hint = suggestions?.length ? ` Did you mean: ${suggestions.join(", ")}?` : ""
-        Bus.publish(Session.Event.Error, {
-          sessionID: input.sessionID,
-          error: new NamedError.Unknown({ message: `Model not found: ${providerID}/${modelID}.${hint}` }).toObject(),
-        })
+        Bus.publish(
+          Session.Event.Error,
+          {
+            sessionID: input.sessionID,
+            error: new NamedError.Unknown({ message: `Model not found: ${providerID}/${modelID}.${hint}` }).toObject(),
+          },
+          InstanceALS.directory,
+        )
       }
       throw e
     }
@@ -1951,10 +1963,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const available = await Agent.list().then((agents) => agents.filter((a) => !a.hidden).map((a) => a.name))
       const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
       const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-      Bus.publish(Session.Event.Error, {
-        sessionID: input.sessionID,
-        error: error.toObject(),
-      })
+      Bus.publish(
+        Session.Event.Error,
+        {
+          sessionID: input.sessionID,
+          error: error.toObject(),
+        },
+        InstanceALS.directory,
+      )
       throw error
     }
 
@@ -1992,6 +2008,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         arguments: input.arguments,
       },
       { parts },
+      InstanceALS.directory,
     )
 
     if (command.ephemeral) {
@@ -2006,12 +2023,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           variant: input.variant,
         })
 
-        Bus.publish(Command.Event.Executed, {
-          name: input.command,
-          sessionID: input.sessionID,
-          arguments: input.arguments,
-          messageID: forkedResult.info.id,
-        })
+        Bus.publish(
+          Command.Event.Executed,
+          {
+            name: input.command,
+            sessionID: input.sessionID,
+            arguments: input.arguments,
+            messageID: forkedResult.info.id,
+          },
+          InstanceALS.directory,
+        )
 
         // forkedResult IDs reference the now-deleted fork — intentional,
         // ephemeral results are transient and not meant to be dereferenced later
@@ -2030,12 +2051,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       variant: input.variant,
     })) as MessageV2.WithParts
 
-    Bus.publish(Command.Event.Executed, {
-      name: input.command,
-      sessionID: input.sessionID,
-      arguments: input.arguments,
-      messageID: result.info.id,
-    })
+    Bus.publish(
+      Command.Event.Executed,
+      {
+        name: input.command,
+        sessionID: input.sessionID,
+        arguments: input.arguments,
+        messageID: result.info.id,
+      },
+      InstanceALS.directory,
+    )
 
     return result
   }

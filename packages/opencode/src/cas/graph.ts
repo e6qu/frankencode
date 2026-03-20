@@ -8,6 +8,7 @@ import { Log } from "@/util/log"
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import z from "zod"
+import { InstanceALS } from "@/project/instance-als"
 
 export namespace EditGraph {
   const log = Log.create({ service: "edit-graph" })
@@ -120,11 +121,15 @@ export namespace EditGraph {
       }
 
       Database.effect(() =>
-        Bus.publish(Event.Committed, {
-          sessionID: input.sessionID,
-          nodeID,
-          operation: input.operation,
-        }),
+        Bus.publish(
+          Event.Committed,
+          {
+            sessionID: input.sessionID,
+            nodeID,
+            operation: input.operation,
+          },
+          InstanceALS.directory,
+        ),
       )
     })
 
@@ -248,7 +253,7 @@ export namespace EditGraph {
         .where(eq(EditGraphHeadTable.session_id, sessionID))
         .run()
 
-      Database.effect(() => Bus.publish(Event.CheckedOut, { sessionID, nodeID: targetNodeID }))
+      Database.effect(() => Bus.publish(Event.CheckedOut, { sessionID, nodeID: targetNodeID }, InstanceALS.directory))
     })
 
     log.info("checked out", { sessionID, targetNodeID, undone: nodesToUndo.length })
@@ -279,7 +284,7 @@ export namespace EditGraph {
         .where(eq(EditGraphHeadTable.session_id, sessionID))
         .run()
 
-      Database.effect(() => Bus.publish(Event.Forked, { sessionID, nodeID, branch: branchName }))
+      Database.effect(() => Bus.publish(Event.Forked, { sessionID, nodeID, branch: branchName }, InstanceALS.directory))
     })
 
     log.info("forked", { sessionID, nodeID, branchName })

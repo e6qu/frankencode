@@ -11,6 +11,7 @@ import type { LSPServer } from "./server"
 import { NamedError } from "@opencode-ai/util/error"
 import { withTimeout } from "../util/timeout"
 import { Filesystem } from "../util/filesystem"
+import { InstanceALS } from "@/project/instance-als"
 
 const DIAGNOSTICS_DEBOUNCE_MS = 150
 
@@ -57,7 +58,7 @@ export namespace LSPClient {
       const exists = diagnostics.has(filePath)
       diagnostics.set(filePath, params.diagnostics)
       if (!exists && input.serverID === "typescript") return
-      Bus.publish(Event.Diagnostics, { path: filePath, serverID: input.serverID })
+      Bus.publish(Event.Diagnostics, { path: filePath, serverID: input.serverID }, InstanceALS.directory)
     })
     connection.onRequest("window/workDoneProgress/create", (params) => {
       l.info("window/workDoneProgress/create", params)
@@ -215,17 +216,21 @@ export namespace LSPClient {
         let debounceTimer: ReturnType<typeof setTimeout> | undefined
         return await withTimeout(
           new Promise<void>((resolve) => {
-            unsub = Bus.subscribe(Event.Diagnostics, (event) => {
-              if (event.properties.path === normalizedPath && event.properties.serverID === result.serverID) {
-                // Debounce to allow LSP to send follow-up diagnostics (e.g., semantic after syntax)
-                if (debounceTimer) clearTimeout(debounceTimer)
-                debounceTimer = setTimeout(() => {
-                  log.info("got diagnostics", { path: normalizedPath })
-                  unsub?.()
-                  resolve()
-                }, DIAGNOSTICS_DEBOUNCE_MS)
-              }
-            })
+            unsub = Bus.subscribe(
+              Event.Diagnostics,
+              (event) => {
+                if (event.properties.path === normalizedPath && event.properties.serverID === result.serverID) {
+                  // Debounce to allow LSP to send follow-up diagnostics (e.g., semantic after syntax)
+                  if (debounceTimer) clearTimeout(debounceTimer)
+                  debounceTimer = setTimeout(() => {
+                    log.info("got diagnostics", { path: normalizedPath })
+                    unsub?.()
+                    resolve()
+                  }, DIAGNOSTICS_DEBOUNCE_MS)
+                }
+              },
+              InstanceALS.directory,
+            )
           }),
           3000,
         )

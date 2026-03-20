@@ -10,6 +10,7 @@ import { Storage } from "@/storage/storage"
 import { Bus } from "../bus"
 import { SessionPrompt } from "./prompt"
 import { SessionSummary } from "./summary"
+import { InstanceALS } from "@/project/instance-als"
 
 export namespace SessionRevert {
   const log = Log.create({ service: "session.revert" })
@@ -118,7 +119,11 @@ export namespace SessionRevert {
     }
     for (const msg of remove) {
       Database.use((db) => db.delete(MessageTable).where(eq(MessageTable.id, msg.info.id)).run())
-      await Bus.publish(MessageV2.Event.Removed, { sessionID: sessionID, messageID: msg.info.id })
+      await Bus.publish(
+        MessageV2.Event.Removed,
+        { sessionID: sessionID, messageID: msg.info.id },
+        InstanceALS.directory,
+      )
     }
     if (session.revert.partID && target) {
       const partID = session.revert.partID
@@ -129,11 +134,15 @@ export namespace SessionRevert {
         target.parts = preserveParts
         for (const part of removeParts) {
           Database.use((db) => db.delete(PartTable).where(eq(PartTable.id, part.id)).run())
-          await Bus.publish(MessageV2.Event.PartRemoved, {
-            sessionID: sessionID,
-            messageID: target.info.id,
-            partID: part.id,
-          })
+          await Bus.publish(
+            MessageV2.Event.PartRemoved,
+            {
+              sessionID: sessionID,
+              messageID: target.info.id,
+              partID: part.id,
+            },
+            InstanceALS.directory,
+          )
         }
       }
     }

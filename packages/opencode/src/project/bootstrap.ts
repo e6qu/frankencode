@@ -30,7 +30,7 @@ export async function InstanceBootstrap() {
   const directory = InstanceALS.directory
   const projectID = InstanceALS.project.id
   Log.Default.info("bootstrapping", { directory })
-  await Plugin.init()
+  await Plugin.init(directory)
   ShareNext.init()
   await Format.init()
   await LSP.init()
@@ -46,9 +46,13 @@ export async function InstanceBootstrap() {
   Snapshot.init()
   ensureTruncateCleanup()
 
-  Bus.subscribe(Command.Event.Executed, async (payload) => {
-    if (payload.properties.name === Command.Default.INIT) {
-      await Project.setInitialized(projectID)
-    }
-  })
+  Bus.subscribe(
+    Command.Event.Executed,
+    async (payload) => {
+      if (payload.properties.name === Command.Default.INIT) {
+        await Project.setInitialized(projectID)
+      }
+    },
+    InstanceALS.directory,
+  )
 }

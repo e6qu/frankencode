@@ -5,6 +5,7 @@ import { SideThreadTable } from "./side-thread.sql"
 import { Identifier } from "@/id/id"
 import { Log } from "@/util/log"
 import z from "zod"
+import { InstanceALS } from "@/project/instance-als"
 
 export namespace SideThread {
   const log = Log.create({ service: "side-thread" })
@@ -104,7 +105,7 @@ export namespace SideThread {
       timeUpdated: now,
     }
 
-    Database.effect(() => Bus.publish(Event.Created, { thread }))
+    Database.effect(() => Bus.publish(Event.Created, { thread }, InstanceALS.directory))
     log.info("created", { id, title: input.title })
     return thread
   }
@@ -191,7 +192,7 @@ export namespace SideThread {
 
     const updated = get(id)
     if (updated) {
-      Database.effect(() => Bus.publish(Event.Updated, { thread: updated }))
+      Database.effect(() => Bus.publish(Event.Updated, { thread: updated }, InstanceALS.directory))
       log.info("updated", { id, fields: Object.keys(fields) })
     }
     return updated

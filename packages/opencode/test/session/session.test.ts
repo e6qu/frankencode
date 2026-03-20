@@ -21,7 +21,7 @@ describe("session.started event", () => {
         const unsub = Bus.subscribe(Session.Event.Created, (event) => {
           eventReceived = true
           receivedInfo = event.properties.info as Session.Info
-        })
+        }, Instance.directory)
 
         const session = await Session.create({})
 
@@ -49,11 +49,11 @@ describe("session.started event", () => {
 
         const unsubStarted = Bus.subscribe(Session.Event.Created, () => {
           events.push("started")
-        })
+        }, Instance.directory)
 
         const unsubUpdated = Bus.subscribe(Session.Event.Updated, () => {
           events.push("updated")
-        })
+        }, Instance.directory)
 
         const session = await Session.create({})
 
@@ -96,7 +96,7 @@ describe("step-finish token propagation via Bus event", () => {
           let received: MessageV2.Part | undefined
           const unsub = Bus.subscribe(MessageV2.Event.PartUpdated, (event) => {
             received = event.properties.part
-          })
+          }, Instance.directory)
 
           const tokens = {
             total: 1500,

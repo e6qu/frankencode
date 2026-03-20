@@ -1,6 +1,5 @@
 import z from "zod"
 import { Log } from "../util/log"
-import { InstanceALS } from "../project/instance-als"
 import { BusEvent } from "./bus-event"
 import { GlobalBus } from "./global"
 import { Effect, Layer, ServiceMap } from "effect"
@@ -32,9 +31,9 @@ export namespace Bus {
   export async function publish<Definition extends BusEvent.Definition>(
     def: Definition,
     properties: z.output<Definition["properties"]>,
-    directory?: string,
+    directory: string,
   ) {
-    const dir = directory ?? InstanceALS.directory
+    const dir = directory
     const payload = {
       type: def.type,
       properties,
@@ -59,7 +58,7 @@ export namespace Bus {
   export function subscribe<Definition extends BusEvent.Definition>(
     def: Definition,
     callback: (event: { type: Definition["type"]; properties: z.infer<Definition["properties"]> }) => void,
-    directory?: string,
+    directory: string,
   ) {
     return raw(def.type, callback, directory)
   }
@@ -70,7 +69,7 @@ export namespace Bus {
       type: Definition["type"]
       properties: z.infer<Definition["properties"]>
     }) => "done" | undefined,
-    directory?: string,
+    directory: string,
   ) {
     const unsub = subscribe(
       def,
@@ -82,13 +81,13 @@ export namespace Bus {
     return unsub
   }
 
-  export function subscribeAll(callback: (event: any) => void, directory?: string) {
+  export function subscribeAll(callback: (event: any) => void, directory: string) {
     return raw("*", callback, directory)
   }
 
-  function raw(type: string, callback: (event: any) => void, directory?: string) {
+  function raw(type: string, callback: (event: any) => void, directory: string) {
     log.info("subscribing", { type })
-    const subscriptions = state(directory ?? InstanceALS.directory).subscriptions
+    const subscriptions = state(directory).subscriptions
     let match = subscriptions.get(type) ?? []
     match.push(callback)
     subscriptions.set(type, match)

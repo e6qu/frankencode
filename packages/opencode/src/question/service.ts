@@ -5,6 +5,7 @@ import { SessionID, MessageID } from "@/session/schema"
 import { Log } from "@/util/log"
 import z from "zod"
 import { QuestionID } from "./schema"
+import { InstanceALS } from "@/project/instance-als"
 
 const log = Log.create({ service: "question" })
 
@@ -121,7 +122,7 @@ export class QuestionService extends ServiceMap.Service<QuestionService, Questio
           tool: input.tool,
         }
         pending.set(id, { info, deferred })
-        Bus.publish(Event.Asked, info)
+        Bus.publish(Event.Asked, info, InstanceALS.directory)
 
         return yield* Effect.ensuring(
           Deferred.await(deferred),
@@ -139,11 +140,15 @@ export class QuestionService extends ServiceMap.Service<QuestionService, Questio
         }
         pending.delete(input.requestID)
         log.info("replied", { requestID: input.requestID, answers: input.answers })
-        Bus.publish(Event.Replied, {
-          sessionID: existing.info.sessionID,
-          requestID: existing.info.id,
-          answers: input.answers,
-        })
+        Bus.publish(
+          Event.Replied,
+          {
+            sessionID: existing.info.sessionID,
+            requestID: existing.info.id,
+            answers: input.answers,
+          },
+          InstanceALS.directory,
+        )
         yield* Deferred.succeed(existing.deferred, input.answers)
       })
 
@@ -155,10 +160,14 @@ export class QuestionService extends ServiceMap.Service<QuestionService, Questio
         }
         pending.delete(requestID)
         log.info("rejected", { requestID })
-        Bus.publish(Event.Rejected, {
-          sessionID: existing.info.sessionID,
-          requestID: existing.info.id,
-        })
+        Bus.publish(
+          Event.Rejected,
+          {
+            sessionID: existing.info.sessionID,
+            requestID: existing.info.id,
+          },
+          InstanceALS.directory,
+        )
         yield* Deferred.fail(existing.deferred, new RejectedError())
       })
 

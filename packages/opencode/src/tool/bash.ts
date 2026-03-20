@@ -16,6 +16,7 @@ import { Shell } from "@/shell/shell"
 import { BashArity } from "@/permission/arity"
 import { Truncate } from "./truncation"
 import { Plugin } from "@/plugin"
+import { InstanceALS } from "@/project/instance-als"
 
 const MAX_METADATA_LENGTH = 30_000
 const DEFAULT_TIMEOUT = Flag.OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
@@ -166,6 +167,7 @@ export const BashTool = Tool.define("bash", async (initCtx?: Tool.InitContext) =
         "shell.env",
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
+        InstanceALS.directory,
       )
       const proc = spawn(params.command, {
         shell,

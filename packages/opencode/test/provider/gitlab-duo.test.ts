@@ -21,7 +21,7 @@ test("GitLab Duo: loads provider with API key from environment", async () => {
   await Instance.provide({
     directory: tmp.path,
     init: async () => {
-      Env.set("GITLAB_TOKEN", "test-gitlab-token")
+      Env.set("GITLAB_TOKEN", "test-gitlab-token", Instance.directory)
     },
     fn: async () => {
       const providers = await Provider.list()
@@ -52,8 +52,8 @@ test("GitLab Duo: config instanceUrl option sets baseURL", async () => {
   await Instance.provide({
     directory: tmp.path,
     init: async () => {
-      Env.set("GITLAB_TOKEN", "test-token")
-      Env.set("GITLAB_INSTANCE_URL", "https://gitlab.example.com")
+      Env.set("GITLAB_TOKEN", "test-token", Instance.directory)
+      Env.set("GITLAB_INSTANCE_URL", "https://gitlab.example.com", Instance.directory)
     },
     fn: async () => {
       const providers = await Provider.list()
@@ -91,7 +91,7 @@ test("GitLab Duo: loads with OAuth token from auth.json", async () => {
   await Instance.provide({
     directory: tmp.path,
     init: async () => {
-      Env.set("GITLAB_TOKEN", "")
+      Env.set("GITLAB_TOKEN", "", Instance.directory)
     },
     fn: async () => {
       const providers = await Provider.list()
@@ -126,7 +126,7 @@ test("GitLab Duo: loads with Personal Access Token from auth.json", async () => 
   await Instance.provide({
     directory: tmp.path,
     init: async () => {
-      Env.set("GITLAB_TOKEN", "")
+      Env.set("GITLAB_TOKEN", "", Instance.directory)
     },
     fn: async () => {
       const providers = await Provider.list()
@@ -158,7 +158,7 @@ test("GitLab Duo: supports self-hosted instance configuration", async () => {
   await Instance.provide({
     directory: tmp.path,
     init: async () => {
-      Env.set("GITLAB_INSTANCE_URL", "https://gitlab.company.internal")
+      Env.set("GITLAB_INSTANCE_URL", "https://gitlab.company.internal", Instance.directory)
     },
     fn: async () => {
       const providers = await Provider.list()
@@ -189,7 +189,7 @@ test("GitLab Duo: config apiKey takes precedence over environment variable", asy
   await Instance.provide({
     directory: tmp.path,
     init: async () => {
-      Env.set("GITLAB_TOKEN", "env-token")
+      Env.set("GITLAB_TOKEN", "env-token", Instance.directory)
     },
     fn: async () => {
       const providers = await Provider.list()
@@ -212,7 +212,7 @@ test("GitLab Duo: includes context-1m beta header in aiGatewayHeaders", async ()
   await Instance.provide({
     directory: tmp.path,
     init: async () => {
-      Env.set("GITLAB_TOKEN", "test-token")
+      Env.set("GITLAB_TOKEN", "test-token", Instance.directory)
     },
     fn: async () => {
       const providers = await Provider.list()
@@ -246,7 +246,7 @@ test("GitLab Duo: supports feature flags configuration", async () => {
   await Instance.provide({
     directory: tmp.path,
     init: async () => {
-      Env.set("GITLAB_TOKEN", "test-token")
+      Env.set("GITLAB_TOKEN", "test-token", Instance.directory)
     },
     fn: async () => {
       const providers = await Provider.list()
@@ -271,7 +271,7 @@ test("GitLab Duo: has multiple agentic chat models available", async () => {
   await Instance.provide({
     directory: tmp.path,
     init: async () => {
-      Env.set("GITLAB_TOKEN", "test-token")
+      Env.set("GITLAB_TOKEN", "test-token", Instance.directory)
     },
     fn: async () => {
       const providers = await Provider.list()

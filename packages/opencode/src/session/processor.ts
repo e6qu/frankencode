@@ -329,6 +329,7 @@ export namespace SessionProcessor {
                         partID: currentText.id,
                       },
                       { text: currentText.text },
+                      InstanceALS.directory,
                     )
                     currentText.text = textOutput.text
                     currentText.time = {
@@ -360,10 +361,14 @@ export namespace SessionProcessor {
             const error = MessageV2.fromError(e, { providerID: input.model.providerID })
             if (MessageV2.ContextOverflowError.isInstance(error)) {
               needsCompaction = true
-              Bus.publish(Session.Event.Error, {
-                sessionID: input.sessionID,
-                error,
-              })
+              Bus.publish(
+                Session.Event.Error,
+                {
+                  sessionID: input.sessionID,
+                  error,
+                },
+                InstanceALS.directory,
+              )
             } else {
               const retry = SessionRetry.retryable(error)
               if (retry !== undefined) {
@@ -383,10 +388,14 @@ export namespace SessionProcessor {
                 continue
               }
               input.assistantMessage.error = error
-              Bus.publish(Session.Event.Error, {
-                sessionID: input.assistantMessage.sessionID,
-                error: input.assistantMessage.error,
-              })
+              Bus.publish(
+                Session.Event.Error,
+                {
+                  sessionID: input.assistantMessage.sessionID,
+                  error: input.assistantMessage.error,
+                },
+                InstanceALS.directory,
+              )
               SessionStatus.set(input.sessionID, { type: "idle" }, InstanceALS.directory)
             }
           }

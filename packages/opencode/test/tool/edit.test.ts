@@ -89,8 +89,8 @@ describe("tool.edit", () => {
           const { FileWatcher } = await import("../../src/file/watcher")
 
           const events: string[] = []
-          const unsubEdited = Bus.subscribe(File.Event.Edited, () => events.push("edited"))
-          const unsubUpdated = Bus.subscribe(FileWatcher.Event.Updated, () => events.push("updated"))
+          const unsubEdited = Bus.subscribe(File.Event.Edited, () => events.push("edited"), Instance.directory)
+          const unsubUpdated = Bus.subscribe(FileWatcher.Event.Updated, () => events.push("updated"), Instance.directory)
 
           const edit = await EditTool.init()
           await edit.execute(
@@ -309,8 +309,8 @@ describe("tool.edit", () => {
           const { FileWatcher } = await import("../../src/file/watcher")
 
           const events: string[] = []
-          const unsubEdited = Bus.subscribe(File.Event.Edited, () => events.push("edited"))
-          const unsubUpdated = Bus.subscribe(FileWatcher.Event.Updated, () => events.push("updated"))
+          const unsubEdited = Bus.subscribe(File.Event.Edited, () => events.push("edited"), Instance.directory)
+          const unsubUpdated = Bus.subscribe(FileWatcher.Event.Updated, () => events.push("updated"), Instance.directory)
 
           const edit = await EditTool.init()
           await edit.execute(

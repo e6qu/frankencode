@@ -416,7 +416,7 @@ export namespace Agent {
     const language = await Provider.getLanguage(model)
 
     const system = [PROMPT_GENERATE]
-    await Plugin.trigger("experimental.chat.system.transform", { model }, { system })
+    await Plugin.trigger("experimental.chat.system.transform", { model }, { system }, InstanceALS.directory)
     const existing = await list()
 
     const params = {

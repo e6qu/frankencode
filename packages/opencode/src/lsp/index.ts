@@ -279,7 +279,7 @@ export namespace LSP {
       if (!client) continue
 
       result.push(client)
-      Bus.publish(Event.Updated, {})
+      Bus.publish(Event.Updated, {}, InstanceALS.directory)
     }
 
     return result

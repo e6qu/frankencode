@@ -725,9 +725,13 @@ export namespace Session {
         .onConflictDoUpdate({ target: MessageTable.id, set: { data } })
         .run()
       Database.effect(() =>
-        Bus.publish(MessageV2.Event.Updated, {
-          info: msg,
-        }),
+        Bus.publish(
+          MessageV2.Event.Updated,
+          {
+            info: msg,
+          },
+          InstanceALS.directory,
+        ),
       )
     })
     return msg
@@ -745,10 +749,14 @@ export namespace Session {
           .where(and(eq(MessageTable.id, input.messageID), eq(MessageTable.session_id, input.sessionID)))
           .run()
         Database.effect(() =>
-          Bus.publish(MessageV2.Event.Removed, {
-            sessionID: input.sessionID,
-            messageID: input.messageID,
-          }),
+          Bus.publish(
+            MessageV2.Event.Removed,
+            {
+              sessionID: input.sessionID,
+              messageID: input.messageID,
+            },
+            InstanceALS.directory,
+          ),
         )
       })
       return input.messageID
@@ -767,11 +775,15 @@ export namespace Session {
           .where(and(eq(PartTable.id, input.partID), eq(PartTable.session_id, input.sessionID)))
           .run()
         Database.effect(() =>
-          Bus.publish(MessageV2.Event.PartRemoved, {
-            sessionID: input.sessionID,
-            messageID: input.messageID,
-            partID: input.partID,
-          }),
+          Bus.publish(
+            MessageV2.Event.PartRemoved,
+            {
+              sessionID: input.sessionID,
+              messageID: input.messageID,
+              partID: input.partID,
+            },
+            InstanceALS.directory,
+          ),
         )
       })
       return input.partID
@@ -795,9 +807,13 @@ export namespace Session {
         .onConflictDoUpdate({ target: PartTable.id, set: { data } })
         .run()
       Database.effect(() =>
-        Bus.publish(MessageV2.Event.PartUpdated, {
-          part: structuredClone(part),
-        }),
+        Bus.publish(
+          MessageV2.Event.PartUpdated,
+          {
+            part: structuredClone(part),
+          },
+          InstanceALS.directory,
+        ),
       )
     })
     return part
@@ -812,7 +828,7 @@ export namespace Session {
       delta: z.string(),
     }),
     async (input) => {
-      Bus.publish(MessageV2.Event.PartDelta, input)
+      Bus.publish(MessageV2.Event.PartDelta, input, InstanceALS.directory)
     },
   )
 

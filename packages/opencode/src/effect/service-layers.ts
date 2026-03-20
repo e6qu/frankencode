@@ -66,14 +66,14 @@ export class PluginService extends ServiceMap.Service<PluginService, PluginServi
     Effect.gen(function* () {
       const { directory: dir } = yield* InstanceContext
       const { Plugin, pluginStates } = yield* Effect.promise(() => import("@/plugin"))
-      yield* Effect.promise(() => Plugin.init())
+      yield* Effect.promise(() => Plugin.init(dir))
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => {
           pluginStates.delete(dir)
         }),
       )
       return PluginService.of({
-        init: () => Effect.promise(() => Plugin.init()),
+        init: () => Effect.promise(() => Plugin.init(dir)),
       })
     }),
   )

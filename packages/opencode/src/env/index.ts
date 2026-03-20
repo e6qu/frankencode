@@ -1,24 +1,23 @@
 import { Effect, Layer, ServiceMap } from "effect"
-import { InstanceALS } from "../project/instance-als"
 import { InstanceContext } from "../effect/instance-context"
 
 const states = new Map<string, Record<string, string | undefined>>()
 
 export namespace Env {
-  export function get(key: string, directory?: string) {
-    return state(directory ?? InstanceALS.directory)[key]
+  export function get(key: string, directory: string) {
+    return state(directory)[key]
   }
 
-  export function all(directory?: string) {
-    return state(directory ?? InstanceALS.directory)
+  export function all(directory: string) {
+    return state(directory)
   }
 
-  export function set(key: string, value: string, directory?: string) {
-    state(directory ?? InstanceALS.directory)[key] = value
+  export function set(key: string, value: string, directory: string) {
+    state(directory)[key] = value
   }
 
-  export function remove(key: string, directory?: string) {
-    delete state(directory ?? InstanceALS.directory)[key]
+  export function remove(key: string, directory: string) {
+    delete state(directory)[key]
   }
 }
 

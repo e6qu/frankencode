@@ -16,6 +16,7 @@ import { FileTime } from "../file/time"
 import { Filesystem } from "../util/filesystem"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectory } from "./external-directory"
+import { InstanceALS } from "@/project/instance-als"
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
 
@@ -70,13 +71,21 @@ export const EditTool = Tool.define("edit", {
           },
         })
         await Filesystem.write(filePath, params.newString)
-        await Bus.publish(File.Event.Edited, {
-          file: filePath,
-        })
-        await Bus.publish(FileWatcher.Event.Updated, {
-          file: filePath,
-          event: existed ? "change" : "add",
-        })
+        await Bus.publish(
+          File.Event.Edited,
+          {
+            file: filePath,
+          },
+          InstanceALS.directory,
+        )
+        await Bus.publish(
+          FileWatcher.Event.Updated,
+          {
+            file: filePath,
+            event: existed ? "change" : "add",
+          },
+          InstanceALS.directory,
+        )
         await FileTime.read(ctx.sessionID, filePath)
         return
       }
@@ -107,13 +116,21 @@ export const EditTool = Tool.define("edit", {
       })
 
       await Filesystem.write(filePath, contentNew)
-      await Bus.publish(File.Event.Edited, {
-        file: filePath,
-      })
-      await Bus.publish(FileWatcher.Event.Updated, {
-        file: filePath,
-        event: "change",
-      })
+      await Bus.publish(
+        File.Event.Edited,
+        {
+          file: filePath,
+        },
+        InstanceALS.directory,
+      )
+      await Bus.publish(
+        FileWatcher.Event.Updated,
+        {
+          file: filePath,
+          event: "change",
+        },
+        InstanceALS.directory,
+      )
       contentNew = await Filesystem.readText(filePath)
       diff = trimDiff(
         createTwoFilesPatch(filePath, filePath, normalizeLineEndings(contentOld), normalizeLineEndings(contentNew)),

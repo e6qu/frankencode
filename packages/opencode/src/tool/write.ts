@@ -11,6 +11,7 @@ import { FileTime } from "../file/time"
 import { Filesystem } from "../util/filesystem"
 import { trimDiff } from "./edit"
 import { assertExternalDirectory } from "./external-directory"
+import { InstanceALS } from "../project/instance-als"
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5
@@ -41,13 +42,21 @@ export const WriteTool = Tool.define("write", {
     })
 
     await Filesystem.write(filepath, params.content)
-    await Bus.publish(File.Event.Edited, {
-      file: filepath,
-    })
-    await Bus.publish(FileWatcher.Event.Updated, {
-      file: filepath,
-      event: exists ? "change" : "add",
-    })
+    await Bus.publish(
+      File.Event.Edited,
+      {
+        file: filepath,
+      },
+      InstanceALS.directory,
+    )
+    await Bus.publish(
+      FileWatcher.Event.Updated,
+      {
+        file: filepath,
+        event: exists ? "change" : "add",
+      },
+      InstanceALS.directory,
+    )
     await FileTime.read(ctx.sessionID, filepath)
 
     let output = "Wrote file successfully."

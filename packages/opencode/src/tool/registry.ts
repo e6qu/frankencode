@@ -78,7 +78,7 @@ export namespace ToolRegistry {
       }
     }
 
-    const plugins = await Plugin.list()
+    const plugins = await Plugin.list(InstanceALS.directory)
     for (const plugin of plugins) {
       for (const [id, def] of Object.entries(plugin.tool ?? {})) {
         custom.push(fromPlugin(id, def))
@@ -204,7 +204,7 @@ export namespace ToolRegistry {
             description: tool.description,
             parameters: tool.parameters,
           }
-          await Plugin.trigger("tool.definition", { toolID: t.id }, output)
+          await Plugin.trigger("tool.definition", { toolID: t.id }, output, InstanceALS.directory)
           return {
             id: t.id,
             ...tool,

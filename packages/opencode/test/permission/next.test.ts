@@ -591,7 +591,7 @@ test("ask - publishes asked event", async () => {
       let seen: PermissionNext.Request | undefined
       const unsub = Bus.subscribe(PermissionNext.Event.Asked, (event) => {
         seen = event.properties
-      })
+      }, Instance.directory)
 
       const ask = PermissionNext.ask({
         sessionID: SessionID.make("session_test"),
@@ -900,7 +900,7 @@ test("reply - publishes replied event", async () => {
         | undefined
       const unsub = Bus.subscribe(PermissionNext.Event.Replied, (event) => {
         seen = event.properties
-      })
+      }, Instance.directory)
 
       await PermissionNext.reply({
         requestID: PermissionID.make("per_test7"),

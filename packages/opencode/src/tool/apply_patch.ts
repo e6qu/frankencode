@@ -12,6 +12,7 @@ import { LSP } from "../lsp"
 import { Filesystem } from "../util/filesystem"
 import DESCRIPTION from "./apply_patch.txt"
 import { File } from "../file"
+import { InstanceALS } from "../project/instance-als"
 
 const PatchParams = z.object({
   patchText: z.string().describe("The full patch text that describes all changes to be made"),
@@ -219,15 +220,19 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
       }
 
       if (edited) {
-        await Bus.publish(File.Event.Edited, {
-          file: edited,
-        })
+        await Bus.publish(
+          File.Event.Edited,
+          {
+            file: edited,
+          },
+          InstanceALS.directory,
+        )
       }
     }
 
     // Publish file change events
     for (const update of updates) {
-      await Bus.publish(FileWatcher.Event.Updated, update)
+      await Bus.publish(FileWatcher.Event.Updated, update, InstanceALS.directory)
     }
 
     // Notify LSP of file changes and collect diagnostics

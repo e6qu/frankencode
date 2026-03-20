@@ -4,6 +4,7 @@ import { InstanceContext } from "@/effect/instance-context"
 import { SessionID } from "./schema"
 import z from "zod"
 import { Effect, Layer, ServiceMap } from "effect"
+import { InstanceALS } from "@/project/instance-als"
 
 const states = new Map<string, Record<string, SessionStatus.Info>>()
 
@@ -125,9 +126,9 @@ export class SessionStatusService extends ServiceMap.Service<SessionStatusServic
           },
         list: () => data,
         set: (sessionID, status) => {
-          Bus.publish(SessionStatus.Event.Status, { sessionID, status })
+          Bus.publish(SessionStatus.Event.Status, { sessionID, status }, InstanceALS.directory)
           if (status.type === "idle") {
-            Bus.publish(SessionStatus.Event.Idle, { sessionID })
+            Bus.publish(SessionStatus.Event.Idle, { sessionID }, InstanceALS.directory)
             delete data[sessionID]
             return
           }

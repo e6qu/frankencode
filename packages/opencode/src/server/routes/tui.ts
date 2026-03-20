@@ -7,6 +7,7 @@ import { TuiEvent } from "@/cli/cmd/tui/event"
 import { AsyncQueue } from "../../util/queue"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
+import { InstanceALS } from "../../project/instance-als"
 
 const TuiRequest = z.object({
   path: z.string(),
@@ -97,7 +98,7 @@ export const TuiRoutes = lazy(() =>
       }),
       validator("json", TuiEvent.PromptAppend.properties),
       async (c) => {
-        await Bus.publish(TuiEvent.PromptAppend, c.req.valid("json"))
+        await Bus.publish(TuiEvent.PromptAppend, c.req.valid("json"), InstanceALS.directory)
         return c.json(true)
       },
     )
@@ -119,9 +120,13 @@ export const TuiRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        await Bus.publish(TuiEvent.CommandExecute, {
-          command: "help.show",
-        })
+        await Bus.publish(
+          TuiEvent.CommandExecute,
+          {
+            command: "help.show",
+          },
+          InstanceALS.directory,
+        )
         return c.json(true)
       },
     )
@@ -143,9 +148,13 @@ export const TuiRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        await Bus.publish(TuiEvent.CommandExecute, {
-          command: "session.list",
-        })
+        await Bus.publish(
+          TuiEvent.CommandExecute,
+          {
+            command: "session.list",
+          },
+          InstanceALS.directory,
+        )
         return c.json(true)
       },
     )
@@ -167,9 +176,13 @@ export const TuiRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        await Bus.publish(TuiEvent.CommandExecute, {
-          command: "session.list",
-        })
+        await Bus.publish(
+          TuiEvent.CommandExecute,
+          {
+            command: "session.list",
+          },
+          InstanceALS.directory,
+        )
         return c.json(true)
       },
     )
@@ -191,9 +204,13 @@ export const TuiRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        await Bus.publish(TuiEvent.CommandExecute, {
-          command: "model.list",
-        })
+        await Bus.publish(
+          TuiEvent.CommandExecute,
+          {
+            command: "model.list",
+          },
+          InstanceALS.directory,
+        )
         return c.json(true)
       },
     )
@@ -215,9 +232,13 @@ export const TuiRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        await Bus.publish(TuiEvent.CommandExecute, {
-          command: "prompt.submit",
-        })
+        await Bus.publish(
+          TuiEvent.CommandExecute,
+          {
+            command: "prompt.submit",
+          },
+          InstanceALS.directory,
+        )
         return c.json(true)
       },
     )
@@ -239,9 +260,13 @@ export const TuiRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        await Bus.publish(TuiEvent.CommandExecute, {
-          command: "prompt.clear",
-        })
+        await Bus.publish(
+          TuiEvent.CommandExecute,
+          {
+            command: "prompt.clear",
+          },
+          InstanceALS.directory,
+        )
         return c.json(true)
       },
     )
@@ -266,24 +291,28 @@ export const TuiRoutes = lazy(() =>
       validator("json", z.object({ command: z.string() })),
       async (c) => {
         const command = c.req.valid("json").command
-        await Bus.publish(TuiEvent.CommandExecute, {
-          // @ts-expect-error
-          command: {
-            session_new: "session.new",
-            session_share: "session.share",
-            session_interrupt: "session.interrupt",
-            session_compact: "session.compact",
-            messages_page_up: "session.page.up",
-            messages_page_down: "session.page.down",
-            messages_line_up: "session.line.up",
-            messages_line_down: "session.line.down",
-            messages_half_page_up: "session.half.page.up",
-            messages_half_page_down: "session.half.page.down",
-            messages_first: "session.first",
-            messages_last: "session.last",
-            agent_cycle: "agent.cycle",
-          }[command],
-        })
+        await Bus.publish(
+          TuiEvent.CommandExecute,
+          {
+            // @ts-expect-error
+            command: {
+              session_new: "session.new",
+              session_share: "session.share",
+              session_interrupt: "session.interrupt",
+              session_compact: "session.compact",
+              messages_page_up: "session.page.up",
+              messages_page_down: "session.page.down",
+              messages_line_up: "session.line.up",
+              messages_line_down: "session.line.down",
+              messages_half_page_up: "session.half.page.up",
+              messages_half_page_down: "session.half.page.down",
+              messages_first: "session.first",
+              messages_last: "session.last",
+              agent_cycle: "agent.cycle",
+            }[command],
+          },
+          InstanceALS.directory,
+        )
         return c.json(true)
       },
     )
@@ -306,7 +335,7 @@ export const TuiRoutes = lazy(() =>
       }),
       validator("json", TuiEvent.ToastShow.properties),
       async (c) => {
-        await Bus.publish(TuiEvent.ToastShow, c.req.valid("json"))
+        await Bus.publish(TuiEvent.ToastShow, c.req.valid("json"), InstanceALS.directory)
         return c.json(true)
       },
     )
@@ -345,7 +374,11 @@ export const TuiRoutes = lazy(() =>
       ),
       async (c) => {
         const evt = c.req.valid("json")
-        await Bus.publish(Object.values(TuiEvent).find((def) => def.type === evt.type)!, evt.properties)
+        await Bus.publish(
+          Object.values(TuiEvent).find((def) => def.type === evt.type)!,
+          evt.properties,
+          InstanceALS.directory,
+        )
         return c.json(true)
       },
     )
@@ -371,7 +404,7 @@ export const TuiRoutes = lazy(() =>
       async (c) => {
         const { sessionID } = c.req.valid("json")
         await Session.get(sessionID)
-        await Bus.publish(TuiEvent.SessionSelect, { sessionID })
+        await Bus.publish(TuiEvent.SessionSelect, { sessionID }, InstanceALS.directory)
         return c.json(true)
       },
     )

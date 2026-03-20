@@ -141,7 +141,7 @@ export namespace Pty {
 
     const directory = InstanceALS.directory
     const cwd = input.cwd || directory
-    const shellEnv = await Plugin.trigger("shell.env", { cwd }, { env: {} })
+    const shellEnv = await Plugin.trigger("shell.env", { cwd }, { env: {} }, InstanceALS.directory)
     const env = {
       ...process.env,
       ...input.env,
@@ -216,7 +216,7 @@ export namespace Pty {
       Bus.publish(Event.Exited, { id, exitCode }, directory)
       remove(id, directory)
     })
-    Bus.publish(Event.Created, { info })
+    Bus.publish(Event.Created, { info }, InstanceALS.directory)
     return info
   }
 
@@ -229,7 +229,7 @@ export namespace Pty {
     if (input.size) {
       session.process.resize(input.size.cols, input.size.rows)
     }
-    Bus.publish(Event.Updated, { info: session.info })
+    Bus.publish(Event.Updated, { info: session.info }, InstanceALS.directory)
     return session.info
   }
 

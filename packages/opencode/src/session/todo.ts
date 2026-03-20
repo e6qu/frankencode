@@ -4,6 +4,7 @@ import { SessionID } from "./schema"
 import z from "zod"
 import { Database, eq, asc } from "../storage/db"
 import { TodoTable } from "./session.sql"
+import { InstanceALS } from "@/project/instance-als"
 
 export namespace Todo {
   export const Info = z
@@ -40,7 +41,7 @@ export namespace Todo {
           })),
         )
         .run()
-      Database.effect(() => Bus.publish(Event.Updated, input))
+      Database.effect(() => Bus.publish(Event.Updated, input, InstanceALS.directory))
     })
   }
 

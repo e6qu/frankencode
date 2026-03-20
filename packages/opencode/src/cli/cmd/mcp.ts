@@ -228,14 +228,18 @@ export const McpAuthCommand = cmd({
       spinner.start("Starting OAuth flow...")
 
       // Subscribe to browser open failure events to show URL for manual opening
-      const unsubscribe = Bus.subscribe(MCP.BrowserOpenFailed, (evt) => {
-        if (evt.properties.mcpName === serverName) {
-          spinner.stop("Could not open browser automatically")
-          prompts.log.warn("Please open this URL in your browser to authenticate:")
-          prompts.log.info(evt.properties.url)
-          spinner.start("Waiting for authorization...")
-        }
-      })
+      const unsubscribe = Bus.subscribe(
+        MCP.BrowserOpenFailed,
+        (evt) => {
+          if (evt.properties.mcpName === serverName) {
+            spinner.stop("Could not open browser automatically")
+            prompts.log.warn("Please open this URL in your browser to authenticate:")
+            prompts.log.info(evt.properties.url)
+            spinner.start("Waiting for authorization...")
+          }
+        },
+        InstanceALS.directory,
+      )
 
       try {
         const status = await MCP.authenticate(serverName)

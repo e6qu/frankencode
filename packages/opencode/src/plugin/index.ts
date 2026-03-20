@@ -86,11 +86,15 @@ export namespace Plugin {
           const cause = err instanceof Error ? err.cause : err
           const detail = cause instanceof Error ? cause.message : String(cause ?? err)
           log.error("failed to install plugin", { pkg, version, error: detail })
-          Bus.publish(Session.Event.Error, {
-            error: new NamedError.Unknown({
-              message: `Failed to install plugin ${pkg}@${version}: ${detail}`,
-            }).toObject(),
-          })
+          Bus.publish(
+            Session.Event.Error,
+            {
+              error: new NamedError.Unknown({
+                message: `Failed to install plugin ${pkg}@${version}: ${detail}`,
+              }).toObject(),
+            },
+            dir,
+          )
           return ""
         })
         if (!plugin) continue
@@ -110,11 +114,15 @@ export namespace Plugin {
         .catch((err) => {
           const message = err instanceof Error ? err.message : String(err)
           log.error("failed to load plugin", { path: plugin, error: message })
-          Bus.publish(Session.Event.Error, {
-            error: new NamedError.Unknown({
-              message: `Failed to load plugin ${plugin}: ${message}`,
-            }).toObject(),
-          })
+          Bus.publish(
+            Session.Event.Error,
+            {
+              error: new NamedError.Unknown({
+                message: `Failed to load plugin ${plugin}: ${message}`,
+              }).toObject(),
+            },
+            dir,
+          )
         })
     }
 
@@ -128,9 +136,9 @@ export namespace Plugin {
     Name extends Exclude<keyof Required<Hooks>, "auth" | "event" | "tool">,
     Input = Parameters<Required<Hooks>[Name]>[0],
     Output = Parameters<Required<Hooks>[Name]>[1],
-  >(name: Name, input: Input, output: Output, directory?: string): Promise<Output> {
+  >(name: Name, input: Input, output: Output, directory: string): Promise<Output> {
     if (!name) return output
-    for (const hook of await state(directory ?? InstanceALS.directory).then((x) => x.hooks)) {
+    for (const hook of await state(directory).then((x) => x.hooks)) {
       const fn = hook[name]
       if (!fn) continue
       // @ts-expect-error if you feel adventurous, please fix the typing, make sure to bump the try-counter if you
@@ -141,24 +149,24 @@ export namespace Plugin {
     return output
   }
 
-  export async function list(directory?: string) {
-    return state(directory ?? InstanceALS.directory).then((x) => x.hooks)
+  export async function list(directory: string) {
+    return state(directory).then((x) => x.hooks)
   }
 
-  export async function init(directory?: string) {
-    const hooks = await state(directory ?? InstanceALS.directory).then((x) => x.hooks)
+  export async function init(directory: string) {
+    const hooks = await state(directory).then((x) => x.hooks)
     const config = await Config.get()
     for (const hook of hooks) {
       // @ts-expect-error this is because we haven't moved plugin to sdk v2
       await hook.config?.(config)
     }
     Bus.subscribeAll(async (input) => {
-      const hooks = await state(directory ?? InstanceALS.directory).then((x) => x.hooks)
+      const hooks = await state(directory).then((x) => x.hooks)
       for (const hook of hooks) {
         hook["event"]?.({
           event: input,
         })
       }
-    })
+    }, directory)
   }
 }

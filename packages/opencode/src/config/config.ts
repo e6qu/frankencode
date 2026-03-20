@@ -205,7 +205,7 @@ export namespace Config {
         ])
         if (token) {
           process.env["OPENCODE_CONSOLE_TOKEN"] = token
-          Env.set("OPENCODE_CONSOLE_TOKEN", token)
+          Env.set("OPENCODE_CONSOLE_TOKEN", token, InstanceALS.directory)
         }
 
         if (config) {
@@ -413,7 +413,11 @@ export namespace Config {
           ? err.data.message
           : `Failed to parse command ${item}`
         const { Session } = await import("@/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        Bus.publish(
+          Session.Event.Error,
+          { error: new NamedError.Unknown({ message }).toObject() },
+          InstanceALS.directory,
+        )
         log.error("failed to load command", { command: item, err })
         return undefined
       })
@@ -452,7 +456,11 @@ export namespace Config {
           ? err.data.message
           : `Failed to parse agent ${item}`
         const { Session } = await import("@/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        Bus.publish(
+          Session.Event.Error,
+          { error: new NamedError.Unknown({ message }).toObject() },
+          InstanceALS.directory,
+        )
         log.error("failed to load agent", { agent: item, err })
         return undefined
       })
@@ -490,7 +498,11 @@ export namespace Config {
           ? err.data.message
           : `Failed to parse mode ${item}`
         const { Session } = await import("@/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        Bus.publish(
+          Session.Event.Error,
+          { error: new NamedError.Unknown({ message }).toObject() },
+          InstanceALS.directory,
+        )
         log.error("failed to load mode", { mode: item, err })
         return undefined
       })

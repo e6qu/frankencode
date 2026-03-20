@@ -2,6 +2,7 @@ import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { Flag } from "@/flag/flag"
 import { Installation } from "@/installation"
+import { InstanceALS } from "@/project/instance-als"
 
 export async function upgrade() {
   const config = await Config.global()
@@ -14,12 +15,12 @@ export async function upgrade() {
     return
   }
   if (config.autoupdate === "notify") {
-    await Bus.publish(Installation.Event.UpdateAvailable, { version: latest })
+    await Bus.publish(Installation.Event.UpdateAvailable, { version: latest }, InstanceALS.directory)
     return
   }
 
   if (method === "unknown") return
   await Installation.upgrade(method, latest)
-    .then(() => Bus.publish(Installation.Event.Updated, { version: latest }))
+    .then(() => Bus.publish(Installation.Event.Updated, { version: latest }, InstanceALS.directory))
     .catch(() => {})
 }

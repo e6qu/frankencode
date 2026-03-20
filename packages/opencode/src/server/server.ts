@@ -535,7 +535,7 @@ export namespace Server {
               if (event.type === Bus.InstanceDisposed.type) {
                 stream.close()
               }
-            })
+            }, InstanceALS.directory)
 
             // Send heartbeat every 10s to prevent stalled proxy streams.
             const heartbeat = setInterval(() => {

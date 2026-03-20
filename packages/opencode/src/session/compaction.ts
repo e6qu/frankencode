@@ -11,6 +11,7 @@ import { SessionProcessor } from "./processor"
 import { fn } from "@/util/fn"
 import { Agent } from "@/agent/agent"
 import { Plugin } from "@/plugin"
+import { InstanceALS } from "@/project/instance-als"
 import { Config } from "@/config/config"
 import { ProviderTransform } from "@/provider/transform"
 import { ModelID, ProviderID } from "@/provider/schema"
@@ -176,6 +177,7 @@ export namespace SessionCompaction {
       "experimental.session.compacting",
       { sessionID: input.sessionID },
       { context: [], prompt: undefined },
+      InstanceALS.directory,
     )
     const defaultPrompt = `Provide a detailed prompt for continuing our conversation above.
 Focus on information that would be helpful for continuing the conversation, including what we did, what we're doing, which files we're working on, and what we're going to do next.
@@ -207,7 +209,7 @@ When constructing the summary, try to stick to this template:
 
     const promptText = compacting.prompt ?? [defaultPrompt, ...compacting.context].join("\n\n")
     const msgs = structuredClone(messages)
-    await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
+    await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs }, InstanceALS.directory)
     const result = await processor.process({
       user: userMessage,
       agent,

@@ -144,7 +144,11 @@ export class SkillService extends ServiceMap.Service<SkillService, SkillService.
             ? err.data.message
             : `Failed to parse skill ${match}`
           const { Session } = await import("@/session")
-          Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+          Bus.publish(
+            Session.Event.Error,
+            { error: new NamedError.Unknown({ message }).toObject() },
+            InstanceALS.directory,
+          )
           log.error("failed to load skill", { skill: match, err })
           return undefined
         })
