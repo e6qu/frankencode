@@ -135,12 +135,12 @@ export const TuiThreadCommand = cmd({
         ),
       })
       worker.onerror = (e) => {
-        Log.Default.error(e)
+        Log.Default.error(e.message ?? String(e))
       }
 
       const client = Rpc.client<typeof rpc>(worker)
       const error = (e: unknown) => {
-        Log.Default.error(e)
+        Log.Default.error(e instanceof Error ? e : String(e))
       }
       const reload = () => {
         client.call("reload", undefined).catch((err) => {

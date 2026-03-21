@@ -583,7 +583,7 @@ export function Session() {
     {
       title: conceal() ? "Disable code concealment" : "Enable code concealment",
       value: "session.toggle.conceal",
-      keybind: "messages_toggle_conceal" as any,
+      keybind: "messages_toggle_conceal",
       category: "Session",
       onSelect: (dialog) => {
         setConceal((prev) => !prev)
@@ -1353,12 +1353,14 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
           const component = createMemo(() => PART_MAPPING[part.type as keyof typeof PART_MAPPING])
           return (
             <Show when={component()}>
-              <Dynamic
-                last={index() === props.parts.length - 1}
-                component={component()}
-                part={part as any}
-                message={props.message}
-              />
+              {(comp) => (
+                <Dynamic
+                  last={index() === props.parts.length - 1}
+                  component={comp() as (props: { last: boolean; part: Part; message: AssistantMessage }) => JSX.Element}
+                  part={part}
+                  message={props.message}
+                />
+              )}
             </Show>
           )
         }}
@@ -1586,7 +1588,7 @@ type ToolProps<T extends Tool.Info> = {
   output?: string
   part: ToolPart
 }
-function GenericTool(props: ToolProps<any>) {
+function GenericTool(props: ToolProps<Tool.Info>) {
   const { theme } = useTheme()
   const ctx = use()
   const output = createMemo(() => props.output?.trim() ?? "")
@@ -1624,7 +1626,7 @@ function GenericTool(props: ToolProps<any>) {
   )
 }
 
-function ToolTitle(props: { fallback: string; when: any; icon: string; children: JSX.Element }) {
+function ToolTitle(props: { fallback: string; when: unknown; icon: string; children: JSX.Element }) {
   const { theme } = useTheme()
   return (
     <text paddingLeft={3} fg={props.when ? theme.textMuted : theme.text}>
@@ -1638,7 +1640,7 @@ function ToolTitle(props: { fallback: string; when: any; icon: string; children:
 function InlineTool(props: {
   icon: string
   iconColor?: RGBA
-  complete: any
+  complete: unknown
   pending: string
   spinner?: boolean
   children: JSX.Element
@@ -1944,28 +1946,33 @@ function List(props: ToolProps<typeof ListTool>) {
 
 function WebFetch(props: ToolProps<typeof WebFetchTool>) {
   return (
-    <InlineTool icon="%" pending="Fetching from the web..." complete={(props.input as any).url} part={props.part}>
-      WebFetch {(props.input as any).url}
+    <InlineTool icon="%" pending="Fetching from the web..." complete={props.input.url} part={props.part}>
+      WebFetch {props.input.url}
     </InlineTool>
   )
 }
 
-function CodeSearch(props: ToolProps<any>) {
-  const input = props.input as any
-  const metadata = props.metadata as any
+function CodeSearch(props: {
+  input: Partial<{ query: string }>
+  metadata: Partial<{ results: number }>
+  part: ToolPart
+}) {
   return (
-    <InlineTool icon="◇" pending="Searching code..." complete={input.query} part={props.part}>
-      Exa Code Search "{input.query}" <Show when={metadata.results}>({metadata.results} results)</Show>
+    <InlineTool icon="◇" pending="Searching code..." complete={props.input.query} part={props.part}>
+      Exa Code Search "{props.input.query}" <Show when={props.metadata.results}>({props.metadata.results} results)</Show>
     </InlineTool>
   )
 }
 
-function WebSearch(props: ToolProps<any>) {
-  const input = props.input as any
-  const metadata = props.metadata as any
+function WebSearch(props: {
+  input: Partial<{ query: string }>
+  metadata: Partial<{ numResults: number }>
+  part: ToolPart
+}) {
   return (
-    <InlineTool icon="◈" pending="Searching web..." complete={input.query} part={props.part}>
-      Exa Web Search "{input.query}" <Show when={metadata.numResults}>({metadata.numResults} results)</Show>
+    <InlineTool icon="◈" pending="Searching web..." complete={props.input.query} part={props.part}>
+      Exa Web Search "{props.input.query}"{" "}
+      <Show when={props.metadata.numResults}>({props.metadata.numResults} results)</Show>
     </InlineTool>
   )
 }
@@ -1992,7 +1999,7 @@ function Task(props: ToolProps<typeof TaskTool>) {
     )
   })
 
-  const current = createMemo(() => tools().findLast((x) => (x.state as any).title))
+  const current = createMemo(() => tools().findLast((x) => x.state.status !== "pending" && x.state.status !== "error" && "title" in x.state && x.state.title))
 
   const isRunning = createMemo(() => props.part.state.status === "running")
 
@@ -2009,7 +2016,11 @@ function Task(props: ToolProps<typeof TaskTool>) {
 
     if (isRunning() && tools().length > 0) {
       // content[0] += ` · ${tools().length} toolcalls`
-      if (current()) content.push(`↳ ${Locale.titlecase(current()!.tool)} ${(current()!.state as any).title}`)
+      if (current()) {
+        const st = current()!.state
+        const title = (st.status === "running" || st.status === "completed") ? st.title : undefined
+        content.push(`↳ ${Locale.titlecase(current()!.tool)} ${title}`)
+      }
       else content.push(`↳ ${tools().length} toolcalls`)
     }
 

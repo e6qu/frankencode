@@ -9,13 +9,8 @@ export namespace Log {
   export const Level = z.enum(["DEBUG", "INFO", "WARN", "ERROR"]).meta({ ref: "LogLevel", description: "Log level" })
   export type Level = z.infer<typeof Level>
 
-  // The logger is a system boundary: it must accept unknown values because
-  // catch blocks produce `unknown` and callers pass them as both the message
-  // and in the extra record (e.g. `log.error("fail", { error: e })`).
-  // This is one of the few places where `unknown` is correct and intentional.
-  // biome-ignore lint: logger boundary accepts unknown by design
-  type LogMessage = unknown
-  export type LogExtra = Record<string, unknown>
+  type LogMessage = string | Error
+  export type LogExtra = Record<string, string | number | boolean | null | Error | object>
 
   const levelPriority: Record<Level, number> = {
     DEBUG: 0,
@@ -112,7 +107,7 @@ export namespace Log {
       }
     }
 
-    function build(message: LogMessage, extra?: LogExtra) {
+    function build(message: LogMessage | undefined, extra?: LogExtra) {
       const prefix = Object.entries({
         ...tags,
         ...extra,

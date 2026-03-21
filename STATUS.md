@@ -6,7 +6,7 @@
 
 ## Current Focus
 
-Type safety audit complete. All fixable `any` eliminated. 31 remain at SDK boundaries and structural patterns.
+Type safety audit complete. TUI types fixed. Logger types strengthened. 20 documented `any` remain at structural boundaries.
 
 ## Bug Status
 
@@ -14,14 +14,13 @@ Type safety audit complete. All fixable `any` eliminated. 31 remain at SDK bound
 
 ## Type Safety Status
 
-- **~160+ `any`/`z.any()` eliminated** across ~40 files
-- **31 remaining** — all documented SDK boundaries, generic patterns, or upstream code
-- **Strong schemas:** `JsonValue`, `ProviderMeta`, `ToolInput`, `ToolMeta` in message-v2.ts
-- **0 TypeScript errors**, **1448 tests passing**
+- **~250+ `any` eliminated** across ~50 files
+- **20 remaining** — all documented (event emitters, SDK boundaries, generic patterns, upstream SDK)
+- **0 `z.any()` in our code** (3 in upstream OpenAI SDK)
+- **0 `unknown` types** in interfaces (removed from log.ts)
+- **Strong schemas:** `JsonValue`, `ProviderMeta`, `ToolInput`, `ToolMeta`
 
-## Branch Status
+## Test Status
 
-| Branch | Status |
-|--------|--------|
-| `dev` | Main development |
-| `fix/remaining-bugs-b47-b52` | Bug fixes + type safety audit — pending commit & PR |
+- **1448 tests passing**, 0 failures, 8 skipped
+- **0 tsgo errors** (`bun run typecheck`)

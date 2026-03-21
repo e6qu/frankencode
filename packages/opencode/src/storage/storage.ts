@@ -161,7 +161,7 @@ export namespace Storage {
         await migration(dir)
         await Filesystem.write(path.join(dir, "migration"), (index + 1).toString())
       } catch (e) {
-        log.error("failed to run migration", { index, error: e })
+        log.error("failed to run migration", { index, error: e instanceof Error ? e : String(e) })
         throw e
       }
     }

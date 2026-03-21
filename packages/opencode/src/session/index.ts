@@ -686,7 +686,7 @@ export namespace Session {
       try {
         await remove(child.id)
       } catch (e) {
-        log.error("failed to remove child session", { childID: child.id, error: e })
+        log.error("failed to remove child session", { childID: child.id, error: e instanceof Error ? e : String(e) })
       }
     }
     await unshare(sessionID)

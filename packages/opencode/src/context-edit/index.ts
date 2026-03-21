@@ -655,7 +655,7 @@ export namespace ContextEdit {
             })
             log.info("swept discardable", {
               partID: part.id.slice(0, 12),
-              reason: lifecycle.reason,
+              reason: lifecycle.reason ?? null,
               casHash: casHash.slice(0, 12),
             })
           })

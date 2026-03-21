@@ -484,7 +484,11 @@ export namespace SessionPrompt {
         }
         const result = await taskTool.execute(taskArgs, taskCtx).catch((error) => {
           executionError = error
-          log.error("subtask execution failed", { error, agent: task.agent, description: task.description })
+          log.error("subtask execution failed", {
+            error: error instanceof Error ? error : String(error),
+            agent: task.agent,
+            description: task.description,
+          })
           return undefined
         })
         const attachments = result?.attachments?.map((attachment) => ({
@@ -1153,7 +1157,11 @@ export namespace SessionPrompt {
                 sessionID: input.sessionID,
               })
             } catch (error: unknown) {
-              log.error("failed to read MCP resource", { error, clientName, uri })
+              log.error("failed to read MCP resource", {
+                error: error instanceof Error ? error : String(error),
+                clientName,
+                uri,
+              })
               const message = error instanceof Error ? error.message : String(error)
               pieces.push({
                 messageID: info.id,

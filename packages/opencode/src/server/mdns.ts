@@ -33,7 +33,7 @@ export namespace MDNS {
 
       currentPort = port
     } catch (err) {
-      log.error("mDNS publish failed", { error: err })
+      log.error("mDNS publish failed", { error: err instanceof Error ? err : String(err) })
       if (bonjour) {
         try {
           bonjour.destroy()
@@ -50,7 +50,7 @@ export namespace MDNS {
         bonjour.unpublishAll()
         bonjour.destroy()
       } catch (err) {
-        log.error("mDNS unpublish failed", { error: err })
+        log.error("mDNS unpublish failed", { error: err instanceof Error ? err : String(err) })
       }
       bonjour = undefined
       currentPort = undefined

@@ -134,7 +134,7 @@ export class FormatService extends ServiceMap.Service<FormatService, FormatServi
                 })
             } catch (error) {
               log.error("failed to format file", {
-                error,
+                error: error instanceof Error ? error : String(error),
                 command: item.command,
                 ...item.environment,
                 file,

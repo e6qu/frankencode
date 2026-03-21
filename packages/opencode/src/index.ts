@@ -38,13 +38,13 @@ import { Database } from "./storage/db"
 
 process.on("unhandledRejection", (e) => {
   Log.Default.error("rejection", {
-    e: e instanceof Error ? e.message : e,
+    e: e instanceof Error ? e.message : String(e),
   })
 })
 
 process.on("uncaughtException", (e) => {
   Log.Default.error("exception", {
-    e: e instanceof Error ? e.message : e,
+    e: e instanceof Error ? e.message : String(e),
   })
 })
 

@@ -104,7 +104,7 @@ export namespace LSPServer {
     extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"],
     async spawn(root, directory, worktree) {
       const tsserver = Module.resolve("typescript/lib/tsserver.js", directory)
-      log.info("typescript server", { tsserver })
+      log.info("typescript server", { tsserver: tsserver ?? null })
       if (!tsserver) return
       const proc = spawn(BunProc.which(), ["x", "typescript-language-server", "--stdio"], {
         cwd: root,
@@ -1501,7 +1501,9 @@ export namespace LSPServer {
           const ok = await Archive.extractZip(tempPath, installDir)
             .then(() => true)
             .catch((error) => {
-              log.error("Failed to extract lua-language-server archive", { error })
+              log.error("Failed to extract lua-language-server archive", {
+                error: error instanceof Error ? error : String(error),
+              })
               return false
             })
           if (!ok) return
@@ -1509,7 +1511,9 @@ export namespace LSPServer {
           const ok = await run(["tar", "-xzf", tempPath, "-C", installDir])
             .then((result) => result.code === 0)
             .catch((error: unknown) => {
-              log.error("Failed to extract lua-language-server archive", { error })
+              log.error("Failed to extract lua-language-server archive", {
+                error: error instanceof Error ? error : String(error),
+              })
               return false
             })
           if (!ok) return
@@ -1531,7 +1535,7 @@ export namespace LSPServer {
             .then(() => true)
             .catch((error: unknown) => {
               log.error("Failed to set executable permission for lua-language-server binary", {
-                error,
+                error: error instanceof Error ? error : String(error),
               })
               return false
             })

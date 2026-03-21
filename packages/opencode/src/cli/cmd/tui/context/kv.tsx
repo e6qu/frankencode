@@ -39,10 +39,10 @@ export const { use: useKV, provider: KVProvider } = createSimpleContext({
           },
         ] as const
       },
-      get(key: string, defaultValue?: any) {
+      get(key: string, defaultValue?: unknown) {
         return store[key] ?? defaultValue
       },
-      set(key: string, value: any) {
+      set(key: string, value: unknown) {
         setStore(key, value)
         Filesystem.writeJson(filePath, store)
       },

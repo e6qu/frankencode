@@ -95,7 +95,7 @@ export namespace SessionCompaction {
             part.state.time.compacted = Date.now()
             await Session.updatePart(part)
           } catch (e) {
-            log.error("failed to prune part", { partID: part.id, error: e })
+            log.error("failed to prune part", { partID: part.id, error: e instanceof Error ? e : String(e) })
           }
         }
       }
