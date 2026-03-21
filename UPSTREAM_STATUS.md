@@ -186,11 +186,97 @@ For each of the 12 Effect PRs, read the diff and extract:
 
 ---
 
+---
+
+## Open PRs — Backport Candidates (~195 total, ~20 high priority)
+
+### From Recognized/Vouched Contributors
+
+| PR | Author | Title | Priority |
+|----|--------|-------|----------|
+| [#18527](https://github.com/anomalyco/opencode/pull/18527) | Dax Raad (Vouched) | fix(core): restore SIGHUP exit handler (+1/-0) | **HIGH** |
+| [#18551](https://github.com/anomalyco/opencode/pull/18551) | Sebastian (Vouched) | Upgrade opentui to 0.1.90 | **HIGH** |
+| [#18113](https://github.com/anomalyco/opencode/pull/18113) | Ariane Emory (Vouched) | fix: Fix default timeout value (+2/-2) | **HIGH** |
+| [#12633](https://github.com/anomalyco/opencode/pull/12633) | Dax Raad (beta) | feat(tui): add auto-accept mode for permissions | **HIGH** |
+| [#18348](https://github.com/anomalyco/opencode/pull/18348) | rekram1-node (Vouched) | fix: plugins can register providers with config changes | Med |
+| [#18155](https://github.com/anomalyco/opencode/pull/18155) | rekram1-node (Vouched) | feat: add model reconciliation hook | Med |
+| [#13692](https://github.com/anomalyco/opencode/pull/13692) | Dax Raad | feat: add reference agent for searching external repos | Med |
+| [#18173](https://github.com/anomalyco/opencode/pull/18173) | Kit Langton (Vouched) | feat(bus): migrate Bus to Effect PubSub | Med — Effect |
+| [#18336](https://github.com/anomalyco/opencode/pull/18336) | Tim Smart | refactor effect runtime | Med — Effect |
+
+Kit Langton has 10 more Effect PRs — all DRAFT, all require behavioral analysis not cherry-pick.
+
+### Security PRs
+
+| PR | Author | Title | Priority |
+|----|--------|-------|----------|
+| [#10763](https://github.com/anomalyco/opencode/pull/10763) | orbisai0security | Fix CVE-2025-58179 (astrojs/cloudflare) | **HIGH** |
+| [#10974](https://github.com/anomalyco/opencode/pull/10974) | MaxMiksa | Guard TUI server exposure | **HIGH** |
+| [#14581](https://github.com/anomalyco/opencode/pull/14581) | Nicoo01x | Prevent cross-drive path bypass (Windows) | Med |
+| [#17362](https://github.com/anomalyco/opencode/pull/17362) | kvenux | Sanitize markdown link XSS | Med (web only) |
+
+### Core Bug Fixes (non-contributor, worth evaluating)
+
+| PR | Author | Title | Why |
+|----|--------|-------|-----|
+| [#18539](https://github.com/anomalyco/opencode/pull/18539) | KnutZuidema | Discourage _noop tool call during compaction | Small, targeted |
+| [#18538](https://github.com/anomalyco/opencode/pull/18538) | zaxbysauce | Handle client disconnect in SSE writes | Crash prevention |
+| [#18443](https://github.com/anomalyco/opencode/pull/18443) | LucasSantana-Dev | Retry 429 even when provider says non-retryable | Reliability |
+| [#18445](https://github.com/anomalyco/opencode/pull/18445) | LucasSantana-Dev | Account for OpenRouter cache write tokens | Cost accuracy |
+| [#17834](https://github.com/anomalyco/opencode/pull/17834) | TomRoyls | Cap retry backoff to 30s | 2-line fix |
+| [#17758](https://github.com/anomalyco/opencode/pull/17758) | SunCreation | Prevent lone surrogate 400 errors in tool results | Provider compat |
+| [#17742](https://github.com/anomalyco/opencode/pull/17742) | RhoninSeiei | Filter empty text content blocks for all providers | Provider compat |
+| [#17712](https://github.com/anomalyco/opencode/pull/17712) | jpvelasco | Drop empty messages after reasoning filter | Provider fix |
+| [#18412](https://github.com/anomalyco/opencode/pull/18412) | ernestodeoliveira | Don't decode percent-encoding in filesystem paths | Path safety |
+| [#18137](https://github.com/anomalyco/opencode/pull/18137) | BYK | Reduce memory during prompting (lazy scan + windowing) | Performance |
+| [#18516](https://github.com/anomalyco/opencode/pull/18516) | BYK | Prevent subagent plan escape | Subagent safety |
+| [#17818](https://github.com/anomalyco/opencode/pull/17818) | LehaoLin | Validate JSON in tool call arguments | Robustness |
+| [#17635](https://github.com/anomalyco/opencode/pull/17635) | SHL0MS | Remove dead LSP clients (memory leak) | Memory |
+| [#17651](https://github.com/anomalyco/opencode/pull/17651) | vesector | Recover MCP clients after transient failures | MCP reliability |
+| [#17645](https://github.com/anomalyco/opencode/pull/17645) | mollux | Apply config model cost overrides at runtime | Cost accuracy |
+| [#18069](https://github.com/anomalyco/opencode/pull/18069) | ihubanov | Timeout for snapshot git add (large worktrees) | Reliability |
+| [#17888](https://github.com/anomalyco/opencode/pull/17888) | flacks | Honor model:inherit in subagent frontmatter | 1-line fix |
+
+### TUI Feature PRs (evaluate)
+
+| PR | Author | Title | Notes |
+|----|--------|-------|-------|
+| [#18497](https://github.com/anomalyco/opencode/pull/18497) | amosbird | Sidebar position config | TUI layout |
+| [#17644](https://github.com/anomalyco/opencode/pull/17644) | joeyism | /edit command to open files in $EDITOR | TUI UX |
+| [#17868](https://github.com/anomalyco/opencode/pull/17868) | jwcrystal | Prompt after /compact (continue or branch) | TUI UX |
+| [#17156](https://github.com/anomalyco/opencode/pull/17156) | shiyuhang0 | Show skills in sidebar | TUI feature |
+| [#14190](https://github.com/anomalyco/opencode/pull/14190) | mocksoul | Tail-f effect for tool output | TUI UX |
+| [#17992](https://github.com/anomalyco/opencode/pull/17992) | saltykovdg | Light-clean theme | TUI theme |
+| [#18198](https://github.com/anomalyco/opencode/pull/18198) | 2KAbhishek | Syntax highlighting for kotlin, hcl, lua, toml | TUI feature |
+
+### Core Feature PRs (evaluate)
+
+| PR | Author | Title | Notes |
+|----|--------|-------|-------|
+| [#18317](https://github.com/anomalyco/opencode/pull/18317) | vaporwavie | Quiet mode for CLI runs | CLI UX |
+| [#18235](https://github.com/anomalyco/opencode/pull/18235) | dgruzd | Offline mode | Network control |
+| [#18178](https://github.com/anomalyco/opencode/pull/18178) | mjdouglas | Custom system prompt per model | Config |
+| [#17670](https://github.com/anomalyco/opencode/pull/17670) | dmitryryabkov | Dynamic model discovery for local providers | Provider feature |
+| [#18450](https://github.com/anomalyco/opencode/pull/18450) | potlee | Use native Output.object() for structured output | Net code deletion |
+| [#18280](https://github.com/anomalyco/opencode/pull/18280) | ryanskidmore | Plugin system robustness improvements | Plugin stability |
+
+### Permanently Skipped (~80 PRs)
+
+- **Desktop/Electron:** ~15 PRs (Brendan Allan, Luke Parker, OpeOginni)
+- **Web App UI:** ~25 PRs (anduimagui, Rohansguliani, Shoubhit Dash)
+- **Bun→Node portability:** ~5 PRs (Dax Raad)
+- **Docs/translations/ecosystem:** ~15 PRs
+- **CI/chore:** ~10 PRs
+- **Niche/massive:** ~10 PRs (Kiro provider +4309 lines, multi-session daemon +7589 lines)
+
+---
+
 ## Decision Key
 
 - **Cherry-pick** = isolated fix, applies cleanly
 - **Reimplement** = extract behavioral change from architectural refactor, apply to our architecture
-- **Skip (desktop)** = permanently irrelevant
-- **Skip (portability)** = Bun→Node, we target Bun only
-- **Skip (chore)** = auto-generated, CI, docs
-- **Evaluate** = needs code-level review
+- **Skip (desktop)** = Frankencode never ships desktop — permanently irrelevant
+- **Skip (portability)** = Bun→Node refactor — Frankencode targets Bun only
+- **Skip (web app)** = Web app changes — low priority, evaluate individually
+- **Skip (chore)** = auto-generated, CI, docs, translations
+- **Evaluate** = needs code-level review before deciding
