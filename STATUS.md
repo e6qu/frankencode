@@ -1,22 +1,18 @@
 # Frankencode — Project Status
 
 **Date:** 2026-03-21
-**Upstream:** `anomalyco/opencode` @ `dev`
-**Fork:** `e6qu/frankencode` @ `dev`
 
 ## Summary
 
-All features implemented. Type safety audit complete. 0 open bugs.
-
-## Metrics
+All features implemented. Type safety complete. Zod v4 migrated. 0 open bugs.
 
 | Metric | Value |
 |--------|-------|
-| Tests passing | 1448 (0 fail, 8 skip) |
+| Tests | 1473 pass, 0 fail, 8 skip (127 files) |
 | tsgo errors | 0 |
 | Open bugs | 0 (1 deferred: B51) |
 | Fixed bugs | 51 |
-| `any` remaining | 20 (all documented structural exceptions) |
-| `z.any()` in our code | 0 (3 in upstream OpenAI SDK) |
+| `any` remaining | 20 documented structural exceptions |
+| Frankencode unit tests | 25 (CAS, EditGraph, SideThread, Objective, ContextEdit) |
 | Architecture docs | 8 (in `docs/`) |
-| PRs merged | #16-#23 |
+| PRs merged | #16-#24 |

@@ -2,35 +2,15 @@
 
 > **Frankencode** is a fork of [OpenCode](https://github.com/anomalyco/opencode) (`dev` branch) that adds context editing, content-addressable storage, and an edit graph.
 
-**Status (2026-03-21):** Features implemented. 51 bugs fixed, 0 open. Type safety audit complete (20 documented `any` remain). 1448 tests passing, 0 tsgo errors. See `STATUS.md`.
+**Status (2026-03-21):** All features implemented. 51 bugs fixed, 0 open. Type safety complete (20 documented `any`). Zod v4 migrated. 1473 tests passing, 0 tsgo errors. See `STATUS.md`.
 
 ---
 
-## Next: Zod v3 → v4 Migration
+## Next: Upstream Re-sync
 
-See details below.
+Upstream (`anomalyco/opencode`) has diverged since our last rebase. Effect-ification PRs are landing upstream (7+ still open). We need to stay in sync.
 
----
-
-## Future: Zod v3 → v4 Migration
-
-The codebase uses Zod v4 (`zod` package) but some patterns and downstream libraries (`zod-to-json-schema`, `hono-openapi`) expect Zod v3 types. Sites needing conversion:
-
-| File | Pattern | Issue |
-|------|---------|-------|
-| `server/routes/experimental.ts:91` | `zodToJsonSchema(t.parameters as any)` | `zod-to-json-schema` expects Zod v3 `ZodType`, not v4 |
-| `server/routes/*.ts` | `resolver()`, `validator()` from `hono-openapi` | May expect v3 schemas |
-| `util/json.ts` | `JsonValue` uses `z.any()` with cast | `z.lazy()` generates `__schema0` $ref breaking SDK generation |
-| `session/message-v2.ts` | `z.toJSONSchema()` | Uses Zod v4 native JSON Schema generation |
-| `util/effect-zod.ts` | Effect-to-Zod bridge | Converts between Effect Schema and Zod |
-
-**Action:** Audit all `zod-to-json-schema` call sites. Either migrate to Zod v4's `z.toJSONSchema()` or keep the v3 compatibility cast. Separate PR.
-
----
-
-## Future: Upstream Re-sync
-
-Upstream (`anomalyco/opencode`) continues to diverge. The Effect-ification migration is ongoing upstream (7+ PRs still open). Key areas of conflict:
+### Conflict areas
 
 | Area | Risk | Notes |
 |------|------|-------|
@@ -40,27 +20,36 @@ Upstream (`anomalyco/opencode`) continues to diverge. The Effect-ification migra
 | `skill/skill.ts` | High | Upstream rewrote to Effect service; we added content cache |
 | New Frankencode files | None | CAS, edit graph, context tools, side threads — no upstream conflict |
 
-**Strategy:** Periodic rebase onto `upstream/dev`. Cherry-pick applicable fixes first, then full rebase.
+### Strategy
+
+1. `git fetch upstream` and review new commits
+2. Cherry-pick applicable bug fixes
+3. Full rebase onto `upstream/dev` — resolve conflicts in prompt.ts, message-v2.ts, effect/, skill.ts
+4. Re-run tests and tsgo typecheck
 
 ---
 
-## Completed Features
+## Backlog: Testing
 
-| Feature | Status | PR |
-|---------|--------|-----|
-| Plan Mode Fixes | Done | — |
-| Verification Tool | Done | — |
-| Progressive Disclosure | Done | — |
-| Skills as Scripts | Done | — |
-| Evaluator-Optimizer | Done | — |
-| Bug Fix Pass (46 bugs) | Done | #10, #12 |
-| Upstream Bug Backport P1 (B1-B9) | Done | #16 |
-| Upstream Bug Backport P2 (B10-B16) | Done | #17 |
-| Upstream Backport P3 (B17-B22) | Done | #18 |
-| Upstream Full Rebase (Phase 4) | Done | #19 |
-| Effect-ification B1 (state maps) | Done | #20 |
-| Effect-ification B2-B10g + Instance deletion | Done | #21 |
-| Bug fixes B47-B52 | Done | #22 |
-| Type safety audit (~236 `any` eliminated) | Done | #22 |
-| Architecture docs (Effect, ACP, Providers) | Done | #22 |
-| Strong Zod schemas (JsonValue, ProviderMeta, ToolInput, ToolMeta) | Done | #22 |
+- [ ] Unit tests for filterEdited (hidden parts stripped, empty messages dropped)
+- [ ] Unit tests for ContextEdit validation (ownership, budget, recency, privileged agents)
+- [ ] TUI dialog tests (9: command, provider, session-rename, stash, status, tag, workspace-list, mcp, cost)
+- [ ] TUI interaction tests (dialog-select keyboard nav, prompt input, command palette)
+
+## Backlog: Features
+
+- [ ] TUI rendering of edit indicators (hidden/replaced/annotated parts)
+- [ ] CAS garbage collection improvements (size limits, age-based cleanup)
+
+---
+
+## Completed (PRs #16-#24)
+
+| Feature | PR |
+|---------|-----|
+| Upstream bug backports (B1-B22) | #16-#18 |
+| Upstream full rebase | #19 |
+| Effect-ification (Instance deleted, 0 ALS fallbacks, 81 TUI tests) | #20-#21 |
+| Bug fixes B47-B52 + type safety (~250 `any` eliminated) + architecture docs | #22 |
+| TUI types + logger types | #23 |
+| Zod v4 migration + 25 Frankencode unit tests + tracking docs cleanup | #24 |
