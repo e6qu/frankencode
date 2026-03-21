@@ -4,17 +4,20 @@ All bugs tracked here. Do not create per-package bug files.
 
 ---
 
-## Open — Security (5)
-
-From upstream security audit. See [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) for full details.
+## Open — Security (1)
 
 | #   | Issue | Sev  | Location | Upstream | Notes |
 | --- | ----- | ---- | -------- | -------- | ----- |
-| S1  | `Filesystem.contains()` symlink bypass | Crit | `util/filesystem.ts` | [#8313](https://github.com/anomalyco/opencode/issues/8313) | Lexical check only, no `realpathSync()` |
-| S2  | `exec()` command injection in github.ts | High | `cli/cmd/github.ts` | [#17350](https://github.com/anomalyco/opencode/issues/17350) | Use `spawn` with arg array |
-| S3  | Untrusted `.opencode/` autoloading (MCP + plugins) | High | `mcp/`, `plugin/` | [#6361](https://github.com/anomalyco/opencode/issues/6361), [#7163](https://github.com/anomalyco/opencode/issues/7163) | No trust prompt |
-| S4  | Server unauthenticated on non-loopback | Med | `server/server.ts` | [#10973](https://github.com/anomalyco/opencode/issues/10973) | Auth skips when no password |
-| S5  | Read tool exposes .env files (ignores .gitignore) | Med | `tool/read.ts` | [#12196](https://github.com/anomalyco/opencode/issues/12196) | No sensitive file deny-list |
+| S3  | Untrusted `.opencode/` autoloading (MCP + plugins) | High | `mcp/`, `plugin/` | [#6361](https://github.com/anomalyco/opencode/issues/6361), [#7163](https://github.com/anomalyco/opencode/issues/7163) | Warning log added; full trust prompt planned |
+
+## Fixed — Security (4)
+
+| #   | Issue | Sev  | Fix |
+| --- | ----- | ---- | --- |
+| S1  | `Filesystem.contains()` symlink bypass | Crit | Added `realpathSync()` resolution before lexical check |
+| S2  | `exec()` command injection in github.ts | High | Replaced `exec()` with `spawn()` + argument array |
+| S4  | Server unauthenticated on non-loopback | Med | Server throws if bound to non-loopback without `OPENCODE_SERVER_PASSWORD` |
+| S5  | Read tool exposes .env files | Med | Sensitive file deny-list; `always: []` for sensitive files forces permission prompt |
 
 ## Open — Bugs (0)
 

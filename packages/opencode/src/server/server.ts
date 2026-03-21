@@ -605,6 +605,15 @@ export namespace Server {
     mdnsDomain?: string
     cors?: string[]
   }) {
+    // Security: require password when binding to non-loopback addresses
+    const loopback = ["127.0.0.1", "localhost", "::1"]
+    if (!loopback.includes(opts.hostname) && !Flag.OPENCODE_SERVER_PASSWORD) {
+      throw new Error(
+        `OPENCODE_SERVER_PASSWORD is required when binding to non-loopback address "${opts.hostname}". ` +
+          `Set OPENCODE_SERVER_PASSWORD or use --hostname 127.0.0.1`,
+      )
+    }
+
     url = new URL(`http://${opts.hostname}:${opts.port}`)
     const app = createApp(opts)
     const args = {

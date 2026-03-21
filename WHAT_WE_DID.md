@@ -15,3 +15,4 @@ CAS, edit graph, context editing (6 ops), side threads, objective tracker, class
 - **#23:** TUI types fixed, logger types strengthened (unknown → string | Error)
 - **#24:** Zod v4 migration (zodToJsonSchema → z.toJSONSchema), 25 Frankencode unit tests, tracking docs cleanup
 - **#25:** Upstream catalogue (162 commits + ~195 PRs), security audit (2 CVEs, 5 issues), 6-phase roadmap
+- **#26:** Phase 1 security fixes: S1 symlink bypass, S2 exec→spawn, S4 server auth, S5 sensitive deny-list, S3 warning (13 tests)

@@ -11,6 +11,31 @@ import { assertExternalDirectory } from "./external-directory"
 import { InstructionPrompt } from "../session/instruction"
 import { Filesystem } from "../util/filesystem"
 
+// Deny-list of sensitive file patterns that should never be read by the agent.
+// Prevents accidental exposure of credentials, API keys, and private keys.
+const SENSITIVE_PATTERNS = [
+  /^\.env(\..*)?$/, // .env, .env.local, .env.production
+  /secrets?\.json$/i, // secrets.json
+  /credentials?\.json$/i, // credentials.json
+  /^\.netrc$/, // .netrc (HTTP auth)
+  /private[_-]?key/i, // private_key.pem, private-key.json
+  /\.pem$/, // TLS/SSH keys
+  /\.p12$/, // PKCS#12 certificates
+  /\.pfx$/, // PKCS#12 certificates
+  /\.key$/, // private keys
+  /\.dockercfg$/, // Docker credentials
+  /^config\.json$/, // Docker/cloud config with tokens
+]
+
+const SENSITIVE_DIRS = [".aws", ".ssh", ".gnupg", ".kube"]
+
+function isSensitive(filepath: string): boolean {
+  const base = path.basename(filepath)
+  const dir = path.basename(path.dirname(filepath))
+  if (SENSITIVE_DIRS.includes(dir)) return true
+  return SENSITIVE_PATTERNS.some((p) => p.test(base))
+}
+
 const DEFAULT_READ_LIMIT = 2000
 const MAX_LINE_LENGTH = 2000
 const MAX_LINE_SUFFIX = `... (line truncated to ${MAX_LINE_LENGTH} chars)`
@@ -41,10 +66,15 @@ export const ReadTool = Tool.define("read", {
       kind: stat?.isDirectory() ? "directory" : "file",
     })
 
+    // Sensitive files require explicit user permission — never auto-approve.
+    // The `always` list is empty for sensitive files, forcing the permission
+    // system to ask the user every time rather than auto-approving.
+    const sensitive = !stat?.isDirectory() && isSensitive(filepath)
+
     await ctx.ask({
       permission: "read",
       patterns: [filepath],
-      always: ["*"],
+      always: sensitive ? [] : ["*"],
       metadata: {},
     })
 

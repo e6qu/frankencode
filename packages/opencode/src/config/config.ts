@@ -165,6 +165,14 @@ export namespace Config {
 
     for (const dir of unique(directories)) {
       if (dir.endsWith(".opencode") || dir === Flag.OPENCODE_CONFIG_DIR) {
+        // Security: warn when loading workspace config — may contain untrusted plugins/MCP servers.
+        // A full trust prompt (VS Code model) is planned but not yet implemented.
+        if (dir.endsWith(".opencode") && dir !== Flag.OPENCODE_CONFIG_DIR) {
+          log.warn("loading workspace config", {
+            dir,
+            note: "may contain untrusted plugins/MCP — review .opencode/ contents",
+          })
+        }
         for (const file of ["opencode.jsonc", "opencode.json"]) {
           log.debug(`loading config from ${path.join(dir, file)}`)
           result = mergeConfigConcatArrays(result, await loadFile(path.join(dir, file)))
