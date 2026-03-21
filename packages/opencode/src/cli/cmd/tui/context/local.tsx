@@ -139,7 +139,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       }
 
       Filesystem.readJson(filePath)
-        .then((x: any) => {
+        .then((x: { recent?: unknown; favorite?: unknown; variant?: unknown }) => {
           if (Array.isArray(x.recent)) setModelStore("recent", x.recent)
           if (Array.isArray(x.favorite)) setModelStore("favorite", x.favorite)
           if (typeof x.variant === "object" && x.variant !== null) setModelStore("variant", x.variant)

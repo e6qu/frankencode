@@ -55,7 +55,7 @@ export namespace Bus {
             pending.push(result)
           }
         } catch (e) {
-          log.warn("subscriber threw", { type: def.type, error: e })
+          log.warn("subscriber threw", { type: def.type, error: e instanceof Error ? e : String(e) })
         }
       }
     }
@@ -66,7 +66,10 @@ export namespace Bus {
     const results = await Promise.allSettled(pending)
     const rejected = results.filter((r): r is PromiseRejectedResult => r.status === "rejected")
     if (rejected.length > 0) {
-      log.warn("subscriber errors", { count: rejected.length, errors: rejected.map((r) => r.reason) })
+      log.warn("subscriber errors", {
+        count: rejected.length,
+        errors: rejected.map((r) => (r.reason instanceof Error ? r.reason.message : String(r.reason))).join("; "),
+      })
     }
   }
 

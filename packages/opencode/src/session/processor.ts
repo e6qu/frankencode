@@ -347,7 +347,7 @@ export namespace SessionProcessor {
 
                 default:
                   log.info("unhandled", {
-                    ...value,
+                    type: value.type,
                   })
                   continue
               }
@@ -355,8 +355,8 @@ export namespace SessionProcessor {
             }
           } catch (e) {
             log.error("process", {
-              error: e,
-              stack: e instanceof Error ? e.stack : undefined,
+              error: e instanceof Error ? e : String(e),
+              stack: e instanceof Error ? (e.stack ?? null) : null,
             })
             const error = MessageV2.fromError(e, { providerID: input.model.providerID })
             if (MessageV2.ContextOverflowError.isInstance(error)) {

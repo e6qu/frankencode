@@ -39,7 +39,7 @@ const watcher = lazy((): typeof import("@parcel/watcher") | undefined => {
     )
     return createWrapper(binding) as typeof import("@parcel/watcher")
   } catch (error) {
-    log.error("failed to load watcher binding", { error })
+    log.error("failed to load watcher binding", { error: error instanceof Error ? error : String(error) })
     return
   }
 })

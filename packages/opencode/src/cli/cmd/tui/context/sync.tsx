@@ -430,8 +430,8 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         .catch(async (e) => {
           Log.Default.error("tui bootstrap failed", {
             error: e instanceof Error ? e.message : String(e),
-            name: e instanceof Error ? e.name : undefined,
-            stack: e instanceof Error ? e.stack : undefined,
+            name: e instanceof Error ? e.name : null,
+            stack: e instanceof Error ? e.stack ?? null : null,
           })
           await exit(e)
         })

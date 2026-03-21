@@ -896,7 +896,10 @@ export namespace MCP {
     } catch (error) {
       // Browser opening failed (e.g., in remote/headless sessions like SSH, devcontainers)
       // Emit event so CLI can display the URL for manual opening
-      log.warn("failed to open browser, user must open URL manually", { mcpName, error })
+      log.warn("failed to open browser, user must open URL manually", {
+        mcpName,
+        error: error instanceof Error ? error : String(error),
+      })
       Bus.publish(BrowserOpenFailed, { mcpName, url: authorizationUrl }, InstanceALS.directory)
     }
 
@@ -952,7 +955,7 @@ export namespace MCP {
       const statusRecord = result.status as Record<string, Status>
       return statusRecord[mcpName] ?? { status: "failed", error: "Unknown error after auth" }
     } catch (error) {
-      log.error("failed to finish oauth", { mcpName, error })
+      log.error("failed to finish oauth", { mcpName, error: error instanceof Error ? error : String(error) })
       return {
         status: "failed",
         error: error instanceof Error ? error.message : String(error),

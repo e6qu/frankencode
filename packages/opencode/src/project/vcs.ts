@@ -54,7 +54,7 @@ export class VcsService extends ServiceMap.Service<VcsService, VcsService.Servic
         }
 
         current = yield* Effect.promise(() => currentBranch())
-        log.info("initialized", { branch: current })
+        log.info("initialized", { branch: current ?? null })
 
         const directory = instance.directory
         const unsubscribe = Bus.subscribe(
@@ -63,7 +63,7 @@ export class VcsService extends ServiceMap.Service<VcsService, VcsService.Servic
             if (!evt.properties.file.endsWith("HEAD")) return
             const next = await currentBranch()
             if (next !== current) {
-              log.info("branch changed", { from: current, to: next })
+              log.info("branch changed", { from: current ?? null, to: next ?? null })
               current = next
               Bus.publish(Vcs.Event.BranchUpdated, { branch: next }, directory)
             }
