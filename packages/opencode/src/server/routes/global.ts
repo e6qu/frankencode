@@ -77,13 +77,33 @@ export const GlobalRoutes = lazy(() =>
               },
             }),
           })
-          async function handler(event: {
+          // Queue events to prevent backpressure when they arrive faster than
+          // the SSE stream can flush (upstream #18259 by James Long)
+          const queue: Array<{
+            directory?: string
+            payload: { type: string; properties: Record<string, string | number | boolean | null | object> }
+          }> = []
+          let flushing = false
+          async function flush() {
+            if (flushing) return
+            flushing = true
+            while (queue.length > 0) {
+              const event = queue.shift()!
+              try {
+                await stream.writeSSE({ data: JSON.stringify(event) })
+              } catch {
+                // Client disconnected — stop flushing
+                break
+              }
+            }
+            flushing = false
+          }
+          function handler(event: {
             directory?: string
             payload: { type: string; properties: Record<string, string | number | boolean | null | object> }
           }) {
-            await stream.writeSSE({
-              data: JSON.stringify(event),
-            })
+            queue.push(event)
+            flush()
           }
           GlobalBus.on("event", handler)
 

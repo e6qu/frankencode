@@ -1091,7 +1091,8 @@ export namespace MessageV2 {
           { cause: e },
         ).toObject()
       case e instanceof Error:
-        return new NamedError.Unknown({ message: e.toString() }, { cause: e }).toObject()
+        // Use e.message instead of e.toString() to preserve tagged error messages (upstream #18165 by Kit Langton)
+        return new NamedError.Unknown({ message: e.message }, { cause: e }).toObject()
       default:
         try {
           const parsed = ProviderError.parseStreamError(e)

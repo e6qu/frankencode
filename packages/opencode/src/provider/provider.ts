@@ -50,7 +50,8 @@ import { Installation } from "../installation"
 import { ModelID, ProviderID } from "./schema"
 import { JsonValue } from "@/util/json"
 
-const DEFAULT_CHUNK_TIMEOUT = 300_000
+// Chunk timeout disabled by default — prevents false timeouts on slow providers
+// (upstream #18264 by James Long). Enable via provider config chunkTimeout option.
 
 // Provider SDK layer: each AI SDK provider (OpenAI, Anthropic, Google, etc.) returns a unique type
 // with different methods (.responses, .chat, .languageModel). The BUNDLED_PROVIDERS dispatch table,
@@ -1187,7 +1188,7 @@ export namespace Provider {
       if (existing) return existing
 
       const customFetch = options["fetch"] as unknown as typeof globalThis.fetch | undefined
-      const chunkTimeout = (options["chunkTimeout"] as number) || DEFAULT_CHUNK_TIMEOUT
+      const chunkTimeout = options["chunkTimeout"] as number | undefined
       delete options["chunkTimeout"]
 
       // @ts-expect-error fetch function stored in JSON options object
@@ -1230,7 +1231,7 @@ export namespace Provider {
           timeout: false,
         })
 
-        if (!chunkAbortCtl) return res
+        if (!chunkAbortCtl || !chunkTimeout) return res
         return wrapSSE(res, chunkTimeout, chunkAbortCtl)
       }
 
