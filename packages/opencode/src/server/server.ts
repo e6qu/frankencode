@@ -47,7 +47,7 @@ import { PermissionRoutes } from "./routes/permission"
 import { GlobalRoutes } from "./routes/global"
 import { MDNS } from "./mdns"
 import { lazy } from "@/util/lazy"
-import { MessageV2 } from "@/session/message-v2"
+import { JsonValue } from "@/util/json"
 
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -388,7 +388,7 @@ export namespace Server {
             level: z.enum(["debug", "info", "error", "warn"]).meta({ description: "Log level" }),
             message: z.string().meta({ description: "Log message" }),
             extra: z
-              .record(z.string(), MessageV2.JsonValue)
+              .record(z.string(), JsonValue)
               .optional()
               .meta({ description: "Additional metadata for the log entry" }),
           }),

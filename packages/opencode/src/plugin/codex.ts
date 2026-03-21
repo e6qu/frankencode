@@ -6,7 +6,7 @@ import os from "os"
 import { ProviderTransform } from "@/provider/transform"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { setTimeout as sleep } from "node:timers/promises"
-import { MessageV2 } from "@/session/message-v2"
+import { type JsonValueType } from "@/util/json"
 
 const log = Log.create({ service: "plugin.codex" })
 
@@ -400,7 +400,7 @@ export async function CodexAuthPlugin(input: PluginInput): Promise<Hooks> {
             options: {},
             headers: {},
             release_date: "2026-02-05",
-            variants: {} as Record<string, Record<string, MessageV2.JsonValueType>>,
+            variants: {} as Record<string, Record<string, JsonValueType>>,
             family: "gpt-codex",
           }
           model.variants = ProviderTransform.variants(model)

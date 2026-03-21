@@ -13,6 +13,7 @@ import { iife } from "@/util/iife"
 import { type SystemError } from "bun"
 import type { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "@/provider/schema"
+import { type JsonValueType as _JsonValueType, JsonValue as _JsonValue } from "@/util/json"
 
 export namespace MessageV2 {
   export function isMedia(mime: string) {
@@ -53,15 +54,12 @@ export namespace MessageV2 {
   )
 
   // ── Strong schema types for JSON-serializable data ──────────────────────
-  // Used instead of z.any() throughout message schemas. SDK boundary crossings
-  // (AI SDK ProviderMetadata, UIMessage parts) use explicit casts.
+  // JsonValue defined in util/json.ts to avoid circular imports when used in
+  // module-level Zod schemas. Re-exported here for backward compatibility.
+  // SDK boundary crossings (AI SDK ProviderMetadata, UIMessage parts) use explicit casts.
 
-  export type JsonValueType = string | number | boolean | null | { [key: string]: JsonValueType } | JsonValueType[]
-
-  /** Recursive JSON-serializable value per JSON spec: primitives, objects, arrays. No undefined (not valid JSON). */
-  export const JsonValue: z.ZodType<JsonValueType> = z.lazy(() =>
-    z.union([z.string(), z.number(), z.boolean(), z.null(), z.record(z.string(), JsonValue), z.array(JsonValue)]),
-  )
+  export type JsonValueType = _JsonValueType
+  export const JsonValue = _JsonValue
 
   /** Provider metadata: keyed by provider name, each containing provider-specific key-value pairs */
   export const ProviderMeta = z.record(z.string(), z.record(z.string(), JsonValue))

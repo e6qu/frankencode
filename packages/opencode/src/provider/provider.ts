@@ -48,7 +48,7 @@ import { GoogleAuth } from "google-auth-library"
 import { ProviderTransform } from "./transform"
 import { Installation } from "../installation"
 import { ModelID, ProviderID } from "./schema"
-import { MessageV2 } from "@/session/message-v2"
+import { JsonValue } from "@/util/json"
 
 const DEFAULT_CHUNK_TIMEOUT = 300_000
 
@@ -767,10 +767,10 @@ export namespace Provider {
         output: z.number(),
       }),
       status: z.enum(["alpha", "beta", "deprecated", "active"]),
-      options: z.record(z.string(), MessageV2.JsonValue),
+      options: z.record(z.string(), JsonValue),
       headers: z.record(z.string(), z.string()),
       release_date: z.string(),
-      variants: z.record(z.string(), z.record(z.string(), MessageV2.JsonValue)).optional(),
+      variants: z.record(z.string(), z.record(z.string(), JsonValue)).optional(),
     })
     .meta({
       ref: "Model",
@@ -784,7 +784,7 @@ export namespace Provider {
       source: z.enum(["env", "config", "custom", "api"]),
       env: z.string().array(),
       key: z.string().optional(),
-      options: z.record(z.string(), MessageV2.JsonValue),
+      options: z.record(z.string(), JsonValue),
       models: z.record(z.string(), Model),
     })
     .meta({

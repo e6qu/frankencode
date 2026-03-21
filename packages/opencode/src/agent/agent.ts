@@ -26,7 +26,7 @@ import { Global } from "@/global"
 import path from "path"
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
-import { MessageV2 } from "@/session/message-v2"
+import { JsonValue } from "@/util/json"
 
 export const agentStates = new Map<string, Promise<Record<string, Agent.Info>>>()
 registerDisposer(async (directory) => {
@@ -53,7 +53,7 @@ export namespace Agent {
         .optional(),
       variant: z.string().optional(),
       prompt: z.string().optional(),
-      options: z.record(z.string(), MessageV2.JsonValue),
+      options: z.record(z.string(), JsonValue),
       steps: z.number().int().positive().optional(),
     })
     .meta({

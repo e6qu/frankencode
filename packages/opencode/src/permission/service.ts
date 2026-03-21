@@ -11,7 +11,7 @@ import { Deferred, Effect, Layer, Schema, ServiceMap } from "effect"
 import z from "zod"
 import { PermissionID } from "./schema"
 import { InstanceALS } from "@/project/instance-als"
-import { MessageV2 } from "@/session/message-v2"
+import { JsonValue } from "@/util/json"
 
 const log = Log.create({ service: "permission" })
 
@@ -42,7 +42,7 @@ export const Request = z
     sessionID: SessionID.zod,
     permission: z.string(),
     patterns: z.string().array(),
-    metadata: z.record(z.string(), MessageV2.JsonValue),
+    metadata: z.record(z.string(), JsonValue),
     always: z.string().array(),
     tool: z
       .object({

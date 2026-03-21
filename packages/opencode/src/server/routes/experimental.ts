@@ -12,7 +12,7 @@ import { zodToJsonSchema } from "zod-to-json-schema"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
 import { WorkspaceRoutes } from "./workspace"
-import { MessageV2 } from "@/session/message-v2"
+import { JsonValue } from "@/util/json"
 import { SideThread } from "@/session/side-thread"
 
 export const ExperimentalRoutes = lazy(() =>
@@ -59,7 +59,7 @@ export const ExperimentalRoutes = lazy(() =>
                         .object({
                           id: z.string(),
                           description: z.string(),
-                          parameters: MessageV2.JsonValue,
+                          parameters: JsonValue,
                         })
                         .meta({ ref: "ToolListItem" }),
                     )

@@ -6,7 +6,7 @@ import { Installation } from "../installation"
 import { Flag } from "../flag/flag"
 import { lazy } from "@/util/lazy"
 import { Filesystem } from "../util/filesystem"
-import { MessageV2 } from "@/session/message-v2"
+import { JsonValue } from "@/util/json"
 
 // Try to import bundled snapshot (generated at build time)
 // Falls back to undefined in dev mode when snapshot doesn't exist
@@ -64,10 +64,10 @@ export namespace ModelsDev {
       .optional(),
     experimental: z.boolean().optional(),
     status: z.enum(["alpha", "beta", "deprecated"]).optional(),
-    options: z.record(z.string(), MessageV2.JsonValue),
+    options: z.record(z.string(), JsonValue),
     headers: z.record(z.string(), z.string()).optional(),
     provider: z.object({ npm: z.string().optional(), api: z.string().optional() }).optional(),
-    variants: z.record(z.string(), z.record(z.string(), MessageV2.JsonValue)).optional(),
+    variants: z.record(z.string(), z.record(z.string(), JsonValue)).optional(),
   })
   export type Model = z.infer<typeof Model>
 

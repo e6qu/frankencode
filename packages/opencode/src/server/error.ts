@@ -1,7 +1,7 @@
 import { resolver } from "hono-openapi"
 import z from "zod"
 import { NotFoundError } from "../storage/db"
-import { MessageV2 } from "@/session/message-v2"
+import { JsonValue } from "@/util/json"
 
 export const ERRORS = {
   400: {
@@ -11,8 +11,8 @@ export const ERRORS = {
         schema: resolver(
           z
             .object({
-              data: MessageV2.JsonValue,
-              errors: z.array(z.record(z.string(), MessageV2.JsonValue)),
+              data: JsonValue,
+              errors: z.array(z.record(z.string(), JsonValue)),
               success: z.literal(false),
             })
             .meta({

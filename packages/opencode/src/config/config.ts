@@ -40,7 +40,7 @@ import { ConfigPaths } from "./paths"
 import { Filesystem } from "@/util/filesystem"
 import { Process } from "@/util/process"
 import { Lock } from "@/util/lock"
-import { MessageV2 } from "@/session/message-v2"
+import { JsonValue } from "@/util/json"
 
 type ConfigStateResult = { config: Config.Info; directories: string[]; deps: Promise<void>[] }
 export const configStates = new Map<string, Promise<ConfigStateResult>>()
@@ -763,7 +763,7 @@ export namespace Config {
         .boolean()
         .optional()
         .describe("Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)"),
-      options: z.record(z.string(), MessageV2.JsonValue).optional(),
+      options: z.record(z.string(), JsonValue).optional(),
       color: z
         .union([
           z.string().regex(/^#[0-9a-fA-F]{6}$/, "Invalid hex color format"),
@@ -780,7 +780,7 @@ export namespace Config {
       maxSteps: z.number().int().positive().optional().describe("@deprecated Use 'steps' field instead."),
       permission: Permission.optional(),
     })
-    .catchall(MessageV2.JsonValue)
+    .catchall(JsonValue)
     .transform((agent, ctx) => {
       const knownKeys = new Set([
         "name",
@@ -1026,7 +1026,7 @@ export namespace Config {
                   .object({
                     disabled: z.boolean().optional().describe("Disable this variant for the model"),
                   })
-                  .catchall(MessageV2.JsonValue),
+                  .catchall(JsonValue),
               )
               .optional()
               .describe("Variant-specific configuration"),
@@ -1063,7 +1063,7 @@ export namespace Config {
               "Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted.",
             ),
         })
-        .catchall(MessageV2.JsonValue)
+        .catchall(JsonValue)
         .optional(),
     })
     .strict()
@@ -1199,7 +1199,7 @@ export namespace Config {
                 extensions: z.array(z.string()).optional(),
                 disabled: z.boolean().optional(),
                 env: z.record(z.string(), z.string()).optional(),
-                initialization: z.record(z.string(), MessageV2.JsonValue).optional(),
+                initialization: z.record(z.string(), JsonValue).optional(),
               }),
             ]),
           ),

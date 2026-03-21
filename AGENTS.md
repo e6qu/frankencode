@@ -156,7 +156,7 @@ Use `context_history` to navigate the edit DAG:
 
 ## Pre-existing Failures and Bugs
 
-**IMPORTANT:** Pre-existing failures, bugs, and issues MUST be fixed too — always. Do not ignore typecheck errors, lint warnings, unused variables, broken imports, or failing tests just because they existed before your changes. If you encounter a pre-existing issue during your work, fix it as part of your changes. This applies to all types of issues: type errors, dead code, incorrect logic, missing exports, stale references, etc.
+**IMPORTANT:** Pre-existing failures, bugs, and issues MUST be fixed too — always, no exceptions. Do not ignore typecheck errors, lint warnings, unused variables, broken imports, or failing tests just because they existed before your changes. If you encounter a pre-existing issue during your work, fix it as part of your changes. This applies to all types of issues: type errors, dead code, incorrect logic, missing exports, stale references, runtime errors, circular imports, etc. If a pre-existing issue is too complex to fix in a single session, document it in `BUGS.md` with full details so it can be tracked and fixed later — but never silently skip it.
 
 ## Git Workflow
 

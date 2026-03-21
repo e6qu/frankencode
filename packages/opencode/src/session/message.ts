@@ -3,6 +3,7 @@ import { SessionID } from "./schema"
 import { ModelID, ProviderID } from "../provider/schema"
 import { NamedError } from "@opencode-ai/util/error"
 import { MessageV2 } from "./message-v2"
+import { JsonValue } from "@/util/json"
 
 export namespace Message {
   export const OutputLengthError = NamedError.create("MessageOutputLengthError", z.object({}))
@@ -157,7 +158,7 @@ export namespace Message {
                   end: z.number(),
                 }),
               })
-              .catchall(MessageV2.JsonValue),
+              .catchall(JsonValue),
           ),
           assistant: z
             .object({
