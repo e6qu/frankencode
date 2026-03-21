@@ -84,7 +84,7 @@ export namespace ShareNext {
         await sync(evt.properties.info.sessionID, [
           {
             type: "message",
-            data: evt.properties.info,
+            data: evt.properties.info as SDK.Message,
           },
         ])
         if (evt.properties.info.role === "user") {
@@ -93,7 +93,7 @@ export namespace ShareNext {
               type: "model",
               data: [
                 await Provider.getModel(evt.properties.info.model.providerID, evt.properties.info.model.modelID).then(
-                  (m) => m,
+                  (m) => m as SDK.Model,
                 ),
               ],
             },
@@ -108,7 +108,7 @@ export namespace ShareNext {
         await sync(evt.properties.part.sessionID, [
           {
             type: "part",
-            data: evt.properties.part,
+            data: evt.properties.part as SDK.Part,
           },
         ])
       },
@@ -289,16 +289,16 @@ export namespace ShareNext {
       },
       ...messages.map((x) => ({
         type: "message" as const,
-        data: x.info,
+        data: x.info as SDK.Message,
       })),
-      ...messages.flatMap((x) => x.parts.map((y) => ({ type: "part" as const, data: y }))),
+      ...messages.flatMap((x) => x.parts.map((y) => ({ type: "part" as const, data: y as SDK.Part }))),
       {
         type: "session_diff",
-        data: diffs,
+        data: diffs as SDK.FileDiff[],
       },
       {
         type: "model",
-        data: models,
+        data: models as SDK.Model[],
       },
     ])
   }
