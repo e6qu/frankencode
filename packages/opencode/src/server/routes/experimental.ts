@@ -8,7 +8,6 @@ import { InstanceALS } from "../../project/instance-als"
 import { Project } from "../../project/project"
 import { MCP } from "../../mcp"
 import { Session } from "../../session"
-import { zodToJsonSchema } from "zod-to-json-schema"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
 import { WorkspaceRoutes } from "./workspace"
@@ -85,10 +84,8 @@ export const ExperimentalRoutes = lazy(() =>
           tools.map((t) => ({
             id: t.id,
             description: t.description,
-            // Handle both Zod schemas and plain JSON schemas
-            // SDK boundary: zodToJsonSchema expects Zod v3 ZodType, but parameters may be Zod v4 or plain JSON schema
-            // biome-ignore lint: Zod v3/v4 type incompatibility at library boundary
-            parameters: (t.parameters as any)?._def ? zodToJsonSchema(t.parameters as any) : t.parameters,
+            // Convert Zod v4 schemas to JSON Schema; pass through plain JSON schemas unchanged
+            parameters: t.parameters instanceof z.ZodType ? z.toJSONSchema(t.parameters) : t.parameters,
           })),
         )
       },
