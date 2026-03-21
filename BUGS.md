@@ -4,7 +4,19 @@ All bugs tracked here. Do not create per-package bug files.
 
 ---
 
-## Open (0)
+## Open — Security (5)
+
+From upstream security audit. See [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) for full details.
+
+| #   | Issue | Sev  | Location | Upstream | Notes |
+| --- | ----- | ---- | -------- | -------- | ----- |
+| S1  | `Filesystem.contains()` symlink bypass | Crit | `util/filesystem.ts` | [#8313](https://github.com/anomalyco/opencode/issues/8313) | Lexical check only, no `realpathSync()` |
+| S2  | `exec()` command injection in github.ts | High | `cli/cmd/github.ts` | [#17350](https://github.com/anomalyco/opencode/issues/17350) | Use `spawn` with arg array |
+| S3  | Untrusted `.opencode/` autoloading (MCP + plugins) | High | `mcp/`, `plugin/` | [#6361](https://github.com/anomalyco/opencode/issues/6361), [#7163](https://github.com/anomalyco/opencode/issues/7163) | No trust prompt |
+| S4  | Server unauthenticated on non-loopback | Med | `server/server.ts` | [#10973](https://github.com/anomalyco/opencode/issues/10973) | Auth skips when no password |
+| S5  | Read tool exposes .env files (ignores .gitignore) | Med | `tool/read.ts` | [#12196](https://github.com/anomalyco/opencode/issues/12196) | No sensitive file deny-list |
+
+## Open — Bugs (0)
 
 _No open bugs._
 

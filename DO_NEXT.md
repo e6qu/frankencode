@@ -1,29 +1,23 @@
 # Frankencode — Do Next
 
-## Priority 1: Zod v3 → v4 Migration
+Follow the phases in [PLAN.md](PLAN.md). Security first.
 
-Single site: `server/routes/experimental.ts:91` uses `zodToJsonSchema(... as any)`. Replace `zod-to-json-schema` with Zod v4's built-in `z.toJSONSchema()`. Also audit `hono-openapi` resolver/validator calls for v3 compatibility.
+## Immediate: Phase 1 — Security Fixes
 
-See `PLAN.md` for full site list.
+1. Fix S1: `Filesystem.contains()` — add `realpathSync()` in `src/util/filesystem.ts`
+2. Fix S2: `exec()` → `spawn()` in `src/cli/cmd/github.ts`
+3. Fix S3: workspace trust prompt for `.opencode/` MCP and plugins
+4. Fix S4: server auth for non-loopback binding
+5. Fix S5: sensitive file deny-list for read tool
+6. Evaluate upstream security PRs: #10763, #10974, #14581
 
-## Priority 2: Upstream Re-sync
+## Then: Phase 2 — High-Priority Upstream Fixes
 
-Upstream (`anomalyco/opencode`) has diverged since our last rebase. Effect-ification PRs are landing (7+ still open). Strategy: cherry-pick applicable fixes first, then full rebase.
+Cherry-pick 8 commits from vouched contributors. See [PLAN.md](PLAN.md) Phase 2.
 
-High-conflict areas: `session/prompt.ts`, `session/message-v2.ts`, `effect/`, `skill/skill.ts`.
+## See Also
 
-## Backlog: Testing
-
-- [ ] Unit tests for CAS (store, get, dedup)
-- [ ] Unit tests for filterEdited (hidden parts stripped)
-- [ ] Unit tests for EditGraph (commit chain, log walk, checkout)
-- [ ] Unit tests for SideThread CRUD
-- [ ] Unit tests for ContextEdit validation (ownership, budget, recency)
-- [ ] Unit tests for lifecycle sweeper (discardable auto-hide, ephemeral auto-externalize)
-- [ ] TUI dialog tests (9 remaining: command, provider, session-rename, etc.)
-- [ ] TUI interaction tests (dialog-select keyboard nav, prompt input, command palette)
-
-## Backlog: Features
-
-- [ ] TUI rendering of edit indicators (hidden/replaced/annotated parts)
-- [ ] CAS garbage collection improvements (size limits, age-based cleanup)
+- [PLAN.md](PLAN.md) — full 6-phase roadmap
+- [GAP_ANALYSIS.md](GAP_ANALYSIS.md) — current vs target state per phase
+- [BUGS.md](BUGS.md) — security issues S1-S5
+- [UPSTREAM_STATUS.md](UPSTREAM_STATUS.md) — upstream commit/PR catalogue
