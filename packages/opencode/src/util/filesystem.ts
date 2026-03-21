@@ -149,7 +149,14 @@ export namespace Filesystem {
   }
 
   export function contains(parent: string, child: string) {
-    return !relative(parent, child).startsWith("..")
+    try {
+      // Resolve symlinks to prevent escaping the project directory via symlink chains
+      const resolved = relative(realpathSync(parent), realpathSync(child))
+      return !resolved.startsWith("..")
+    } catch {
+      // File may not exist yet (write tool creates new files) — fall back to lexical check
+      return !relative(pathResolve(parent), pathResolve(child)).startsWith("..")
+    }
   }
 
   export async function findUp(target: string, start: string, stop?: string) {
