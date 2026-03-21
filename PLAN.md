@@ -197,6 +197,22 @@ These appear as "deletions" in `git diff dev..upstream/dev` because upstream nev
 
 ---
 
+## Future: Zod v3 → v4 Migration
+
+The codebase uses Zod v4 (`zod` package) but some patterns and downstream libraries (`zod-to-json-schema`, `hono-openapi`) expect Zod v3 types. Sites needing conversion:
+
+| File | Pattern | Issue |
+|------|---------|-------|
+| `server/routes/experimental.ts:89` | `zodToJsonSchema(t.parameters as any)` | `zod-to-json-schema` expects Zod v3 `ZodType`, not v4 |
+| `server/routes/*.ts` | `resolver()`, `validator()` from `hono-openapi` | May expect v3 schemas |
+| `util/json.ts` | `JsonValue` uses `z.any()` with cast | `z.lazy()` generates `__schema0` $ref breaking SDK generation |
+| `session/message-v2.ts` | `z.toJSONSchema()` | Uses Zod v4 native JSON Schema generation |
+| `util/effect-zod.ts` | Effect-to-Zod bridge | Converts between Effect Schema and Zod |
+
+**Action:** Audit all `zod-to-json-schema` call sites and `hono-openapi` validators. Either migrate them to Zod v4's built-in `z.toJSONSchema()` or ensure the v3 compatibility layer works. Track in a separate PR.
+
+---
+
 ## Completed Features
 
 | Feature                | Status        |
