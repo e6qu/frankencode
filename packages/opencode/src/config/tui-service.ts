@@ -1,9 +1,11 @@
 import { Effect, Layer, ServiceMap } from "effect"
 import { InstanceALS } from "@/project/instance-als"
+import type z from "zod"
+import type { TuiInfo } from "./tui-schema"
 
 export namespace TuiConfigService {
   export interface Service {
-    readonly get: () => Effect.Effect<any>
+    readonly get: () => Effect.Effect<z.output<typeof TuiInfo>>
   }
 }
 

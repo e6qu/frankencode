@@ -127,3 +127,12 @@ Per-session classification results from `distill_threads`:
 ## Migration
 
 All new tables are created in a single migration: `20260315120000_context_editing/migration.sql`
+
+---
+
+## See Also
+
+- [context-editing.md](context-editing.md) — tools that read/write these tables
+- [agents.md](agents.md) — agents that create side threads and edit graph nodes
+- [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) — all Frankencode vs OpenCode changes
+- [EFFECTIFICATION.md](EFFECTIFICATION.md) — database access via Drizzle ORM and Effect service layers

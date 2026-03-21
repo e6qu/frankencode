@@ -8,16 +8,17 @@ import { AsyncQueue } from "../../util/queue"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
 import { InstanceALS } from "../../project/instance-als"
+import { JsonValue, type JsonValueType } from "@/util/json"
 
 const TuiRequest = z.object({
   path: z.string(),
-  body: z.any(),
+  body: JsonValue,
 })
 
 type TuiRequest = z.infer<typeof TuiRequest>
 
 const request = new AsyncQueue<TuiRequest>()
-const response = new AsyncQueue<any>()
+const response = new AsyncQueue<JsonValueType>()
 
 export async function callTui(ctx: Context) {
   const body = await ctx.req.json()
@@ -68,7 +69,7 @@ const TuiControlRoutes = new Hono()
         },
       },
     }),
-    validator("json", z.any()),
+    validator("json", JsonValue),
     async (c) => {
       const body = c.req.valid("json")
       response.push(body)

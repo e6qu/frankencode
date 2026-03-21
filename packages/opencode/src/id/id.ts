@@ -21,7 +21,9 @@ export namespace Identifier {
 
   const LENGTH = 26
 
-  // State for monotonic ID generation
+  // State for monotonic ID generation.
+  // Note: counter is not atomic — safe in single-threaded Node.js but would need
+  // synchronization (Atomics or mutex) if ID generation ever moves to worker threads.
   let lastTimestamp = 0
   let counter = 0
 

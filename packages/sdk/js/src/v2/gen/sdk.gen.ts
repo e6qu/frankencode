@@ -53,6 +53,7 @@ import type {
   GlobalEventResponses,
   GlobalHealthResponses,
   InstanceDisposeResponses,
+  JsonValue,
   LifecycleMeta,
   LspStatusResponses,
   McpAddErrors,
@@ -3354,7 +3355,7 @@ export class Control extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
-      body?: unknown
+      jsonValue?: JsonValue
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3365,7 +3366,7 @@ export class Control extends HeyApiClient {
           args: [
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
-            { key: "body", map: "body" },
+            { key: "jsonValue", map: "body" },
           ],
         },
       ],
@@ -3903,7 +3904,7 @@ export class App extends HeyApiClient {
       level?: "debug" | "info" | "error" | "warn"
       message?: string
       extra?: {
-        [key: string]: unknown
+        [key: string]: JsonValue
       }
     },
     options?: Options<never, ThrowOnError>,

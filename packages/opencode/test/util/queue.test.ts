@@ -45,11 +45,11 @@ describe("util.queue", () => {
       expect(result).toBeUndefined()
     })
 
-    test("push after close is ignored", async () => {
+    test("push after close throws (B50)", async () => {
       const queue = new AsyncQueue<number>()
       queue.push(1)
       queue.close()
-      queue.push(2)
+      expect(() => queue.push(2)).toThrow("Cannot push to a closed queue")
 
       const first = await queue.next()
       expect(first).toBe(1)

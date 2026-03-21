@@ -17,7 +17,7 @@ export const ThreadListTool = Tool.define("thread_list", {
   async execute(args, ctx) {
     const result = SideThread.list({
       projectID: ctx.projectID,
-      status: args.status as any,
+      status: args.status,
       limit: args.limit,
       offset: args.offset,
     })

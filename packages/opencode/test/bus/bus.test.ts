@@ -47,6 +47,31 @@ describe("bus", () => {
       })
     })
 
+    test("throwing subscriber does not block others (B52)", async () => {
+      await using tmp = await tmpdir()
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const events: number[] = []
+
+          Bus.subscribe(TestEvent, () => {
+            events.push(1)
+          }, Instance.directory)
+          Bus.subscribe(TestEvent, () => {
+            throw new Error("subscriber error")
+          }, Instance.directory)
+          Bus.subscribe(TestEvent, () => {
+            events.push(3)
+          }, Instance.directory)
+
+          // Should not throw, all subscribers should run
+          await Bus.publish(TestEvent, { value: 42 }, Instance.directory)
+          expect(events).toEqual([1, 3])
+        },
+      })
+    })
+
     test("handles unsubscribe with no matching subscription", async () => {
       await using tmp = await tmpdir()
 

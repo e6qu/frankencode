@@ -30,10 +30,6 @@ export namespace Objective {
    * Caches the result so subsequent calls return immediately.
    */
   export async function extract(sessionID: string, messages: MessageV2.WithParts[]): Promise<string | null> {
-    // Check cache first
-    const cached = await get(sessionID)
-    if (cached) return cached
-
     // Find the first user message with text
     for (const msg of messages) {
       if (msg.info.role !== "user") continue

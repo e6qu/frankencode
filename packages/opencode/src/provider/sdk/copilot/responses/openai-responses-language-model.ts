@@ -355,7 +355,7 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV2 {
         details: "flex processing is only available for o3, o4-mini, and gpt-5 models",
       })
       // Remove from args if not supported
-      delete (baseArgs as any).service_tier
+      baseArgs.service_tier = undefined
     }
 
     // Validate priority processing support
@@ -367,7 +367,7 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV2 {
           "priority processing is only available for supported models (gpt-4, gpt-5, gpt-5-mini, o3, o4-mini) and requires Enterprise access. gpt-5-nano is not supported",
       })
       // Remove from args if not supported
-      delete (baseArgs as any).service_tier
+      baseArgs.service_tier = undefined
     }
 
     const {
@@ -1715,6 +1715,7 @@ const openaiResponsesProviderOptionsSchema = z.object({
    */
   maxToolCalls: z.number().nullish(),
 
+  // Upstream OpenAI SDK type — metadata can be any JSON value per OpenAI Responses API
   metadata: z.any().nullish(),
   parallelToolCalls: z.boolean().nullish(),
   previousResponseId: z.string().nullish(),

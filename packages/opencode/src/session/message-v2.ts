@@ -13,6 +13,7 @@ import { iife } from "@/util/iife"
 import { type SystemError } from "bun"
 import type { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "@/provider/schema"
+import { type JsonValueType as _JsonValueType, JsonValue as _JsonValue } from "@/util/json"
 
 export namespace MessageV2 {
   export function isMedia(mime: string) {
@@ -52,6 +53,28 @@ export namespace MessageV2 {
     z.object({ message: z.string(), responseBody: z.string().optional() }),
   )
 
+  // ── Strong schema types for JSON-serializable data ──────────────────────
+  // JsonValue defined in util/json.ts to avoid circular imports when used in
+  // module-level Zod schemas. Re-exported here for backward compatibility.
+  // SDK boundary crossings (AI SDK ProviderMetadata, UIMessage parts) use explicit casts.
+
+  export type JsonValueType = _JsonValueType
+  export const JsonValue = _JsonValue
+
+  /** Provider metadata: keyed by provider name, each containing provider-specific key-value pairs */
+  export const ProviderMeta = z.record(z.string(), z.record(z.string(), JsonValue))
+  export type ProviderMeta = z.infer<typeof ProviderMeta>
+
+  /** Tool input parameters — parsed from Zod-validated tool schemas */
+  export const ToolInput = z.record(z.string(), JsonValue)
+  export type ToolInput = z.infer<typeof ToolInput>
+
+  /** Tool metadata — execution metadata (title, output path, truncated flag, etc.) */
+  export const ToolMeta = z.record(z.string(), JsonValue)
+  export type ToolMeta = z.infer<typeof ToolMeta>
+
+  // ────────────────────────────────────────────────────────────────────────
+
   export const OutputFormatText = z
     .object({
       type: z.literal("text"),
@@ -63,7 +86,7 @@ export namespace MessageV2 {
   export const OutputFormatJsonSchema = z
     .object({
       type: z.literal("json_schema"),
-      schema: z.record(z.string(), z.any()).meta({ ref: "JSONSchema" }),
+      schema: z.record(z.string(), JsonValue).meta({ ref: "JSONSchema" }),
       retryCount: z.number().int().min(0).default(2),
     })
     .meta({
@@ -139,7 +162,7 @@ export namespace MessageV2 {
         end: z.number().optional(),
       })
       .optional(),
-    metadata: z.record(z.string(), z.any()).optional(),
+    metadata: ProviderMeta.optional(),
   }).meta({
     ref: "TextPart",
   })
@@ -148,7 +171,7 @@ export namespace MessageV2 {
   export const ReasoningPart = PartBase.extend({
     type: z.literal("reasoning"),
     text: z.string(),
-    metadata: z.record(z.string(), z.any()).optional(),
+    metadata: ProviderMeta.optional(),
     time: z.object({
       start: z.number(),
       end: z.number().optional(),
@@ -294,7 +317,7 @@ export namespace MessageV2 {
   export const ToolStatePending = z
     .object({
       status: z.literal("pending"),
-      input: z.record(z.string(), z.any()),
+      input: ToolInput,
       raw: z.string(),
     })
     .meta({
@@ -306,9 +329,9 @@ export namespace MessageV2 {
   export const ToolStateRunning = z
     .object({
       status: z.literal("running"),
-      input: z.record(z.string(), z.any()),
+      input: ToolInput,
       title: z.string().optional(),
-      metadata: z.record(z.string(), z.any()).optional(),
+      metadata: ToolMeta.optional(),
       time: z.object({
         start: z.number(),
       }),
@@ -321,10 +344,10 @@ export namespace MessageV2 {
   export const ToolStateCompleted = z
     .object({
       status: z.literal("completed"),
-      input: z.record(z.string(), z.any()),
+      input: ToolInput,
       output: z.string(),
       title: z.string(),
-      metadata: z.record(z.string(), z.any()),
+      metadata: ToolMeta,
       time: z.object({
         start: z.number(),
         end: z.number(),
@@ -340,9 +363,9 @@ export namespace MessageV2 {
   export const ToolStateError = z
     .object({
       status: z.literal("error"),
-      input: z.record(z.string(), z.any()),
+      input: ToolInput,
       error: z.string(),
-      metadata: z.record(z.string(), z.any()).optional(),
+      metadata: ToolMeta.optional(),
       time: z.object({
         start: z.number(),
         end: z.number(),
@@ -364,7 +387,7 @@ export namespace MessageV2 {
     callID: z.string(),
     tool: z.string(),
     state: ToolState,
-    metadata: z.record(z.string(), z.any()).optional(),
+    metadata: ProviderMeta.optional(),
   }).meta({
     ref: "ToolPart",
   })
@@ -468,7 +491,7 @@ export namespace MessageV2 {
         write: z.number(),
       }),
     }),
-    structured: z.any().optional(),
+    structured: JsonValue.optional(),
     variant: z.string().optional(),
     finish: z.string().optional(),
   }).meta({
@@ -721,7 +744,10 @@ export namespace MessageV2 {
             assistantMessage.parts.push({
               type: "text",
               text: part.text,
-              ...(differentModel ? {} : { providerMetadata: part.metadata }),
+              // SDK boundary: ProviderMeta → SharedV2ProviderMetadata
+              ...(differentModel
+                ? {}
+                : { providerMetadata: part.metadata as import("@ai-sdk/provider").SharedV2ProviderMetadata }),
             })
           if (part.type === "step-start")
             assistantMessage.parts.push({
@@ -756,7 +782,10 @@ export namespace MessageV2 {
                 toolCallId: part.callID,
                 input: part.state.input,
                 output,
-                ...(differentModel ? {} : { callProviderMetadata: part.metadata }),
+                // SDK boundary: ProviderMeta → SharedV2ProviderMetadata
+                ...(differentModel
+                  ? {}
+                  : { callProviderMetadata: part.metadata as import("@ai-sdk/provider").SharedV2ProviderMetadata }),
               })
             }
             if (part.state.status === "error")
@@ -766,7 +795,10 @@ export namespace MessageV2 {
                 toolCallId: part.callID,
                 input: part.state.input,
                 errorText: part.state.error,
-                ...(differentModel ? {} : { callProviderMetadata: part.metadata }),
+                // SDK boundary: ProviderMeta → SharedV2ProviderMetadata
+                ...(differentModel
+                  ? {}
+                  : { callProviderMetadata: part.metadata as import("@ai-sdk/provider").SharedV2ProviderMetadata }),
               })
             // Handle pending/running tool calls to prevent dangling tool_use blocks
             // Anthropic/Claude APIs require every tool_use to have a corresponding tool_result
@@ -777,14 +809,20 @@ export namespace MessageV2 {
                 toolCallId: part.callID,
                 input: part.state.input,
                 errorText: "[Tool execution was interrupted]",
-                ...(differentModel ? {} : { callProviderMetadata: part.metadata }),
+                // SDK boundary: ProviderMeta → SharedV2ProviderMetadata
+                ...(differentModel
+                  ? {}
+                  : { callProviderMetadata: part.metadata as import("@ai-sdk/provider").SharedV2ProviderMetadata }),
               })
           }
           if (part.type === "reasoning") {
             assistantMessage.parts.push({
               type: "reasoning",
               text: part.text,
-              ...(differentModel ? {} : { providerMetadata: part.metadata }),
+              // SDK boundary: ProviderMeta → SharedV2ProviderMetadata
+              ...(differentModel
+                ? {}
+                : { providerMetadata: part.metadata as import("@ai-sdk/provider").SharedV2ProviderMetadata }),
             })
           }
         }

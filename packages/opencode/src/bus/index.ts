@@ -5,8 +5,13 @@ import { GlobalBus } from "./global"
 import { Effect, Layer, ServiceMap } from "effect"
 import { InstanceContext } from "../effect/instance-context"
 
-type BusSubscription = (event: any) => void
-const states = new Map<string, { subscriptions: Map<any, BusSubscription[]> }>()
+// Bus callbacks are stored in a heterogeneous map keyed by event type.
+// At the storage level, callbacks for different event definitions coexist
+// in the same array — type narrowing happens at the subscribe() boundary
+// via generics, mirroring Node.js EventEmitter's approach.
+// biome-ignore lint: event emitter pattern requires type erasure at storage level
+type BusCallback = (event: any) => void | Promise<void>
+const states = new Map<string, { subscriptions: Map<string, BusCallback[]> }>()
 
 function state(directory: string) {
   let s = states.get(directory)
@@ -19,7 +24,6 @@ function state(directory: string) {
 
 export namespace Bus {
   const log = Log.create({ service: "bus" })
-  type Subscription = (event: any) => void
 
   export const InstanceDisposed = BusEvent.define(
     "server.instance.disposed",
@@ -41,18 +45,29 @@ export namespace Bus {
     log.info("publishing", {
       type: def.type,
     })
-    const pending = []
+    const pending: Promise<void>[] = []
     for (const key of [def.type, "*"]) {
       const match = state(dir).subscriptions.get(key)
       for (const sub of match ?? []) {
-        pending.push(sub(payload))
+        try {
+          const result = sub(payload)
+          if (result instanceof Promise) {
+            pending.push(result)
+          }
+        } catch (e) {
+          log.warn("subscriber threw", { type: def.type, error: e })
+        }
       }
     }
     GlobalBus.emit("event", {
       directory: dir,
       payload,
     })
-    return Promise.all(pending)
+    const results = await Promise.allSettled(pending)
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === "rejected")
+    if (rejected.length > 0) {
+      log.warn("subscriber errors", { count: rejected.length, errors: rejected.map((r) => r.reason) })
+    }
   }
 
   export function subscribe<Definition extends BusEvent.Definition>(
@@ -60,7 +75,7 @@ export namespace Bus {
     callback: (event: { type: Definition["type"]; properties: z.infer<Definition["properties"]> }) => void,
     directory: string,
   ) {
-    return raw(def.type, callback, directory)
+    return raw(def.type, callback as BusCallback, directory)
   }
 
   export function once<Definition extends BusEvent.Definition>(
@@ -81,11 +96,11 @@ export namespace Bus {
     return unsub
   }
 
-  export function subscribeAll(callback: (event: any) => void, directory: string) {
+  export function subscribeAll(callback: BusCallback, directory: string) {
     return raw("*", callback, directory)
   }
 
-  function raw(type: string, callback: (event: any) => void, directory: string) {
+  function raw(type: string, callback: BusCallback, directory: string) {
     log.info("subscribing", { type })
     const subscriptions = state(directory).subscriptions
     let match = subscriptions.get(type) ?? []

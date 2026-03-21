@@ -24,7 +24,7 @@ export const GlobTool = Tool.define("glob", {
       always: ["*"],
       metadata: {
         pattern: params.pattern,
-        path: params.path,
+        path: params.path ?? null,
       },
     })
 

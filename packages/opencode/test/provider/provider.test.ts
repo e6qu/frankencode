@@ -29,7 +29,7 @@ test("provider loaded from env variable", async () => {
       // Provider should retain its connection source even if custom loaders
       // merge additional options.
       expect(providers["anthropic"].source).toBe("env")
-      expect(providers["anthropic"].options.headers["anthropic-beta"]).toBeDefined()
+      expect((providers["anthropic"].options.headers as Record<string, string>)["anthropic-beta"]).toBeDefined()
     },
   })
 })
@@ -1726,9 +1726,9 @@ test("provider options are deeply merged", async () => {
       const providers = await Provider.list()
       // Custom options should be merged
       expect(providers["anthropic"].options.timeout).toBe(30000)
-      expect(providers["anthropic"].options.headers["X-Custom"]).toBe("custom-value")
+      expect((providers["anthropic"].options.headers as Record<string, string>)["X-Custom"]).toBe("custom-value")
       // anthropic custom loader adds its own headers, they should coexist
-      expect(providers["anthropic"].options.headers["anthropic-beta"]).toBeDefined()
+      expect((providers["anthropic"].options.headers as Record<string, string>)["anthropic-beta"]).toBeDefined()
     },
   })
 })
@@ -1914,7 +1914,7 @@ test("model variants can be customized via config", async () => {
       const providers = await Provider.list()
       const model = providers["anthropic"].models["claude-sonnet-4-20250514"]
       expect(model.variants!["high"]).toBeDefined()
-      expect(model.variants!["high"].thinking.budgetTokens).toBe(20000)
+      expect((model.variants!["high"].thinking as Record<string, number>).budgetTokens).toBe(20000)
     },
   })
 })

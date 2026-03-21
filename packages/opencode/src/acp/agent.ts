@@ -172,7 +172,11 @@ export namespace ACP {
         })
         for await (const event of events.stream) {
           if (this.eventAbort.signal.aborted) return
-          const payload = (event as any)?.payload
+          const payload = (
+            event as {
+              payload?: { type: string; properties: Record<string, string | number | boolean | null | object> }
+            }
+          )?.payload
           if (!payload) continue
           await this.handleEvent(payload as Event).catch((error) => {
             log.error("failed to handle event", { error, type: payload.type })
@@ -202,7 +206,10 @@ export namespace ACP {
                     title: permission.permission,
                     rawInput: permission.metadata,
                     kind: toToolKind(permission.permission),
-                    locations: toLocations(permission.permission, permission.metadata),
+                    locations: toLocations(
+                      permission.permission,
+                      permission.metadata as Record<string, MessageV2.JsonValueType>,
+                    ),
                   },
                   options: this.permissionOptions,
                 })
@@ -296,7 +303,10 @@ export namespace ACP {
                             status: "in_progress",
                             kind: toToolKind(part.tool),
                             title: part.tool,
-                            locations: toLocations(part.tool, part.state.input),
+                            locations: toLocations(
+                              part.tool,
+                              part.state.input as Record<string, MessageV2.JsonValueType>,
+                            ),
                             rawInput: part.state.input,
                           },
                         })
@@ -324,7 +334,7 @@ export namespace ACP {
                       status: "in_progress",
                       kind: toToolKind(part.tool),
                       title: part.tool,
-                      locations: toLocations(part.tool, part.state.input),
+                      locations: toLocations(part.tool, part.state.input as Record<string, MessageV2.JsonValueType>),
                       rawInput: part.state.input,
                       ...(content.length > 0 && { content }),
                     },
@@ -840,7 +850,7 @@ export namespace ACP {
                     status: "in_progress",
                     kind: toToolKind(part.tool),
                     title: part.tool,
-                    locations: toLocations(part.tool, part.state.input),
+                    locations: toLocations(part.tool, part.state.input as Record<string, MessageV2.JsonValueType>),
                     rawInput: part.state.input,
                     ...(runningContent.length > 0 && { content: runningContent }),
                   },
@@ -1154,12 +1164,21 @@ export namespace ACP {
 
       const providers = await this.sdk.config.providers({ directory }).then((x) => x.data!.providers)
       const entries = sortProvidersByName(providers)
-      const availableVariants = modelVariantsFromProviders(entries, model)
+      // z.lazy() causes Provider.Model.variants to infer as Record<string, unknown> — safe to widen
+      const typedEntries = entries as Array<{
+        id: string
+        name: string
+        models: Record<
+          string,
+          { id: string; name: string; variants?: Record<string, Record<string, MessageV2.JsonValueType>> }
+        >
+      }>
+      const availableVariants = modelVariantsFromProviders(typedEntries, model)
       const currentVariant = this.sessionManager.getVariant(sessionId)
       if (currentVariant && !availableVariants.includes(currentVariant)) {
         this.sessionManager.setVariant(sessionId, undefined)
       }
-      const availableModels = buildAvailableModels(entries, { includeVariants: true })
+      const availableModels = buildAvailableModels(typedEntries, { includeVariants: true })
       const modeState = await this.resolveModeState(directory, sessionId)
       const currentModeId = modeState.currentModeId
       const modes = currentModeId
@@ -1260,11 +1279,21 @@ export namespace ACP {
         .providers({ directory: session.cwd }, { throwOnError: true })
         .then((x) => x.data!.providers)
 
-      const selection = parseModelSelection(params.modelId, providers)
+      // z.lazy() causes Provider.Model.variants to infer as Record<string, unknown> — safe cast
+      type TypedProvider = {
+        id: string
+        name: string
+        models: Record<
+          string,
+          { id: string; name: string; variants?: Record<string, Record<string, MessageV2.JsonValueType>> }
+        >
+      }
+      const typed = providers as TypedProvider[]
+      const selection = parseModelSelection(params.modelId, typed)
       this.sessionManager.setModel(session.id, selection.model)
       this.sessionManager.setVariant(session.id, selection.variant)
 
-      const entries = sortProvidersByName(providers)
+      const entries = sortProvidersByName(providers) as TypedProvider[]
       const availableVariants = modelVariantsFromProviders(entries, selection.model)
 
       return {
@@ -1508,20 +1537,20 @@ export namespace ACP {
     }
   }
 
-  function toLocations(toolName: string, input: Record<string, any>): { path: string }[] {
+  function toLocations(toolName: string, input: Record<string, MessageV2.JsonValueType>): { path: string }[] {
     const tool = toolName.toLocaleLowerCase()
     switch (tool) {
       case "read":
       case "edit":
       case "write":
-        return input["filePath"] ? [{ path: input["filePath"] }] : []
+        return input["filePath"] ? [{ path: input["filePath"] as string }] : []
       case "glob":
       case "grep":
-        return input["path"] ? [{ path: input["path"] }] : []
+        return input["path"] ? [{ path: input["path"] as string }] : []
       case "bash":
         return []
       case "list":
-        return input["path"] ? [{ path: input["path"] }] : []
+        return input["path"] ? [{ path: input["path"] as string }] : []
       default:
         return []
     }
@@ -1648,7 +1677,11 @@ export namespace ACP {
   }
 
   function modelVariantsFromProviders(
-    providers: Array<{ id: string; models: Record<string, { variants?: Record<string, any> }> }>,
+    // z.lazy() causes variants to infer as Record<string, unknown> — cast at call sites
+    providers: Array<{
+      id: string
+      models: Record<string, { variants?: Record<string, Record<string, MessageV2.JsonValueType>> }>
+    }>,
     model: { providerID: ProviderID; modelID: ModelID },
   ): string[] {
     const provider = providers.find((entry) => entry.id === model.providerID)
@@ -1659,14 +1692,19 @@ export namespace ACP {
   }
 
   function buildAvailableModels(
-    providers: Array<{ id: string; name: string; models: Record<string, any> }>,
+    providers: Array<{
+      id: string
+      name: string
+      models: Record<
+        string,
+        { id: string; name: string; variants?: Record<string, Record<string, MessageV2.JsonValueType>> }
+      >
+    }>,
     options: { includeVariants?: boolean } = {},
   ): ModelOption[] {
     const includeVariants = options.includeVariants ?? false
     return providers.flatMap((provider) => {
-      const unsorted: Array<{ id: string; name: string; variants?: Record<string, any> }> = Object.values(
-        provider.models,
-      )
+      const unsorted = Object.values(provider.models)
       const models = Provider.sort(unsorted)
       return models.flatMap((model) => {
         const base: ModelOption = {
@@ -1711,7 +1749,11 @@ export namespace ACP {
 
   function parseModelSelection(
     modelId: string,
-    providers: Array<{ id: string; models: Record<string, { variants?: Record<string, any> }> }>,
+    // z.lazy() causes variants to infer as Record<string, unknown> — cast at call sites
+    providers: Array<{
+      id: string
+      models: Record<string, { variants?: Record<string, Record<string, MessageV2.JsonValueType>> }>
+    }>,
   ): { model: { providerID: ProviderID; modelID: ModelID }; variant?: string } {
     const parsed = Provider.parseModel(modelId)
     const provider = providers.find((p) => p.id === parsed.providerID)

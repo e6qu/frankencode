@@ -41,9 +41,9 @@ export interface OpenaiCompatibleProvider {
   responses(modelId: OpenaiCompatibleModelId): LanguageModelV2
   languageModel(modelId: OpenaiCompatibleModelId): LanguageModelV2
 
-  // embeddingModel(modelId: any): EmbeddingModelV2
+  // embeddingModel(modelId: string): EmbeddingModelV2
 
-  // imageModel(modelId: any): ImageModelV2
+  // imageModel(modelId: string): ImageModelV2
 }
 
 /**

@@ -4,6 +4,7 @@ import fs from "fs/promises"
 import z from "zod"
 import { Filesystem } from "../util/filesystem"
 import { SessionID, MessageID, PartID } from "./schema"
+import type { ProjectID } from "../project/schema"
 import { MessageV2 } from "./message-v2"
 import { Log } from "../util/log"
 import { SessionRevert } from "./revert"
@@ -72,7 +73,7 @@ type PromptState = Record<
     abort: AbortController
     callbacks: {
       resolve(input: MessageV2.WithParts): void
-      reject(reason?: any): void
+      reject(reason?: Error): void
     }[]
   }
 >
@@ -423,7 +424,7 @@ export namespace SessionPrompt {
               prompt: task.prompt,
               description: task.description,
               subagent_type: task.agent,
-              command: task.command,
+              ...(task.command ? { command: task.command } : {}),
             },
             time: {
               start: Date.now(),
@@ -461,12 +462,15 @@ export namespace SessionPrompt {
           projectID: _pid,
           containsPath: _cp,
           async metadata(input) {
+            // SDK boundary: Tool.Metadata values are unknown, cast to JsonValueType for our strong schemas
+            const meta = input.metadata as MessageV2.ToolMeta | undefined
             part = (await Session.updatePart({
               ...part,
               type: "tool",
               state: {
                 ...part.state,
-                ...input,
+                ...(input.title ? { title: input.title } : {}),
+                ...(meta ? { metadata: meta } : {}),
               },
             } satisfies MessageV2.ToolPart)) as MessageV2.ToolPart
           },
@@ -755,7 +759,8 @@ export namespace SessionPrompt {
       // If structured output was captured, save it and exit immediately
       // This takes priority because the StructuredOutput tool was called successfully
       if (structuredOutput !== undefined) {
-        processor.message.structured = structuredOutput
+        // SDK boundary: structured output validated by AI SDK against user-provided schema
+        processor.message.structured = structuredOutput as MessageV2.JsonValueType
         processor.message.finish = processor.message.finish ?? "stop"
         await Session.updateMessage(processor.message)
         break
@@ -819,7 +824,7 @@ export namespace SessionPrompt {
     messages: MessageV2.WithParts[]
     directory: string
     worktree: string
-    projectID: string
+    projectID: ProjectID
   }) {
     using _ = log.time("resolveTools")
     const tools: Record<string, AITool> = {}
@@ -829,7 +834,7 @@ export namespace SessionPrompt {
     const _worktree = input.worktree
     const _projectID = input.projectID
 
-    const context = (args: any, options: ToolCallOptions): Tool.Context => ({
+    const context = (args: Record<string, MessageV2.JsonValueType>, options: ToolCallOptions): Tool.Context => ({
       sessionID: input.session.id,
       abort: options.abortSignal!,
       messageID: input.processor.message.id,
@@ -845,7 +850,7 @@ export namespace SessionPrompt {
         if (_worktree === "/") return false
         return Filesystem.contains(_worktree, filepath)
       },
-      metadata: async (val: { title?: string; metadata?: any }) => {
+      metadata: async (val: { title?: string; metadata?: Record<string, MessageV2.JsonValueType> }) => {
         const match = input.processor.partFromToolCall(options.toolCallId)
         if (match && match.state.status === "running") {
           await Session.updatePart({
@@ -878,9 +883,10 @@ export namespace SessionPrompt {
     )) {
       const schema = ProviderTransform.schema(input.model, z.toJSONSchema(item.parameters))
       tools[item.id] = tool({
-        id: item.id as any,
+        // SDK boundary: AI SDK tool() expects specific id/schema types
+        id: item.id as never,
         description: item.description,
-        inputSchema: jsonSchema(schema as any),
+        inputSchema: jsonSchema(schema as Parameters<typeof jsonSchema>[0]),
         async execute(args, options) {
           const ctx = context(args, options)
           await Plugin.trigger(
@@ -1021,16 +1027,17 @@ export namespace SessionPrompt {
 
   /** @internal Exported for testing */
   export function createStructuredOutputTool(input: {
-    schema: Record<string, any>
-    onSuccess: (output: unknown) => void
+    schema: Record<string, MessageV2.JsonValueType>
+    onSuccess: (output: MessageV2.JsonValueType) => void
   }): AITool {
     // Remove $schema property if present (not needed for tool input)
     const { $schema, ...toolSchema } = input.schema
 
     return tool({
-      id: "StructuredOutput" as any,
+      // SDK boundary: AI SDK tool() expects specific id/schema types
+      id: "StructuredOutput" as never,
       description: STRUCTURED_OUTPUT_DESCRIPTION,
-      inputSchema: jsonSchema(toolSchema as any),
+      inputSchema: jsonSchema(toolSchema as Parameters<typeof jsonSchema>[0]),
       async execute(args) {
         // AI SDK validates args against inputSchema before calling execute()
         input.onSuccess(args)

@@ -1,4 +1,5 @@
 import type { Argv } from "yargs"
+import z from "zod"
 import { cmd } from "./cmd"
 import { Session } from "../../session"
 import { bootstrap } from "../bootstrap"
@@ -7,44 +8,38 @@ import { SessionTable } from "../../session/session.sql"
 import { Project } from "../../project/project"
 import { InstanceALS } from "../../project/instance-als"
 
-interface SessionStats {
-  totalSessions: number
-  totalMessages: number
-  totalCost: number
-  totalTokens: {
-    input: number
-    output: number
-    reasoning: number
-    cache: {
-      read: number
-      write: number
-    }
-  }
-  toolUsage: Record<string, number>
-  modelUsage: Record<
-    string,
-    {
-      messages: number
-      tokens: {
-        input: number
-        output: number
-        cache: {
-          read: number
-          write: number
-        }
-      }
-      cost: number
-    }
-  >
-  dateRange: {
-    earliest: number
-    latest: number
-  }
-  days: number
-  costPerDay: number
-  tokensPerSession: number
-  medianTokensPerSession: number
-}
+const TokenCount = z.object({
+  input: z.number(),
+  output: z.number(),
+  reasoning: z.number().optional(),
+  cache: z.object({ read: z.number(), write: z.number() }),
+})
+
+export const SessionStatsSchema = z.object({
+  totalSessions: z.number(),
+  totalMessages: z.number(),
+  totalCost: z.number(),
+  totalTokens: TokenCount,
+  toolUsage: z.record(z.string(), z.number()),
+  modelUsage: z.record(
+    z.string(),
+    z.object({
+      messages: z.number(),
+      tokens: z.object({
+        input: z.number(),
+        output: z.number(),
+        cache: z.object({ read: z.number(), write: z.number() }),
+      }),
+      cost: z.number(),
+    }),
+  ),
+  dateRange: z.object({ earliest: z.number(), latest: z.number() }),
+  days: z.number(),
+  costPerDay: z.number(),
+  tokensPerSession: z.number(),
+  medianTokensPerSession: z.number(),
+})
+type SessionStats = z.infer<typeof SessionStatsSchema>
 
 export const StatsCommand = cmd({
   command: "stats",
@@ -254,7 +249,7 @@ export async function aggregateSessionStats(days?: number, projectFilter?: strin
       stats.totalCost += result.sessionCost
       stats.totalTokens.input += result.sessionTokens.input
       stats.totalTokens.output += result.sessionTokens.output
-      stats.totalTokens.reasoning += result.sessionTokens.reasoning
+      stats.totalTokens.reasoning = (stats.totalTokens.reasoning ?? 0) + (result.sessionTokens.reasoning ?? 0)
       stats.totalTokens.cache.read += result.sessionTokens.cache.read
       stats.totalTokens.cache.write += result.sessionTokens.cache.write
 
@@ -291,7 +286,7 @@ export async function aggregateSessionStats(days?: number, projectFilter?: strin
   const totalTokens =
     stats.totalTokens.input +
     stats.totalTokens.output +
-    stats.totalTokens.reasoning +
+    (stats.totalTokens.reasoning ?? 0) +
     stats.totalTokens.cache.read +
     stats.totalTokens.cache.write
   stats.tokensPerSession = filteredSessions.length > 0 ? totalTokens / filteredSessions.length : 0

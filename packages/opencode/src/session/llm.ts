@@ -1,4 +1,5 @@
 import { Installation } from "@/installation"
+import type { JSONValue } from "@ai-sdk/provider"
 import { Provider } from "@/provider/provider"
 import { Log } from "@/util/log"
 import {
@@ -102,14 +103,9 @@ export namespace LLM {
       : ProviderTransform.options({
           model: input.model,
           sessionID: input.sessionID,
-          providerOptions: provider.options,
+          providerOptions: provider.options as Record<string, Record<string, JSONValue>> | undefined,
         })
-    const options: Record<string, any> = pipe(
-      base,
-      mergeDeep(input.model.options),
-      mergeDeep(input.agent.options),
-      mergeDeep(variant),
-    )
+    const options = pipe(base, mergeDeep(input.model.options), mergeDeep(input.agent.options), mergeDeep(variant))
     if (isCodex) {
       options.instructions = SystemPrompt.instructions()
     }

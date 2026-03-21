@@ -1,5 +1,6 @@
 import z from "zod"
 import { Tool } from "./tool"
+import { MessageV2 } from "@/session/message-v2"
 import { ProviderID, ModelID } from "../provider/schema"
 import DESCRIPTION from "./batch.txt"
 
@@ -70,7 +71,8 @@ export const BatchTool = Tool.define("batch", async () => {
             callID: partID,
             state: {
               status: "running",
-              input: call.parameters,
+              // SDK boundary: AI SDK tool call parameters are Record<string, unknown>
+              input: call.parameters as MessageV2.ToolInput,
               time: {
                 start: callStartTime,
               },
@@ -94,10 +96,12 @@ export const BatchTool = Tool.define("batch", async () => {
             callID: partID,
             state: {
               status: "completed",
-              input: call.parameters,
+              // SDK boundary: AI SDK tool call parameters are Record<string, unknown>
+              input: call.parameters as MessageV2.ToolInput,
               output: result.output,
               title: result.title,
-              metadata: result.metadata,
+              // SDK boundary: Tool.Metadata is Record<string, unknown>
+              metadata: result.metadata as MessageV2.ToolMeta,
               attachments,
               time: {
                 start: callStartTime,
@@ -117,7 +121,8 @@ export const BatchTool = Tool.define("batch", async () => {
             callID: partID,
             state: {
               status: "error",
-              input: call.parameters,
+              // SDK boundary: AI SDK tool call parameters are Record<string, unknown>
+              input: call.parameters as MessageV2.ToolInput,
               error: error instanceof Error ? error.message : String(error),
               time: {
                 start: callStartTime,
@@ -145,7 +150,8 @@ export const BatchTool = Tool.define("batch", async () => {
           callID: partID,
           state: {
             status: "error",
-            input: call.parameters,
+            // SDK boundary: AI SDK tool call parameters are Record<string, unknown>
+            input: call.parameters as MessageV2.ToolInput,
             error: "Maximum of 25 tools allowed in batch",
             time: { start: now, end: now },
           },

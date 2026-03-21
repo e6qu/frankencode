@@ -86,6 +86,9 @@ export namespace Filesystem {
       await mkdir(dir, { recursive: true })
     }
 
+    // Bun's ReadableStream type is structurally incompatible with Node's stream/web.ReadableStream
+    // (Bun adds .values(), .blob(), etc.). Runtime-compatible for fromWeb() — suppress via cast.
+    // biome-ignore lint: Bun/Node ReadableStream type mismatch at boundary
     const nodeStream = stream instanceof ReadableStream ? Readable.fromWeb(stream as any) : stream
     const writeStream = createWriteStream(p)
     await pipeline(nodeStream, writeStream)

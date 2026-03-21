@@ -36,6 +36,9 @@ export const InstanceALS = {
    * restores it when called. Use for callbacks that fire outside the
    * instance async context (native addons, event emitters, timers, etc.).
    */
+  // Generic function binding: any[] args and any return is the standard TS pattern
+  // for preserving arbitrary function signatures through F. Using unknown[] would
+  // break contravariance — callers with specific arg types wouldn't match.
   bind<F extends (...args: any[]) => any>(fn: F): F {
     const ctx = context.use()
     return ((...args: any[]) => context.provide(ctx, () => fn(...args))) as F

@@ -18,46 +18,17 @@ export type EventInstallationUpdateAvailable = {
   }
 }
 
-export type Project = {
-  id: string
-  worktree: string
-  vcs?: "git"
-  name?: string
-  icon?: {
-    url?: string
-    override?: string
-    color?: string
+export type EventServerInstanceDisposed = {
+  type: "server.instance.disposed"
+  properties: {
+    directory: string
   }
-  commands?: {
-    /**
-     * Startup script to run when creating a new workspace (worktree)
-     */
-    start?: string
-  }
-  time: {
-    created: number
-    updated: number
-    initialized?: number
-  }
-  sandboxes: Array<string>
-}
-
-export type EventProjectUpdated = {
-  type: "project.updated"
-  properties: Project
 }
 
 export type EventFileEdited = {
   type: "file.edited"
   properties: {
     file: string
-  }
-}
-
-export type EventServerInstanceDisposed = {
-  type: "server.instance.disposed"
-  properties: {
-    directory: string
   }
 }
 
@@ -69,13 +40,15 @@ export type EventFileWatcherUpdated = {
   }
 }
 
+export type JsonValue = unknown
+
 export type PermissionRequest = {
   id: string
   sessionID: string
   permission: string
   patterns: Array<string>
   metadata: {
-    [key: string]: unknown
+    [key: string]: JsonValue
   }
   always: Array<string>
   tool?: {
@@ -176,6 +149,64 @@ export type EventQuestionRejected = {
   }
 }
 
+export type SessionStatus =
+  | {
+      type: "idle"
+    }
+  | {
+      type: "retry"
+      attempt: number
+      message: string
+      next: number
+    }
+  | {
+      type: "busy"
+    }
+
+export type EventSessionStatus = {
+  type: "session.status"
+  properties: {
+    sessionID: string
+    status: SessionStatus
+  }
+}
+
+export type EventSessionIdle = {
+  type: "session.idle"
+  properties: {
+    sessionID: string
+  }
+}
+
+export type Project = {
+  id: string
+  worktree: string
+  vcs?: "git"
+  name?: string
+  icon?: {
+    url?: string
+    override?: string
+    color?: string
+  }
+  commands?: {
+    /**
+     * Startup script to run when creating a new workspace (worktree)
+     */
+    start?: string
+  }
+  time: {
+    created: number
+    updated: number
+    initialized?: number
+  }
+  sandboxes: Array<string>
+}
+
+export type EventProjectUpdated = {
+  type: "project.updated"
+  properties: Project
+}
+
 export type EventServerConnected = {
   type: "server.connected"
   properties: {
@@ -210,7 +241,7 @@ export type OutputFormatText = {
 }
 
 export type JsonSchema = {
-  [key: string]: unknown
+  [key: string]: JsonValue
 }
 
 export type OutputFormatJsonSchema = {
@@ -354,7 +385,7 @@ export type AssistantMessage = {
       write: number
     }
   }
-  structured?: unknown
+  structured?: JsonValue
   variant?: string
   finish?: string
 }
@@ -411,7 +442,9 @@ export type TextPart = {
     end?: number
   }
   metadata?: {
-    [key: string]: unknown
+    [key: string]: {
+      [key: string]: JsonValue
+    }
   }
 }
 
@@ -441,7 +474,9 @@ export type ReasoningPart = {
   type: "reasoning"
   text: string
   metadata?: {
-    [key: string]: unknown
+    [key: string]: {
+      [key: string]: JsonValue
+    }
   }
   time: {
     start: number
@@ -506,7 +541,7 @@ export type FilePart = {
 export type ToolStatePending = {
   status: "pending"
   input: {
-    [key: string]: unknown
+    [key: string]: JsonValue
   }
   raw: string
 }
@@ -514,11 +549,11 @@ export type ToolStatePending = {
 export type ToolStateRunning = {
   status: "running"
   input: {
-    [key: string]: unknown
+    [key: string]: JsonValue
   }
   title?: string
   metadata?: {
-    [key: string]: unknown
+    [key: string]: JsonValue
   }
   time: {
     start: number
@@ -528,12 +563,12 @@ export type ToolStateRunning = {
 export type ToolStateCompleted = {
   status: "completed"
   input: {
-    [key: string]: unknown
+    [key: string]: JsonValue
   }
   output: string
   title: string
   metadata: {
-    [key: string]: unknown
+    [key: string]: JsonValue
   }
   time: {
     start: number
@@ -546,11 +581,11 @@ export type ToolStateCompleted = {
 export type ToolStateError = {
   status: "error"
   input: {
-    [key: string]: unknown
+    [key: string]: JsonValue
   }
   error: string
   metadata?: {
-    [key: string]: unknown
+    [key: string]: JsonValue
   }
   time: {
     start: number
@@ -571,7 +606,9 @@ export type ToolPart = {
   tool: string
   state: ToolState
   metadata?: {
-    [key: string]: unknown
+    [key: string]: {
+      [key: string]: JsonValue
+    }
   }
 }
 
@@ -706,35 +743,6 @@ export type EventMessagePartRemoved = {
     sessionID: string
     messageID: string
     partID: string
-  }
-}
-
-export type SessionStatus =
-  | {
-      type: "idle"
-    }
-  | {
-      type: "retry"
-      attempt: number
-      message: string
-      next: number
-    }
-  | {
-      type: "busy"
-    }
-
-export type EventSessionStatus = {
-  type: "session.status"
-  properties: {
-    sessionID: string
-    status: SessionStatus
-  }
-}
-
-export type EventSessionIdle = {
-  type: "session.idle"
-  properties: {
-    sessionID: string
   }
 }
 
@@ -1112,9 +1120,8 @@ export type EventWorktreeFailed = {
 export type Event =
   | EventInstallationUpdated
   | EventInstallationUpdateAvailable
-  | EventProjectUpdated
-  | EventFileEdited
   | EventServerInstanceDisposed
+  | EventFileEdited
   | EventFileWatcherUpdated
   | EventPermissionAsked
   | EventPermissionReplied
@@ -1122,6 +1129,9 @@ export type Event =
   | EventQuestionAsked
   | EventQuestionReplied
   | EventQuestionRejected
+  | EventSessionStatus
+  | EventSessionIdle
+  | EventProjectUpdated
   | EventServerConnected
   | EventGlobalDisposed
   | EventLspClientDiagnostics
@@ -1131,8 +1141,6 @@ export type Event =
   | EventMessagePartUpdated
   | EventMessagePartDelta
   | EventMessagePartRemoved
-  | EventSessionStatus
-  | EventSessionIdle
   | EventSessionCompacted
   | EventTodoUpdated
   | EventEditGraphCommitted
@@ -1260,7 +1268,7 @@ export type AgentConfig = {
    */
   hidden?: boolean
   options?: {
-    [key: string]: unknown
+    [key: string]: JsonValue
   }
   /**
    * Hex color code (e.g., #FF5733) or theme color (e.g., primary)
@@ -1276,7 +1284,7 @@ export type AgentConfig = {
   maxSteps?: number
   permission?: PermissionConfig
   [key: string]:
-    | unknown
+    | JsonValue
     | string
     | number
     | {
@@ -1287,7 +1295,7 @@ export type AgentConfig = {
     | "primary"
     | "all"
     | {
-        [key: string]: unknown
+        [key: string]: JsonValue
       }
     | string
     | "primary"
@@ -1347,7 +1355,7 @@ export type ProviderConfig = {
       experimental?: boolean
       status?: "alpha" | "beta" | "deprecated"
       options?: {
-        [key: string]: unknown
+        [key: string]: JsonValue
       }
       headers?: {
         [key: string]: string
@@ -1365,7 +1373,7 @@ export type ProviderConfig = {
            * Disable this variant for the model
            */
           disabled?: boolean
-          [key: string]: unknown | boolean | undefined
+          [key: string]: JsonValue | boolean | undefined
         }
       }
     }
@@ -1391,7 +1399,7 @@ export type ProviderConfig = {
      * Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted.
      */
     chunkTimeout?: number
-    [key: string]: unknown | string | boolean | number | false | number | undefined
+    [key: string]: JsonValue | string | boolean | number | false | number | undefined
   }
 }
 
@@ -1614,7 +1622,7 @@ export type Config = {
                 [key: string]: string
               }
               initialization?: {
-                [key: string]: unknown
+                [key: string]: JsonValue
               }
             }
       }
@@ -1717,9 +1725,9 @@ export type Config = {
 }
 
 export type BadRequestError = {
-  data: unknown
+  data: JsonValue
   errors: Array<{
-    [key: string]: unknown
+    [key: string]: JsonValue
   }>
   success: false
 }
@@ -1811,7 +1819,7 @@ export type Model = {
   }
   status: "alpha" | "beta" | "deprecated" | "active"
   options: {
-    [key: string]: unknown
+    [key: string]: JsonValue
   }
   headers: {
     [key: string]: string
@@ -1819,7 +1827,7 @@ export type Model = {
   release_date: string
   variants?: {
     [key: string]: {
-      [key: string]: unknown
+      [key: string]: JsonValue
     }
   }
 }
@@ -1831,7 +1839,7 @@ export type Provider = {
   env: Array<string>
   key?: string
   options: {
-    [key: string]: unknown
+    [key: string]: JsonValue
   }
   models: {
     [key: string]: Model
@@ -1843,7 +1851,7 @@ export type ToolIds = Array<string>
 export type ToolListItem = {
   id: string
   description: string
-  parameters: unknown
+  parameters: JsonValue
 }
 
 export type ToolList = Array<ToolListItem>
@@ -1941,7 +1949,9 @@ export type TextPartInput = {
     end?: number
   }
   metadata?: {
-    [key: string]: unknown
+    [key: string]: {
+      [key: string]: JsonValue
+    }
   }
 }
 
@@ -2111,7 +2121,7 @@ export type Agent = {
   variant?: string
   prompt?: string
   options: {
-    [key: string]: unknown
+    [key: string]: JsonValue
   }
   steps?: number
 }
@@ -3037,7 +3047,7 @@ export type ContextThreadsResponses = {
    */
   200: {
     projectID: string
-    threads: Array<unknown>
+    threads: Array<SideThread>
     total: number
     hasMore: boolean
   }
@@ -3194,8 +3204,48 @@ export type SessionStatsResponses = {
   /**
    * Usage statistics
    */
-  200: unknown
+  200: {
+    totalSessions: number
+    totalMessages: number
+    totalCost: number
+    totalTokens: {
+      input: number
+      output: number
+      reasoning?: number
+      cache: {
+        read: number
+        write: number
+      }
+    }
+    toolUsage: {
+      [key: string]: number
+    }
+    modelUsage: {
+      [key: string]: {
+        messages: number
+        tokens: {
+          input: number
+          output: number
+          cache: {
+            read: number
+            write: number
+          }
+        }
+        cost: number
+      }
+    }
+    dateRange: {
+      earliest: number
+      latest: number
+    }
+    days: number
+    costPerDay: number
+    tokensPerSession: number
+    medianTokensPerSession: number
+  }
 }
+
+export type SessionStatsResponse = SessionStatsResponses[keyof SessionStatsResponses]
 
 export type SessionDeleteData = {
   body?: never
@@ -4300,7 +4350,7 @@ export type ProviderListResponses = {
           experimental?: boolean
           status?: "alpha" | "beta" | "deprecated"
           options: {
-            [key: string]: unknown
+            [key: string]: JsonValue
           }
           headers?: {
             [key: string]: string
@@ -4311,7 +4361,7 @@ export type ProviderListResponses = {
           }
           variants?: {
             [key: string]: {
-              [key: string]: unknown
+              [key: string]: JsonValue
             }
           }
         }
@@ -5087,14 +5137,14 @@ export type TuiControlNextResponses = {
    */
   200: {
     path: string
-    body: unknown
+    body: JsonValue
   }
 }
 
 export type TuiControlNextResponse = TuiControlNextResponses[keyof TuiControlNextResponses]
 
 export type TuiControlResponseData = {
-  body?: unknown
+  body?: JsonValue
   path?: never
   query?: {
     directory?: string
@@ -5206,7 +5256,7 @@ export type AppLogData = {
      * Additional metadata for the log entry
      */
     extra?: {
-      [key: string]: unknown
+      [key: string]: JsonValue
     }
   }
   path?: never

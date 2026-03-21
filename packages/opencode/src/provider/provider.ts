@@ -4,6 +4,7 @@ import fuzzysort from "fuzzysort"
 import { Config } from "../config/config"
 import { mapValues, mergeDeep, omit, pickBy, sortBy } from "remeda"
 import { NoSuchModelError, type Provider as SDK } from "ai"
+import type { JSONValue } from "@ai-sdk/provider"
 import { Log } from "../util/log"
 import { BunProc } from "../bun"
 import { Hash } from "../util/hash"
@@ -47,18 +48,32 @@ import { GoogleAuth } from "google-auth-library"
 import { ProviderTransform } from "./transform"
 import { Installation } from "../installation"
 import { ModelID, ProviderID } from "./schema"
+import { JsonValue } from "@/util/json"
 
 const DEFAULT_CHUNK_TIMEOUT = 300_000
+
+// Provider SDK layer: each AI SDK provider (OpenAI, Anthropic, Google, etc.) returns a unique type
+// with different methods (.responses, .chat, .languageModel). The BUNDLED_PROVIDERS dispatch table,
+// CustomModelLoader, and getModel() callbacks all receive these heterogeneous SDK instances.
+// Using `any` here is an SDK boundary decision — each provider's type surface is incompatible
+// with others and with the base `Provider` interface.
+// biome-ignore lint: SDK boundary — provider instances are heterogeneous types
+type ProviderSDK = any
 
 type ProviderStateResult = {
   models: Map<string, LanguageModelV2>
   providers: { [providerID: string]: Provider.Info }
-  sdk: Map<string, SDK>
+  sdk: Map<string, ProviderSDK>
   modelLoaders: {
-    [providerID: string]: (sdk: any, modelID: string, options?: Record<string, any>) => Promise<any>
+    // biome-ignore lint: SDK boundary — each provider's SDK type is unique
+    [providerID: string]: (
+      sdk: ProviderSDK,
+      modelID: string,
+      options?: Record<string, JSONValue>,
+    ) => Promise<LanguageModelV2>
   }
   varsLoaders: {
-    [providerID: string]: (options: Record<string, any>) => Record<string, string>
+    [providerID: string]: (options: Record<string, JSONValue>) => Record<string, string>
   }
 }
 export const providerStates = new Map<string, Promise<ProviderStateResult>>()
@@ -123,7 +138,9 @@ export namespace Provider {
     })
   }
 
-  const BUNDLED_PROVIDERS: Record<string, (options: any) => SDK> = {
+  // SDK boundary: each createXXX() takes provider-specific settings and returns a provider-specific SDK
+  // biome-ignore lint: provider constructors have incompatible option types
+  const BUNDLED_PROVIDERS: Record<string, (options: any) => ProviderSDK> = {
     "@ai-sdk/amazon-bedrock": createAmazonBedrock,
     "@ai-sdk/anthropic": createAnthropic,
     "@ai-sdk/azure": createAzure,
@@ -148,16 +165,21 @@ export namespace Provider {
     "@ai-sdk/github-copilot": createGitHubCopilotOpenAICompatible,
   }
 
-  type CustomModelLoader = (sdk: any, modelID: string, options?: Record<string, any>) => Promise<any>
-  type CustomVarsLoader = (options: Record<string, any>) => Record<string, string>
+  type CustomModelLoader = (
+    sdk: ProviderSDK,
+    modelID: string,
+    options?: Record<string, JSONValue>,
+  ) => Promise<LanguageModelV2>
+  type CustomVarsLoader = (options: Record<string, JSONValue>) => Record<string, string>
   type CustomLoader = (provider: Info) => Promise<{
     autoload: boolean
     getModel?: CustomModelLoader
     vars?: CustomVarsLoader
+    // biome-ignore lint: provider init options include optional fields (apiKey?: undefined)
     options?: Record<string, any>
   }>
 
-  function useLanguageModel(sdk: any) {
+  function useLanguageModel(sdk: ProviderSDK) {
     return sdk.responses === undefined && sdk.chat === undefined
   }
 
@@ -198,7 +220,7 @@ export namespace Provider {
     openai: async () => {
       return {
         autoload: false,
-        async getModel(sdk: any, modelID: string, _options?: Record<string, any>) {
+        async getModel(sdk: ProviderSDK, modelID: string, _options?: Record<string, JSONValue>) {
           return sdk.responses(modelID)
         },
         options: {},
@@ -207,7 +229,7 @@ export namespace Provider {
     "github-copilot": async () => {
       return {
         autoload: false,
-        async getModel(sdk: any, modelID: string, _options?: Record<string, any>) {
+        async getModel(sdk: ProviderSDK, modelID: string, _options?: Record<string, JSONValue>) {
           if (useLanguageModel(sdk)) return sdk.languageModel(modelID)
           return shouldUseCopilotResponsesApi(modelID) ? sdk.responses(modelID) : sdk.chat(modelID)
         },
@@ -223,7 +245,7 @@ export namespace Provider {
 
       return {
         autoload: false,
-        async getModel(sdk: any, modelID: string, options?: Record<string, any>) {
+        async getModel(sdk: ProviderSDK, modelID: string, options?: Record<string, JSONValue>) {
           if (useLanguageModel(sdk)) return sdk.languageModel(modelID)
           if (options?.["useCompletionUrls"]) {
             return sdk.chat(modelID)
@@ -243,7 +265,7 @@ export namespace Provider {
       const resourceName = Env.get("AZURE_COGNITIVE_SERVICES_RESOURCE_NAME", InstanceALS.directory)
       return {
         autoload: false,
-        async getModel(sdk: any, modelID: string, options?: Record<string, any>) {
+        async getModel(sdk: ProviderSDK, modelID: string, options?: Record<string, JSONValue>) {
           if (useLanguageModel(sdk)) return sdk.languageModel(modelID)
           if (options?.["useCompletionUrls"]) {
             return sdk.chat(modelID)
@@ -296,14 +318,14 @@ export namespace Provider {
         return { autoload: false }
 
       const providerOptions: AmazonBedrockProviderSettings = {
-        region: defaultRegion,
+        region: defaultRegion as string,
       }
 
       // Only use credential chain if no bearer token exists
       // Bearer token takes precedence over credential chain (profiles, access keys, IAM roles, web identity tokens)
       if (!awsBearerToken) {
         // Build credential provider options (only pass profile if specified)
-        const credentialProviderOptions = profile ? { profile } : {}
+        const credentialProviderOptions = profile ? { profile: profile as string } : {}
 
         providerOptions.credentialProvider = fromNodeProviderChain(credentialProviderOptions)
       }
@@ -311,13 +333,13 @@ export namespace Provider {
       // Add custom endpoint if specified (endpoint takes precedence over baseURL)
       const endpoint = providerConfig?.options?.endpoint ?? providerConfig?.options?.baseURL
       if (endpoint) {
-        providerOptions.baseURL = endpoint
+        providerOptions.baseURL = endpoint as string
       }
 
       return {
         autoload: true,
         options: providerOptions,
-        async getModel(sdk: any, modelID: string, options?: Record<string, any>) {
+        async getModel(sdk: ProviderSDK, modelID: string, options?: Record<string, JSONValue>) {
           // Skip region prefixing if model already has a cross-region inference profile prefix
           // Models from models.dev may already include prefixes like us., eu., global., etc.
           const crossRegionPrefixes = ["global.", "us.", "eu.", "jp.", "apac.", "au."]
@@ -329,7 +351,7 @@ export namespace Provider {
           // 1. options.region from opencode.json provider config
           // 2. defaultRegion from AWS_REGION environment variable
           // 3. Default "us-east-1" (baked into defaultRegion)
-          const region = options?.region ?? defaultRegion
+          const region = (options?.region as string) ?? defaultRegion
 
           let regionPrefix = region.split("-")[0]
 
@@ -445,10 +467,10 @@ export namespace Provider {
       if (!autoload) return { autoload: false }
       return {
         autoload: true,
-        vars(_options: Record<string, any>) {
+        vars(_options: Record<string, JSONValue>) {
           const endpoint = location === "global" ? "aiplatform.googleapis.com" : `${location}-aiplatform.googleapis.com`
           return {
-            ...(project && { GOOGLE_VERTEX_PROJECT: project }),
+            ...(project && { GOOGLE_VERTEX_PROJECT: project as string | undefined }),
             GOOGLE_VERTEX_LOCATION: location,
             GOOGLE_VERTEX_ENDPOINT: endpoint,
           }
@@ -467,7 +489,7 @@ export namespace Provider {
             return fetch(input, { ...init, headers })
           },
         },
-        async getModel(sdk: any, modelID: string) {
+        async getModel(sdk: ProviderSDK, modelID: string) {
           const id = String(modelID).trim()
           return sdk.languageModel(id)
         },
@@ -490,7 +512,7 @@ export namespace Provider {
           project,
           location,
         },
-        async getModel(sdk: any, modelID) {
+        async getModel(sdk: ProviderSDK, modelID) {
           const id = String(modelID).trim()
           return sdk.languageModel(id)
         },
@@ -515,7 +537,7 @@ export namespace Provider {
       return {
         autoload: !!envServiceKey,
         options: envServiceKey ? { deploymentId, resourceGroup } : {},
-        async getModel(sdk: any, modelID: string) {
+        async getModel(sdk: ProviderSDK, modelID: string) {
           return sdk(modelID)
         },
       }
@@ -547,7 +569,7 @@ export namespace Provider {
       const aiGatewayHeaders = {
         "User-Agent": `opencode/${Installation.VERSION} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`,
         "anthropic-beta": "context-1m-2025-08-07",
-        ...(providerConfig?.options?.aiGatewayHeaders || {}),
+        ...((providerConfig?.options?.aiGatewayHeaders || {}) as Record<string, string>),
       }
 
       return {
@@ -559,7 +581,7 @@ export namespace Provider {
           featureFlags: {
             duo_agent_platform_agentic_chat: true,
             duo_agent_platform: true,
-            ...(providerConfig?.options?.featureFlags || {}),
+            ...((providerConfig?.options?.featureFlags || {}) as Record<string, string>),
           },
         },
         async getModel(sdk: ReturnType<typeof createGitLab>, modelID: string) {
@@ -568,7 +590,7 @@ export namespace Provider {
             featureFlags: {
               duo_agent_platform_agentic_chat: true,
               duo_agent_platform: true,
-              ...(providerConfig?.options?.featureFlags || {}),
+              ...((providerConfig?.options?.featureFlags || {}) as Record<string, string>),
             },
           })
         },
@@ -591,7 +613,7 @@ export namespace Provider {
         options: {
           apiKey,
         },
-        async getModel(sdk: any, modelID: string) {
+        async getModel(sdk: ProviderSDK, modelID: string) {
           return sdk.languageModel(modelID)
         },
         vars(_options) {
@@ -631,17 +653,17 @@ export namespace Provider {
       const metadata = iife(() => {
         if (input.options?.metadata) return input.options.metadata
         try {
-          return JSON.parse(input.options?.headers?.["cf-aig-metadata"])
+          return JSON.parse((input.options?.headers as Record<string, string>)?.["cf-aig-metadata"])
         } catch {
           return undefined
         }
       })
       const opts = {
         metadata,
-        cacheTtl: input.options?.cacheTtl,
-        cacheKey: input.options?.cacheKey,
-        skipCache: input.options?.skipCache,
-        collectLog: input.options?.collectLog,
+        cacheTtl: input.options?.cacheTtl as number | undefined,
+        cacheKey: input.options?.cacheKey as string | undefined,
+        skipCache: input.options?.skipCache as boolean | undefined,
+        collectLog: input.options?.collectLog as boolean | undefined,
       }
 
       const aigateway = createAiGateway({
@@ -654,7 +676,7 @@ export namespace Provider {
 
       return {
         autoload: true,
-        async getModel(_sdk: any, modelID: string, _options?: Record<string, any>) {
+        async getModel(_sdk: ProviderSDK, modelID: string, _options?: Record<string, JSONValue>) {
           // Model IDs use Unified API format: provider/model (e.g., "anthropic/claude-sonnet-4-5")
           return aigateway(unified(modelID))
         },
@@ -745,10 +767,10 @@ export namespace Provider {
         output: z.number(),
       }),
       status: z.enum(["alpha", "beta", "deprecated", "active"]),
-      options: z.record(z.string(), z.any()),
+      options: z.record(z.string(), JsonValue),
       headers: z.record(z.string(), z.string()),
       release_date: z.string(),
-      variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
+      variants: z.record(z.string(), z.record(z.string(), JsonValue)).optional(),
     })
     .meta({
       ref: "Model",
@@ -762,7 +784,7 @@ export namespace Provider {
       source: z.enum(["env", "config", "custom", "api"]),
       env: z.string().array(),
       key: z.string().optional(),
-      options: z.record(z.string(), z.any()),
+      options: z.record(z.string(), JsonValue),
       models: z.record(z.string(), Model),
     })
     .meta({
@@ -1016,7 +1038,10 @@ export namespace Provider {
       if (!auth) continue
       if (!plugin.auth.loader) continue
 
-      const options = await plugin.auth.loader(() => Auth.get(providerID) as any, database[plugin.auth.provider])
+      const options = await plugin.auth.loader(
+        () => Auth.get(providerID) as Promise<Auth.Info>,
+        database[plugin.auth.provider],
+      )
       const opts = options ?? {}
       const patch: Partial<Info> = providers[providerID] ? { options: opts } : { source: "custom", options: opts }
       mergeProvider(providerID, patch)
@@ -1153,7 +1178,7 @@ export namespace Provider {
       if (options["apiKey"] === undefined && provider.key) options["apiKey"] = provider.key
       if (model.headers)
         options["headers"] = {
-          ...options["headers"],
+          ...(options["headers"] as Record<string, string>),
           ...model.headers,
         }
 
@@ -1161,11 +1186,12 @@ export namespace Provider {
       const existing = s.sdk.get(key)
       if (existing) return existing
 
-      const customFetch = options["fetch"]
-      const chunkTimeout = options["chunkTimeout"] || DEFAULT_CHUNK_TIMEOUT
+      const customFetch = options["fetch"] as unknown as typeof globalThis.fetch | undefined
+      const chunkTimeout = (options["chunkTimeout"] as number) || DEFAULT_CHUNK_TIMEOUT
       delete options["chunkTimeout"]
 
-      options["fetch"] = async (input: any, init?: BunFetchRequestInit) => {
+      // @ts-expect-error fetch function stored in JSON options object
+      options["fetch"] = async (input: string | URL | Request, init?: BunFetchRequestInit) => {
         // Preserve custom fetch if it exists, wrap it with timeout logic
         const fetchFn = customFetch ?? fetch
         const opts = init ?? {}
@@ -1175,7 +1201,7 @@ export namespace Provider {
         if (opts.signal) signals.push(opts.signal)
         if (chunkAbortCtl) signals.push(chunkAbortCtl.signal)
         if (options["timeout"] !== undefined && options["timeout"] !== null && options["timeout"] !== false)
-          signals.push(AbortSignal.timeout(options["timeout"]))
+          signals.push(AbortSignal.timeout(options["timeout"] as number))
 
         const combined = signals.length === 0 ? null : signals.length === 1 ? signals[0] : AbortSignal.any(signals)
         if (combined) opts.signal = combined
@@ -1347,7 +1373,7 @@ export namespace Provider {
 
           const region = provider.options?.region
           if (region) {
-            const regionPrefix = region.split("-")[0]
+            const regionPrefix = (region as string).split("-")[0]
             if (regionPrefix === "us" || regionPrefix === "eu") {
               const regionalMatch = candidates.find((m) => m.startsWith(`${regionPrefix}.`))
               if (regionalMatch) return getModel(providerID, ModelID.make(regionalMatch))

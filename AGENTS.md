@@ -11,7 +11,7 @@
 
 - Keep things in one function unless composable or reusable
 - Avoid `try`/`catch` where possible
-- Avoid using the `any` type
+- Never use `any` or `unknown` types. Always prefer specific, strong types — define interfaces, use generics, use branded types, use discriminated unions, or use Zod-inferred types. When you encounter `any` or `unknown` in existing code, replace it with the actual type the value holds. For catch blocks use `catch (e)` and narrow with `e instanceof Error`. For Zod schemas use specific Zod types (`z.string()`, `z.number()`, `z.record(z.string(), z.string())`, etc.) — never `z.any()` or `z.unknown()`. The only exceptions are: (1) type-erased storage in event emitter patterns where heterogeneous callbacks coexist, and (2) SDK/library boundary casts where the external API has an incompatible type — document both with a comment explaining why.
 - Prefer single word variable names where possible
 - Use Bun APIs when possible, like `Bun.file()`
 - Rely on type inference when possible; avoid explicit type annotations or interfaces unless necessary for exports or clarity
@@ -156,7 +156,7 @@ Use `context_history` to navigate the edit DAG:
 
 ## Pre-existing Failures and Bugs
 
-**IMPORTANT:** Pre-existing failures, bugs, and issues MUST be fixed too — always. Do not ignore typecheck errors, lint warnings, unused variables, broken imports, or failing tests just because they existed before your changes. If you encounter a pre-existing issue during your work, fix it as part of your changes. This applies to all types of issues: type errors, dead code, incorrect logic, missing exports, stale references, etc.
+**IMPORTANT:** Pre-existing failures, bugs, and issues MUST be fixed too — always, no exceptions. Do not ignore typecheck errors, lint warnings, unused variables, broken imports, or failing tests just because they existed before your changes. If you encounter a pre-existing issue during your work, fix it as part of your changes. This applies to all types of issues: type errors, dead code, incorrect logic, missing exports, stale references, runtime errors, circular imports, etc. If a pre-existing issue is too complex to fix in a single session, document it in `BUGS.md` with full details so it can be tracked and fixed later — but never silently skip it.
 
 ## Git Workflow
 

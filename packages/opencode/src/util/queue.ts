@@ -6,7 +6,7 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
   private closed = false
 
   push(item: T) {
-    if (this.closed) return
+    if (this.closed) throw new Error("Cannot push to a closed queue")
     const resolve = this.resolvers.shift()
     if (resolve) resolve(item)
     else this.queue.push(item)

@@ -174,7 +174,7 @@ export namespace Ripgrep {
       if (config.extension === "zip") {
         const zipFileReader = new ZipReader(new BlobReader(new Blob([arrayBuffer])))
         const entries = await zipFileReader.getEntries()
-        let rgEntry: any
+        let rgEntry: (typeof entries)[number] | undefined
         for (const entry of entries) {
           if (entry.filename.endsWith("rg.exe")) {
             rgEntry = entry
@@ -189,6 +189,12 @@ export namespace Ripgrep {
           })
         }
 
+        if (!rgEntry.getData) {
+          throw new ExtractionFailedError({
+            filepath: archivePath,
+            stderr: "rg.exe entry has no data",
+          })
+        }
         const rgBlob = await rgEntry.getData(new BlobWriter())
         if (!rgBlob) {
           throw new ExtractionFailedError({

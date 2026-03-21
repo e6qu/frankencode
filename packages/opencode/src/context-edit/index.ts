@@ -150,8 +150,8 @@ export namespace ContextEdit {
 
   function getPartContent(part: MessageV2.Part): string {
     if ("text" in part && typeof part.text === "string") return part.text
-    if ("state" in part && part.type === "tool") {
-      const state = part.state as any
+    if (part.type === "tool") {
+      const state = (part as MessageV2.ToolPart).state
       if (state.status === "completed") return state.output ?? ""
       return JSON.stringify(state.input ?? {})
     }
@@ -344,8 +344,8 @@ export namespace ContextEdit {
       // Insert replacement
       Session.updatePart({
         id: newPartID,
-        sessionID: input.sessionID,
-        messageID: input.messageID,
+        sessionID: SessionID.make(input.sessionID),
+        messageID: MessageID.make(input.messageID),
         type: "text",
         text: input.replacement,
         edit: {
@@ -355,7 +355,7 @@ export namespace ContextEdit {
           editedBy: input.agent,
           version,
         },
-      } as any)
+      })
 
       Database.effect(() =>
         Bus.publish(
@@ -531,8 +531,8 @@ export namespace ContextEdit {
         })
         Session.updatePart({
           id: newPartID,
-          sessionID: input.sessionID,
-          messageID: input.messageID,
+          sessionID: SessionID.make(input.sessionID),
+          messageID: MessageID.make(input.messageID),
           type: "text",
           text: summaryText,
           edit: {
@@ -542,7 +542,7 @@ export namespace ContextEdit {
             editedBy: input.agent,
             version,
           },
-        } as any)
+        })
       }
 
       Database.effect(() =>
@@ -583,16 +583,19 @@ export namespace ContextEdit {
     const part = findPart(msg, input.partID)
     if (!part) return { success: false, error: "Part not found" }
 
-    Session.updatePart({
-      ...part,
-      lifecycle: {
-        hint: input.hint,
-        afterTurns: input.afterTurns ?? (input.hint === "discardable" ? 3 : input.hint === "ephemeral" ? 5 : undefined),
-        reason: input.reason,
-        setAt: Date.now(),
-        setBy: input.agent,
-        turnWhenSet: input.currentTurn,
-      },
+    Database.transaction(() => {
+      Session.updatePart({
+        ...part,
+        lifecycle: {
+          hint: input.hint,
+          afterTurns:
+            input.afterTurns ?? (input.hint === "discardable" ? 3 : input.hint === "ephemeral" ? 5 : undefined),
+          reason: input.reason,
+          setAt: Date.now(),
+          setBy: input.agent,
+          turnWhenSet: input.currentTurn,
+        },
+      })
     })
 
     log.info("marked", { partID: input.partID, hint: input.hint })

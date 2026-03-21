@@ -77,7 +77,10 @@ export const GlobalRoutes = lazy(() =>
               },
             }),
           })
-          async function handler(event: any) {
+          async function handler(event: {
+            directory?: string
+            payload: { type: string; properties: Record<string, string | number | boolean | null | object> }
+          }) {
             await stream.writeSSE({
               data: JSON.stringify(event),
             })

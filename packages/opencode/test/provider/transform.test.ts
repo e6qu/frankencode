@@ -43,16 +43,16 @@ describe("ProviderTransform.options - setCacheKey", () => {
     const result = ProviderTransform.options({
       model: mockModel,
       sessionID,
-      providerOptions: { setCacheKey: true },
+      providerOptions: { setCacheKey: true } as any,
     })
-    expect(result.promptCacheKey).toBe(sessionID)
+    expect(result.promptCacheKey).toBe(sessionID as any)
   })
 
   test("should not set promptCacheKey when providerOptions.setCacheKey is false", () => {
     const result = ProviderTransform.options({
       model: mockModel,
       sessionID,
-      providerOptions: { setCacheKey: false },
+      providerOptions: { setCacheKey: false } as any,
     })
     expect(result.promptCacheKey).toBeUndefined()
   })
@@ -82,7 +82,7 @@ describe("ProviderTransform.options - setCacheKey", () => {
       },
     }
     const result = ProviderTransform.options({ model: openaiModel, sessionID, providerOptions: {} })
-    expect(result.promptCacheKey).toBe(sessionID)
+    expect(result.promptCacheKey).toBe(sessionID as any)
   })
 
   test("should set store=false for openai provider", () => {
@@ -100,7 +100,7 @@ describe("ProviderTransform.options - setCacheKey", () => {
       sessionID,
       providerOptions: {},
     })
-    expect(result.store).toBe(false)
+    expect(result.store).toBe(false as any)
   })
 })
 
@@ -136,13 +136,13 @@ describe("ProviderTransform.options - gpt-5 textVerbosity", () => {
   test("gpt-5.2 should have textVerbosity set to low", () => {
     const model = createGpt5Model("gpt-5.2")
     const result = ProviderTransform.options({ model, sessionID, providerOptions: {} })
-    expect(result.textVerbosity).toBe("low")
+    expect(result.textVerbosity).toBe("low" as any)
   })
 
   test("gpt-5.1 should have textVerbosity set to low", () => {
     const model = createGpt5Model("gpt-5.1")
     const result = ProviderTransform.options({ model, sessionID, providerOptions: {} })
-    expect(result.textVerbosity).toBe("low")
+    expect(result.textVerbosity).toBe("low" as any)
   })
 
   test("gpt-5.2-chat-latest should NOT have textVerbosity set (only supports medium)", () => {

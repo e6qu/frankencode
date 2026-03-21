@@ -677,10 +677,10 @@ export const GithubRunCommand = cmd({
             await removeReaction(commentType)
           }
         }
-      } catch (e: any) {
+      } catch (e) {
         exitCode = 1
         console.error(e instanceof Error ? e.message : String(e))
-        let msg = e
+        let msg: string | Error = e instanceof Error ? e : String(e)
         if (e instanceof Process.RunFailedError) {
           msg = e.stderr.toString()
         } else if (e instanceof Error) {

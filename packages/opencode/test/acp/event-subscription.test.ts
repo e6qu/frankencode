@@ -44,19 +44,20 @@ function toolEvent(
     input: Record<string, unknown>
   } & ({ status: "running"; metadata?: Record<string, unknown> } | { status: "pending"; raw: string }),
 ): GlobalEventEnvelope {
+  // SDK types differ from internal MessageV2 types at the JsonValue boundary — cast at construction
   const state: ToolStatePending | ToolStateRunning =
     opts.status === "running"
-      ? {
+      ? ({
           status: "running",
           input: opts.input,
           ...(opts.metadata && { metadata: opts.metadata }),
           time: { start: Date.now() },
-        }
-      : {
+        } as ToolStateRunning)
+      : ({
           status: "pending",
           input: opts.input,
           raw: opts.raw,
-        }
+        } as ToolStatePending)
   const payload: EventMessagePartUpdated = {
     type: "message.part.updated",
     properties: {

@@ -14,6 +14,7 @@ import { tmpdir } from "../fixture/fixture"
 import type { Agent } from "../../src/agent/agent"
 import type { MessageV2 } from "../../src/session/message-v2"
 import { SessionID, MessageID } from "../../src/session/schema"
+import { ProjectID } from "../../src/project/schema"
 
 describe("session.llm.hasToolCalls", () => {
   test("returns false for empty messages array", () => {
@@ -291,7 +292,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
-          projectID: "test",
+          projectID: ProjectID.make("test"),
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
@@ -391,7 +392,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
-          projectID: "test",
+          projectID: ProjectID.make("test"),
           model: resolved,
           agent,
           permission: [{ permission: "question", pattern: "*", action: "allow" }],
@@ -511,7 +512,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
-          projectID: "test",
+          projectID: ProjectID.make("test"),
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
@@ -634,7 +635,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
-          projectID: "test",
+          projectID: ProjectID.make("test"),
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
@@ -736,7 +737,7 @@ describe("session.llm.stream", () => {
         const stream = await LLM.stream({
           user,
           sessionID,
-          projectID: "test",
+          projectID: ProjectID.make("test"),
           model: resolved,
           agent,
           system: ["You are a helpful assistant."],
