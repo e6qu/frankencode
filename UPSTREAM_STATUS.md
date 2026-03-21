@@ -5,6 +5,8 @@
 **Upstream:** `upstream/dev` @ `832b8e252`
 **Divergence:** 23 ahead, 162 behind
 
+**Security audit:** See [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) for upstream CVEs and Frankencode-specific vulnerabilities.
+
 ---
 
 ## Integration Strategy

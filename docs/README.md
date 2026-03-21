@@ -13,6 +13,7 @@
 | [EFFECTIFICATION.md](EFFECTIFICATION.md) | Effect-TS architecture, 22 services, LayerMap, dual-layer context |
 | [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md) | ACP v1 protocol support for IDE integration |
 | [API_PROVIDERS.md](API_PROVIDERS.md) | 21+ LLM providers, models.dev API, transform pipeline |
+| [SECURITY_AUDIT.md](SECURITY_AUDIT.md) | CVEs, upstream security issues, Frankencode-specific vulnerabilities |
 
 ## Architecture at a Glance
 
