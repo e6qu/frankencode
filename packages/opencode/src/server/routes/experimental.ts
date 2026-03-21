@@ -12,6 +12,8 @@ import { zodToJsonSchema } from "zod-to-json-schema"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
 import { WorkspaceRoutes } from "./workspace"
+import { MessageV2 } from "@/session/message-v2"
+import { SideThread } from "@/session/side-thread"
 
 export const ExperimentalRoutes = lazy(() =>
   new Hono()
@@ -57,7 +59,7 @@ export const ExperimentalRoutes = lazy(() =>
                         .object({
                           id: z.string(),
                           description: z.string(),
-                          parameters: z.any(),
+                          parameters: MessageV2.JsonValue,
                         })
                         .meta({ ref: "ToolListItem" }),
                     )
@@ -84,6 +86,8 @@ export const ExperimentalRoutes = lazy(() =>
             id: t.id,
             description: t.description,
             // Handle both Zod schemas and plain JSON schemas
+            // SDK boundary: zodToJsonSchema expects Zod v3 ZodType, but parameters may be Zod v4 or plain JSON schema
+            // biome-ignore lint: Zod v3/v4 type incompatibility at library boundary
             parameters: (t.parameters as any)?._def ? zodToJsonSchema(t.parameters as any) : t.parameters,
           })),
         )
@@ -404,7 +408,7 @@ export const ExperimentalRoutes = lazy(() =>
                 schema: resolver(
                   z.object({
                     projectID: z.string(),
-                    threads: z.array(z.any()),
+                    threads: z.array(SideThread.Info),
                     total: z.number(),
                     hasMore: z.boolean(),
                   }),
@@ -428,7 +432,7 @@ export const ExperimentalRoutes = lazy(() =>
         const projectID = InstanceALS.project.id
         const result = SideThread.list({
           projectID,
-          status: status as any,
+          status: status as "parked" | "investigating" | "resolved" | "deferred" | "all",
           limit,
           offset,
         })

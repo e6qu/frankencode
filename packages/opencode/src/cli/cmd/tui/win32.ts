@@ -71,7 +71,8 @@ export function win32InstallCtrlCGuard() {
   if (!load()) return
   if (unhook) return unhook
 
-  const stdin = process.stdin as any
+  // Bun/Node process.stdin type boundary — setRawMode exists at runtime but types differ
+  const stdin = process.stdin as NodeJS.ReadStream & { setRawMode: (mode: boolean) => NodeJS.ReadStream }
   const original = stdin.setRawMode
 
   const handle = k32!.symbols.GetStdHandle(STD_INPUT_HANDLE)
@@ -93,11 +94,11 @@ export function win32InstallCtrlCGuard() {
     setImmediate(enforce)
   }
 
-  let wrapped: ((mode: boolean) => unknown) | undefined
+  let wrapped: ((mode: boolean) => NodeJS.ReadStream) | undefined
 
   if (typeof original === "function") {
-    wrapped = (mode: boolean) => {
-      const result = original.call(stdin, mode)
+    wrapped = (mode: boolean): NodeJS.ReadStream => {
+      const result = original.call(stdin, mode) as NodeJS.ReadStream
       later()
       return result
     }

@@ -115,3 +115,13 @@ All Frankencode agents inherit the session's model by default. Override per-agen
 | compaction            |       No       | primary (hidden) | enabled  |
 | title                 |       No       | primary (hidden) | enabled  |
 | summary               |       No       | primary (hidden) | enabled  |
+
+---
+
+## See Also
+
+- [context-editing.md](context-editing.md) — tools used by focus/classifier agents
+- [API_PROVIDERS.md](API_PROVIDERS.md) — model selection for agents
+- [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md) — agents exposed via ACP protocol
+- [EFFECTIFICATION.md](EFFECTIFICATION.md) — AgentService Effect layer
+- [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) — all Frankencode additions

@@ -2,6 +2,7 @@ import z from "zod"
 import { SessionID } from "./schema"
 import { ModelID, ProviderID } from "../provider/schema"
 import { NamedError } from "@opencode-ai/util/error"
+import { MessageV2 } from "./message-v2"
 
 export namespace Message {
   export const OutputLengthError = NamedError.create("MessageOutputLengthError", z.object({}))
@@ -72,7 +73,7 @@ export namespace Message {
     .object({
       type: z.literal("reasoning"),
       text: z.string(),
-      providerMetadata: z.record(z.string(), z.any()).optional(),
+      providerMetadata: MessageV2.ProviderMeta.optional(),
     })
     .meta({
       ref: "ReasoningPart",
@@ -95,7 +96,7 @@ export namespace Message {
       sourceId: z.string(),
       url: z.string(),
       title: z.string().optional(),
-      providerMetadata: z.record(z.string(), z.any()).optional(),
+      providerMetadata: MessageV2.ProviderMeta.optional(),
     })
     .meta({
       ref: "SourceUrlPart",
@@ -156,7 +157,7 @@ export namespace Message {
                   end: z.number(),
                 }),
               })
-              .catchall(z.any()),
+              .catchall(MessageV2.JsonValue),
           ),
           assistant: z
             .object({

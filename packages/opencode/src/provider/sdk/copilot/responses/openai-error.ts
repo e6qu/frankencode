@@ -9,6 +9,7 @@ export const openaiErrorDataSchema = z.object({
     // OpenAI-compatible providers that have slightly different error
     // responses:
     type: z.string().nullish(),
+    // Upstream OpenAI SDK type — param can be any JSON value per OpenAI error spec
     param: z.any().nullish(),
     code: z.union([z.string(), z.number()]).nullish(),
   }),
@@ -16,7 +17,8 @@ export const openaiErrorDataSchema = z.object({
 
 export type OpenAIErrorData = z.infer<typeof openaiErrorDataSchema>
 
-export const openaiFailedResponseHandler: any = createJsonErrorResponseHandler({
-  errorSchema: openaiErrorDataSchema,
-  errorToMessage: (data) => data.error.message,
-})
+export const openaiFailedResponseHandler: ReturnType<typeof createJsonErrorResponseHandler> =
+  createJsonErrorResponseHandler({
+    errorSchema: openaiErrorDataSchema,
+    errorToMessage: (data) => data.error.message,
+  })

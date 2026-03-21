@@ -3,11 +3,15 @@ import type { MessageV2 } from "../session/message-v2"
 import type { Agent } from "../agent/agent"
 import type { PermissionNext } from "../permission/next"
 import type { SessionID, MessageID } from "../session/schema"
+import type { ProjectID } from "../project/schema"
 import { Truncate } from "./truncation"
 
 export namespace Tool {
+  // Metadata flows from typed tool execute() results into the DB (as JSON) and back out
+  // to TUI components. Since the DB round-trip produces Record<string, unknown>, the
+  // metadata interface must accept unknown to remain compatible with deserialized values.
   interface Metadata {
-    [key: string]: any
+    [key: string]: unknown
   }
 
   export interface InitContext {
@@ -22,14 +26,14 @@ export namespace Tool {
     agent: string
     abort: AbortSignal
     callID?: string
-    extra?: { [key: string]: any }
+    extra?: { [key: string]: unknown }
     messages: MessageV2.WithParts[]
     /** Resolved project directory (absolute path) */
     directory: string
     /** Git worktree or sandbox directory */
     worktree: string
     /** Project ID */
-    projectID: string
+    projectID: ProjectID
     /** Check if a path is within the project boundary */
     containsPath(filepath: string): boolean
     metadata(input: { title?: string; metadata?: M }): void
@@ -54,7 +58,7 @@ export namespace Tool {
   }
 
   export type InferParameters<T extends Info> = T extends Info<infer P> ? z.infer<P> : never
-  export type InferMetadata<T extends Info> = T extends Info<any, infer M> ? M : never
+  export type InferMetadata<T extends Info> = T extends Info<z.ZodType, infer M> ? M : never
 
   export function define<Parameters extends z.ZodType, Result extends Metadata>(
     id: string,

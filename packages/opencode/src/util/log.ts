@@ -9,6 +9,14 @@ export namespace Log {
   export const Level = z.enum(["DEBUG", "INFO", "WARN", "ERROR"]).meta({ ref: "LogLevel", description: "Log level" })
   export type Level = z.infer<typeof Level>
 
+  // The logger is a system boundary: it must accept unknown values because
+  // catch blocks produce `unknown` and callers pass them as both the message
+  // and in the extra record (e.g. `log.error("fail", { error: e })`).
+  // This is one of the few places where `unknown` is correct and intentional.
+  // biome-ignore lint: logger boundary accepts unknown by design
+  type LogMessage = unknown
+  export type LogExtra = Record<string, unknown>
+
   const levelPriority: Record<Level, number> = {
     DEBUG: 0,
     INFO: 1,
@@ -23,15 +31,15 @@ export namespace Log {
   }
 
   export type Logger = {
-    debug(message?: any, extra?: Record<string, any>): void
-    info(message?: any, extra?: Record<string, any>): void
-    error(message?: any, extra?: Record<string, any>): void
-    warn(message?: any, extra?: Record<string, any>): void
+    debug(message?: LogMessage, extra?: LogExtra): void
+    info(message?: LogMessage, extra?: LogExtra): void
+    error(message?: LogMessage, extra?: LogExtra): void
+    warn(message?: LogMessage, extra?: LogExtra): void
     tag(key: string, value: string): Logger
     clone(): Logger
     time(
       message: string,
-      extra?: Record<string, any>,
+      extra?: LogExtra,
     ): {
       stop(): void
       [Symbol.dispose](): void
@@ -52,7 +60,7 @@ export namespace Log {
   export function file() {
     return logpath
   }
-  let write = (msg: any) => {
+  let write = (msg: string) => {
     process.stderr.write(msg)
     return msg.length
   }
@@ -67,13 +75,9 @@ export namespace Log {
     )
     await fs.truncate(logpath).catch(() => {})
     const stream = createWriteStream(logpath, { flags: "a" })
-    write = async (msg: any) => {
-      return new Promise((resolve, reject) => {
-        stream.write(msg, (err) => {
-          if (err) reject(err)
-          else resolve(msg.length)
-        })
-      })
+    write = (msg: string) => {
+      stream.write(msg)
+      return msg.length
     }
   }
 
@@ -97,7 +101,7 @@ export namespace Log {
   }
 
   let last = Date.now()
-  export function create(tags?: Record<string, any>) {
+  export function create(tags?: LogExtra) {
     tags = tags || {}
 
     const service = tags["service"]
@@ -108,7 +112,7 @@ export namespace Log {
       }
     }
 
-    function build(message: any, extra?: Record<string, any>) {
+    function build(message: LogMessage, extra?: LogExtra) {
       const prefix = Object.entries({
         ...tags,
         ...extra,
@@ -127,22 +131,22 @@ export namespace Log {
       return [next.toISOString().split(".")[0], "+" + diff + "ms", prefix, message].filter(Boolean).join(" ") + "\n"
     }
     const result: Logger = {
-      debug(message?: any, extra?: Record<string, any>) {
+      debug(message?: LogMessage, extra?: LogExtra) {
         if (shouldLog("DEBUG")) {
           write("DEBUG " + build(message, extra))
         }
       },
-      info(message?: any, extra?: Record<string, any>) {
+      info(message?: LogMessage, extra?: LogExtra) {
         if (shouldLog("INFO")) {
           write("INFO  " + build(message, extra))
         }
       },
-      error(message?: any, extra?: Record<string, any>) {
+      error(message?: LogMessage, extra?: LogExtra) {
         if (shouldLog("ERROR")) {
           write("ERROR " + build(message, extra))
         }
       },
-      warn(message?: any, extra?: Record<string, any>) {
+      warn(message?: LogMessage, extra?: LogExtra) {
         if (shouldLog("WARN")) {
           write("WARN  " + build(message, extra))
         }
@@ -154,7 +158,7 @@ export namespace Log {
       clone() {
         return Log.create({ ...tags })
       },
-      time(message: string, extra?: Record<string, any>) {
+      time(message: string, extra?: LogExtra) {
         const now = Date.now()
         result.info(message, { status: "started", ...extra })
         function stop() {

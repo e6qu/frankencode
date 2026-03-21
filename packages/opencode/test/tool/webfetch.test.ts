@@ -3,6 +3,7 @@ import path from "path"
 import { Instance } from "../fixture/instance-shim"
 import { WebFetchTool } from "../../src/tool/webfetch"
 import { SessionID, MessageID } from "../../src/session/schema"
+import { ProjectID } from "../../src/project/schema"
 
 const projectRoot = path.join(import.meta.dir, "../..")
 
@@ -15,7 +16,7 @@ const ctx = {
   messages: [],
   directory: "",
   worktree: "",
-  projectID: "",
+  projectID: ProjectID.make(""),
   containsPath: () => true,
   metadata: () => {},
   ask: async () => {},

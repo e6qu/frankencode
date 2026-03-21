@@ -27,7 +27,7 @@ Previous objectives are preserved in message metadata, creating an objective tim
     ctx,
   ): Promise<{
     title: string
-    metadata: Record<string, any>
+    metadata: Record<string, string | number | boolean | null>
     output: string
   }> {
     const trimmed = args.objective.trim()

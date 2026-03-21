@@ -5,6 +5,7 @@ import { ApplyPatchTool } from "../../src/tool/apply_patch"
 import { Instance } from "../fixture/instance-shim"
 import { tmpdir } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
+import type { ProjectID } from "../../src/project/schema"
 
 const baseFields = {
   sessionID: SessionID.make("ses_test"),
@@ -40,7 +41,7 @@ type AskInput = {
 type ToolCtx = typeof baseFields & {
   directory: string
   worktree: string
-  projectID: string
+  projectID: ProjectID
   containsPath: (fp: string) => boolean
   ask: (input: AskInput) => Promise<void>
 }

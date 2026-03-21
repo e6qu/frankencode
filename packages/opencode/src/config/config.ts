@@ -40,6 +40,7 @@ import { ConfigPaths } from "./paths"
 import { Filesystem } from "@/util/filesystem"
 import { Process } from "@/util/process"
 import { Lock } from "@/util/lock"
+import { MessageV2 } from "@/session/message-v2"
 
 type ConfigStateResult = { config: Config.Info; directories: string[]; deps: Promise<void>[] }
 export const configStates = new Map<string, Promise<ConfigStateResult>>()
@@ -115,7 +116,10 @@ export namespace Config {
         if (!response.ok) {
           throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
         }
-        const wellknown = (await response.json()) as any
+        const wellknown = (await response.json()) as {
+          config?: Record<string, string | number | boolean | object | null>
+          $schema?: string
+        }
         const remoteConfig = wellknown.config ?? {}
         // Add $schema to prevent load() from trying to write back to a non-existent file
         if (!remoteConfig.$schema) remoteConfig.$schema = "https://opencode.ai/config.json"
@@ -217,8 +221,8 @@ export namespace Config {
             }),
           )
         }
-      } catch (err: any) {
-        log.debug("failed to fetch remote account config", { error: err?.message ?? err })
+      } catch (err) {
+        log.debug("failed to fetch remote account config", { error: err instanceof Error ? err.message : String(err) })
       }
     }
 
@@ -759,7 +763,7 @@ export namespace Config {
         .boolean()
         .optional()
         .describe("Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)"),
-      options: z.record(z.string(), z.any()).optional(),
+      options: z.record(z.string(), MessageV2.JsonValue).optional(),
       color: z
         .union([
           z.string().regex(/^#[0-9a-fA-F]{6}$/, "Invalid hex color format"),
@@ -776,7 +780,7 @@ export namespace Config {
       maxSteps: z.number().int().positive().optional().describe("@deprecated Use 'steps' field instead."),
       permission: Permission.optional(),
     })
-    .catchall(z.any())
+    .catchall(MessageV2.JsonValue)
     .transform((agent, ctx) => {
       const knownKeys = new Set([
         "name",
@@ -1022,7 +1026,7 @@ export namespace Config {
                   .object({
                     disabled: z.boolean().optional().describe("Disable this variant for the model"),
                   })
-                  .catchall(z.any()),
+                  .catchall(MessageV2.JsonValue),
               )
               .optional()
               .describe("Variant-specific configuration"),
@@ -1059,7 +1063,7 @@ export namespace Config {
               "Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted.",
             ),
         })
-        .catchall(z.any())
+        .catchall(MessageV2.JsonValue)
         .optional(),
     })
     .strict()
@@ -1195,7 +1199,7 @@ export namespace Config {
                 extensions: z.array(z.string()).optional(),
                 disabled: z.boolean().optional(),
                 env: z.record(z.string(), z.string()).optional(),
-                initialization: z.record(z.string(), z.any()).optional(),
+                initialization: z.record(z.string(), MessageV2.JsonValue).optional(),
               }),
             ]),
           ),
@@ -1504,8 +1508,8 @@ export namespace Config {
 
   export async function updateGlobal(config: Info) {
     const filepath = globalConfigFile()
-    const before = await Filesystem.readText(filepath).catch((err: any) => {
-      if (err.code === "ENOENT") return "{}"
+    const before = await Filesystem.readText(filepath).catch((err) => {
+      if (err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT") return "{}"
       throw new JsonError({ path: filepath }, { cause: err })
     })
 

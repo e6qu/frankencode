@@ -211,7 +211,7 @@ export namespace SessionProcessor {
                       state: {
                         status: "error",
                         input: value.input ?? match.state.input,
-                        error: (value.error as any).toString(),
+                        error: String(value.error),
                         time: {
                           start: match.state.time.start,
                           end: Date.now(),
@@ -353,10 +353,10 @@ export namespace SessionProcessor {
               }
               if (needsCompaction) break
             }
-          } catch (e: any) {
+          } catch (e) {
             log.error("process", {
               error: e,
-              stack: JSON.stringify(e.stack),
+              stack: e instanceof Error ? e.stack : undefined,
             })
             const error = MessageV2.fromError(e, { providerID: input.model.providerID })
             if (MessageV2.ContextOverflowError.isInstance(error)) {

@@ -170,7 +170,7 @@ cli = cli
 try {
   await cli.parse()
 } catch (e) {
-  let data: Record<string, any> = {}
+  let data: Record<string, string | number | boolean> = {}
   if (e instanceof NamedError) {
     const obj = e.toObject()
     Object.assign(data, {

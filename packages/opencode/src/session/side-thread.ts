@@ -6,6 +6,7 @@ import { Identifier } from "@/id/id"
 import { Log } from "@/util/log"
 import z from "zod"
 import { InstanceALS } from "@/project/instance-als"
+import type { ProjectID } from "@/project/schema"
 
 export namespace SideThread {
   const log = Log.create({ service: "side-thread" })
@@ -55,7 +56,7 @@ export namespace SideThread {
   }
 
   export function create(input: {
-    projectID: string
+    projectID: ProjectID
     title: string
     description: string
     priority?: Info["priority"]
@@ -73,7 +74,7 @@ export namespace SideThread {
       db.insert(SideThreadTable)
         .values({
           id,
-          project_id: input.projectID as any,
+          project_id: input.projectID,
           title: input.title,
           description: input.description,
           status: "parked",
@@ -116,7 +117,7 @@ export namespace SideThread {
   }
 
   export interface ListOptions {
-    projectID: string
+    projectID: ProjectID
     status?: Info["status"] | "all"
     limit?: number
     offset?: number
@@ -137,9 +138,7 @@ export namespace SideThread {
         return db
           .select()
           .from(SideThreadTable)
-          .where(
-            and(eq(SideThreadTable.project_id, options.projectID as any), eq(SideThreadTable.status, options.status)),
-          )
+          .where(and(eq(SideThreadTable.project_id, options.projectID), eq(SideThreadTable.status, options.status)))
           .orderBy(desc(SideThreadTable.time_updated))
           .limit(limit + 1)
           .offset(offset)
@@ -148,7 +147,7 @@ export namespace SideThread {
       return db
         .select()
         .from(SideThreadTable)
-        .where(eq(SideThreadTable.project_id, options.projectID as any))
+        .where(eq(SideThreadTable.project_id, options.projectID))
         .orderBy(desc(SideThreadTable.time_updated))
         .limit(limit + 1)
         .offset(offset)
@@ -158,8 +157,8 @@ export namespace SideThread {
     // Get total count (for pagination UI) — must match the same status filter as the rows query
     const countWhere =
       options.status && options.status !== "all"
-        ? and(eq(SideThreadTable.project_id, options.projectID as any), eq(SideThreadTable.status, options.status))
-        : eq(SideThreadTable.project_id, options.projectID as any)
+        ? and(eq(SideThreadTable.project_id, options.projectID), eq(SideThreadTable.status, options.status))
+        : eq(SideThreadTable.project_id, options.projectID)
     const countRow = Database.use((db) =>
       db
         .select({ count: sql<number>`count(*)` })
@@ -180,7 +179,9 @@ export namespace SideThread {
     fields: Partial<Pick<Info, "status" | "priority" | "title" | "description">>,
   ): Info | null {
     Database.use((db) => {
-      const updates: Record<string, any> = {}
+      const updates: Partial<
+        Pick<typeof SideThreadTable.$inferInsert, "status" | "priority" | "title" | "description">
+      > = {}
       if (fields.status !== undefined) updates.status = fields.status
       if (fields.priority !== undefined) updates.priority = fields.priority
       if (fields.title !== undefined) updates.title = fields.title

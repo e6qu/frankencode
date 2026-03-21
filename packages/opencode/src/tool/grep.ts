@@ -29,8 +29,8 @@ export const GrepTool = Tool.define("grep", {
       always: ["*"],
       metadata: {
         pattern: params.pattern,
-        path: params.path,
-        include: params.include,
+        path: params.path ?? null,
+        include: params.include ?? null,
       },
     })
 

@@ -8,6 +8,7 @@ export const openaiCompatibleErrorDataSchema = z.object({
     // OpenAI-compatible providers that have slightly different error
     // responses:
     type: z.string().nullish(),
+    // Upstream OpenAI SDK type — param can be any JSON value per OpenAI error spec
     param: z.any().nullish(),
     code: z.union([z.string(), z.number()]).nullish(),
   }),

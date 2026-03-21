@@ -32,7 +32,7 @@ function emit(directory: string) {
 
 function bootContext(input: {
   directory: string
-  init?: () => Promise<any>
+  init?: () => Promise<void>
   project?: Project.Info
   worktree?: string
 }) {
@@ -70,7 +70,7 @@ export const InstanceLifecycle = {
    * Boot an instance for the given directory. If already cached, returns
    * the existing context. Runs init inside ALS context.
    */
-  async boot(directory: string, init?: () => Promise<any>): Promise<Context> {
+  async boot(directory: string, init?: () => Promise<void>): Promise<Context> {
     const dir = Filesystem.resolve(directory)
     let existing = cache.get(dir)
     if (!existing) {
@@ -129,7 +129,7 @@ export const InstanceLifecycle = {
   /**
    * Reload an instance: dispose, clear cache, re-boot.
    */
-  async reload(input: { directory: string; init?: () => Promise<any>; project?: Project.Info; worktree?: string }) {
+  async reload(input: { directory: string; init?: () => Promise<void>; project?: Project.Info; worktree?: string }) {
     const directory = Filesystem.resolve(input.directory)
     Log.Default.info("reloading instance", { directory })
     await disposeInstance(directory)

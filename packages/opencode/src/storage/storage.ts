@@ -43,9 +43,12 @@ export namespace Storage {
             cwd: path.join(project, projectDir),
             absolute: true,
           })) {
-            const json = await Filesystem.readJson<any>(msgFile)
-            worktree = json.path?.root
-            if (worktree) break
+            const json = await Filesystem.readJson<{ path?: { root?: string } }>(msgFile)
+            const root = json.path?.root
+            if (root) {
+              worktree = root
+              break
+            }
           }
           if (!worktree) continue
           if (!(await Filesystem.isDir(worktree))) continue
@@ -81,7 +84,10 @@ export namespace Storage {
               sessionFile,
               dest,
             })
-            const session = await Filesystem.readJson<any>(sessionFile)
+            const session = await Filesystem.readJson<{
+              id: string
+              [key: string]: string | number | boolean | object | null
+            }>(sessionFile)
             await Filesystem.writeJson(dest, session)
             log.info(`migrating messages for session ${session.id}`)
             for (const msgFile of await Glob.scan(`storage/session/message/${session.id}/*.json`, {
@@ -93,7 +99,10 @@ export namespace Storage {
                 msgFile,
                 dest,
               })
-              const message = await Filesystem.readJson<any>(msgFile)
+              const message = await Filesystem.readJson<{
+                id: string
+                [key: string]: string | number | boolean | object | null
+              }>(msgFile)
               await Filesystem.writeJson(dest, message)
 
               log.info(`migrating parts for message ${message.id}`)
@@ -119,7 +128,12 @@ export namespace Storage {
         cwd: dir,
         absolute: true,
       })) {
-        const session = await Filesystem.readJson<any>(item)
+        const session = await Filesystem.readJson<{
+          id: string
+          projectID?: string
+          summary?: { diffs?: Array<{ additions: number; deletions: number }> }
+          [key: string]: string | number | boolean | object | null | undefined
+        }>(item)
         if (!session.projectID) continue
         if (!session.summary?.diffs) continue
         const { diffs } = session.summary
@@ -127,8 +141,8 @@ export namespace Storage {
         await Filesystem.writeJson(path.join(dir, "session", session.projectID, session.id + ".json"), {
           ...session,
           summary: {
-            additions: diffs.reduce((sum: any, x: any) => sum + x.additions, 0),
-            deletions: diffs.reduce((sum: any, x: any) => sum + x.deletions, 0),
+            additions: diffs.reduce((sum: number, x: { additions: number }) => sum + x.additions, 0),
+            deletions: diffs.reduce((sum: number, x: { deletions: number }) => sum + x.deletions, 0),
           },
         })
       }

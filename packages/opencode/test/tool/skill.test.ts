@@ -7,6 +7,7 @@ import { Instance } from "../fixture/instance-shim"
 import { SkillTool } from "../../src/tool/skill"
 import { tmpdir } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
+import { ProjectID } from "../../src/project/schema"
 
 const baseCtx: Omit<Tool.Context, "ask"> = {
   sessionID: SessionID.make("ses_test"),
@@ -17,7 +18,7 @@ const baseCtx: Omit<Tool.Context, "ask"> = {
   messages: [],
   directory: "",
   worktree: "",
-  projectID: "",
+  projectID: ProjectID.make(""),
   containsPath: () => true,
   metadata: () => {},
 }

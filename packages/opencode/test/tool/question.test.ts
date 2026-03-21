@@ -3,6 +3,7 @@ import { z } from "zod"
 import { QuestionTool } from "../../src/tool/question"
 import * as QuestionModule from "../../src/question"
 import { SessionID, MessageID } from "../../src/session/schema"
+import { ProjectID } from "../../src/project/schema"
 
 const ctx = {
   sessionID: SessionID.make("ses_test-session"),
@@ -13,7 +14,7 @@ const ctx = {
   messages: [],
   directory: "",
   worktree: "",
-  projectID: "",
+  projectID: ProjectID.make(""),
   containsPath: () => true,
   metadata: () => {},
   ask: async () => {},

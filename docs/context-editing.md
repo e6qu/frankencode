@@ -87,3 +87,12 @@ Park and list project-level side threads. Threads survive across sessions.
 | `/focus-rewrite-history` | Full conversation rewrite with user confirmation (disabled by default) |
 | `/btw <question>`        | Side conversation in a subagent — doesn't pollute main thread          |
 | `/reset-context`         | Restore all edited parts to originals from CAS                         |
+
+---
+
+## See Also
+
+- [schema.md](schema.md) — database tables (cas_object, edit_graph_node/head, side_thread, PartBase extensions)
+- [agents.md](agents.md) — classifier, focus, and focus-rewrite-history agents
+- [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) — all Frankencode vs OpenCode changes
+- [EFFECTIFICATION.md](EFFECTIFICATION.md) — Effect services powering the context editing pipeline

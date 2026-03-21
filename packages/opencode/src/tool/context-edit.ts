@@ -19,12 +19,13 @@ function resolvePart(
     if (msg.info.role !== "assistant") continue
     for (const part of msg.parts) {
       if (part.edit?.hidden) continue
-      const content =
-        part.type === "text"
-          ? (part as MessageV2.TextPart).text
-          : part.type === "tool" && (part as MessageV2.ToolPart).state.status === "completed"
-            ? ((part as any).state.output ?? "")
-            : ""
+      let content = ""
+      if (part.type === "text") {
+        content = (part as MessageV2.TextPart).text
+      } else if (part.type === "tool") {
+        const state = (part as MessageV2.ToolPart).state
+        if (state.status === "completed") content = state.output ?? ""
+      }
       candidates.push({
         partID: part.id,
         messageID: msg.info.id,

@@ -26,6 +26,7 @@ import { Global } from "@/global"
 import path from "path"
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
+import { MessageV2 } from "@/session/message-v2"
 
 export const agentStates = new Map<string, Promise<Record<string, Agent.Info>>>()
 registerDisposer(async (directory) => {
@@ -52,7 +53,7 @@ export namespace Agent {
         .optional(),
       variant: z.string().optional(),
       prompt: z.string().optional(),
-      options: z.record(z.string(), z.any()),
+      options: z.record(z.string(), MessageV2.JsonValue),
       steps: z.number().int().positive().optional(),
     })
     .meta({
@@ -354,7 +355,7 @@ export namespace Agent {
       item.mode = value.mode ?? item.mode
       item.color = value.color ?? item.color
       item.hidden = value.hidden ?? item.hidden
-      item.name = value.name ?? item.name
+      item.name = (value.name as string) ?? item.name
       item.steps = value.steps ?? item.steps
       item.options = mergeDeep(item.options, value.options ?? {})
       item.permission = PermissionNext.merge(item.permission, PermissionNext.fromConfig(value.permission ?? {}))

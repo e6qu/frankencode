@@ -195,7 +195,7 @@ const ContextThreadsCommand = cmd({
       const projectID = InstanceALS.project.id
       const result = SideThread.list({
         projectID,
-        status: args.status as any,
+        status: args.status as "parked" | "investigating" | "resolved" | "deferred" | "all",
         limit: args.limit,
       })
 

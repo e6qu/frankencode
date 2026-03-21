@@ -105,7 +105,8 @@ export namespace ToolRegistry {
             directory: ctx.directory,
             worktree: ctx.worktree,
           } as unknown as PluginToolContext
-          const result = await def.execute(args as any, pluginCtx)
+          // SDK boundary: plugin tool args validated by Zod
+          const result = await def.execute(args as Record<string, string | number | boolean | null | object>, pluginCtx)
           const out = await Truncate.output(result, {}, initCtx?.agent)
           return {
             title: "",

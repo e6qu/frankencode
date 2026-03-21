@@ -20,7 +20,7 @@ import { PermissionID } from "@/permission/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
-import { aggregateSessionStats } from "../../cli/cmd/stats"
+import { aggregateSessionStats, SessionStatsSchema } from "../../cli/cmd/stats"
 
 const log = Log.create({ service: "server" })
 
@@ -106,7 +106,7 @@ export const SessionRoutes = lazy(() =>
             description: "Usage statistics",
             content: {
               "application/json": {
-                schema: resolver(z.any()),
+                schema: resolver(SessionStatsSchema),
               },
             },
           },

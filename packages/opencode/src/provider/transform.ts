@@ -1,6 +1,6 @@
 import type { ModelMessage } from "ai"
 import { mergeDeep, unique } from "remeda"
-import type { JSONSchema7 } from "@ai-sdk/provider"
+import type { JSONSchema7, JSONValue } from "@ai-sdk/provider"
 import type { JSONSchema } from "zod/v4/core"
 import type { Provider } from "./provider"
 import type { ModelsDev } from "./models"
@@ -137,11 +137,15 @@ export namespace ProviderTransform {
       const field = model.capabilities.interleaved.field
       return msgs.map((msg) => {
         if (msg.role === "assistant" && Array.isArray(msg.content)) {
-          const reasoningParts = msg.content.filter((part: any) => part.type === "reasoning")
-          const reasoningText = reasoningParts.map((part: any) => part.text).join("")
+          const reasoningParts = msg.content.filter(
+            (part: { type: string; text?: string }) => part.type === "reasoning",
+          )
+          const reasoningText = reasoningParts.map((part: { type: string; text?: string }) => part.text).join("")
 
           // Filter out reasoning parts from content
-          const filteredContent = msg.content.filter((part: any) => part.type !== "reasoning")
+          const filteredContent = msg.content.filter(
+            (part: { type: string; text?: string }) => part.type !== "reasoning",
+          )
 
           // Include reasoning_content | reasoning_details directly on the message for all assistant messages
           if (reasoningText) {
@@ -151,7 +155,7 @@ export namespace ProviderTransform {
               providerOptions: {
                 ...msg.providerOptions,
                 openaiCompatible: {
-                  ...(msg.providerOptions as any)?.openaiCompatible,
+                  ...(msg.providerOptions as Record<string, Record<string, JSONValue>> | undefined)?.openaiCompatible,
                   [field]: reasoningText,
                 },
               },
@@ -267,7 +271,7 @@ export namespace ProviderTransform {
     // Remap providerOptions keys from stored providerID to expected SDK key
     const key = sdkKey(model.api.npm)
     if (key && key !== model.providerID && model.api.npm !== "@ai-sdk/azure") {
-      const remap = (opts: Record<string, any> | undefined) => {
+      const remap = (opts: Record<string, Record<string, JSONValue>> | undefined) => {
         if (!opts) return opts
         if (!(model.providerID in opts)) return opts
         const result = { ...opts }
@@ -329,7 +333,7 @@ export namespace ProviderTransform {
   const WIDELY_SUPPORTED_EFFORTS = ["low", "medium", "high"]
   const OPENAI_EFFORTS = ["none", "minimal", ...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
 
-  export function variants(model: Provider.Model): Record<string, Record<string, any>> {
+  export function variants(model: Provider.Model): Record<string, Record<string, JSONValue>> {
     if (!model.capabilities.reasoning) return {}
 
     const id = model.id.toLowerCase()
@@ -714,9 +718,9 @@ export namespace ProviderTransform {
   export function options(input: {
     model: Provider.Model
     sessionID: string
-    providerOptions?: Record<string, any>
-  }): Record<string, any> {
-    const result: Record<string, any> = {}
+    providerOptions?: Record<string, Record<string, JSONValue>>
+  }): Record<string, Record<string, JSONValue>> {
+    const result: Record<string, JSONValue> = {}
 
     // openai and providers using openai package should set store to false by default.
     if (
@@ -826,7 +830,7 @@ export namespace ProviderTransform {
       }
     }
 
-    return result
+    return result as Record<string, Record<string, JSONValue>>
   }
 
   export function smallOptions(model: Provider.Model) {
@@ -870,7 +874,10 @@ export namespace ProviderTransform {
     amazon: "bedrock",
   }
 
-  export function providerOptions(model: Provider.Model, options: { [x: string]: any }) {
+  export function providerOptions(
+    model: Provider.Model,
+    options: Record<string, JSONValue>,
+  ): Record<string, Record<string, JSONValue>> {
     if (model.api.npm === "@ai-sdk/gateway") {
       // Gateway providerOptions are split across two namespaces:
       // - `gateway`: gateway-native routing/caching controls (order, only, byok, etc.)
@@ -884,15 +891,15 @@ export namespace ProviderTransform {
       const rest = Object.fromEntries(Object.entries(options).filter(([k]) => k !== "gateway"))
       const has = Object.keys(rest).length > 0
 
-      const result: Record<string, any> = {}
-      if (gateway !== undefined) result.gateway = gateway
+      const result: Record<string, Record<string, JSONValue>> = {}
+      if (gateway !== undefined) result.gateway = gateway as Record<string, JSONValue>
 
       if (has) {
         if (slug) {
           // Route model-specific options under the provider slug
           result[slug] = rest
         } else if (gateway && typeof gateway === "object" && !Array.isArray(gateway)) {
-          result.gateway = { ...gateway, ...rest }
+          result.gateway = { ...(gateway as Record<string, JSONValue>), ...rest }
         } else {
           result.gateway = rest
         }
@@ -930,7 +937,7 @@ export namespace ProviderTransform {
 
     // Convert integer enums to string enums for Google/Gemini
     if (model.providerID === "google" || model.api.id.includes("gemini")) {
-      const isPlainObject = (node: unknown): node is Record<string, any> =>
+      const isPlainObject = (node: unknown): node is Record<string, JSONValue> =>
         typeof node === "object" && node !== null && !Array.isArray(node)
       const hasCombiner = (node: unknown) =>
         isPlainObject(node) && (Array.isArray(node.anyOf) || Array.isArray(node.oneOf) || Array.isArray(node.allOf))
@@ -955,7 +962,7 @@ export namespace ProviderTransform {
         ].some((key) => key in node)
       }
 
-      const sanitizeGemini = (obj: any): any => {
+      const sanitizeGemini = (obj: JSONValue): JSONValue => {
         if (obj === null || typeof obj !== "object") {
           return obj
         }
@@ -964,7 +971,7 @@ export namespace ProviderTransform {
           return obj.map(sanitizeGemini)
         }
 
-        const result: any = {}
+        const result: Record<string, JSONValue> = {}
         for (const [key, value] of Object.entries(obj)) {
           if (key === "enum" && Array.isArray(value)) {
             // Convert all enum values to strings
@@ -981,8 +988,15 @@ export namespace ProviderTransform {
         }
 
         // Filter required array to only include fields that exist in properties
-        if (result.type === "object" && result.properties && Array.isArray(result.required)) {
-          result.required = result.required.filter((field: any) => field in result.properties)
+        if (
+          result.type === "object" &&
+          result.properties &&
+          typeof result.properties === "object" &&
+          !Array.isArray(result.properties) &&
+          Array.isArray(result.required)
+        ) {
+          const props = result.properties as Record<string, JSONValue>
+          result.required = (result.required as string[]).filter((field: string) => field in props)
         }
 
         if (result.type === "array" && !hasCombiner(result)) {
@@ -1004,7 +1018,7 @@ export namespace ProviderTransform {
         return result
       }
 
-      schema = sanitizeGemini(schema)
+      schema = sanitizeGemini(schema as JSONValue) as typeof schema
     }
 
     return schema as JSONSchema7

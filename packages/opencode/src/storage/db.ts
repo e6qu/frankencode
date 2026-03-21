@@ -124,6 +124,7 @@ export namespace Database {
     Client.reset()
   }
 
+  // Drizzle ORM internal generics — schema/table types not exposed for parameterization
   export type TxOrDb = SQLiteTransaction<"sync", void, any, any> | Client
 
   const ctx = Context.create<{
@@ -145,7 +146,7 @@ export namespace Database {
     }
   }
 
-  export function effect(fn: () => any | Promise<any>) {
+  export function effect(fn: () => void | Promise<void>) {
     try {
       ctx.use().effects.push(fn)
     } catch {
@@ -159,6 +160,7 @@ export namespace Database {
     } catch (err) {
       if (err instanceof Context.NotFound) {
         const effects: (() => void | Promise<void>)[] = []
+        // Drizzle ORM API: transaction() generic types don't match our TxOrDb alias
         const result = (Client().transaction as any)((tx: TxOrDb) => {
           return ctx.provide({ tx, effects }, () => callback(tx))
         })
