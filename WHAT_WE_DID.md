@@ -14,3 +14,4 @@ CAS, edit graph, context editing (6 ops), side threads, objective tracker, class
 - **#22:** 6 bug fixes (B47-B52), ~250 `any` eliminated, strong Zod schemas, 5 architecture docs, SDK build fix
 - **#23:** TUI types fixed, logger types strengthened (unknown → string | Error)
 - **#24:** Zod v4 migration (zodToJsonSchema → z.toJSONSchema), 25 Frankencode unit tests, tracking docs cleanup
+- **#25:** Upstream catalogue (162 commits + ~195 PRs), security audit (2 CVEs, 5 issues), 6-phase roadmap
