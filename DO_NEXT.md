@@ -1,54 +1,29 @@
 # Frankencode — Do Next
 
-## Implemented
+## Priority 1: Zod v3 → v4 Migration
 
-- [x] CAS (SQLite) + Part Editing (EditMeta, LifecycleMeta, filterEdited, context_edit, context_deref)
-- [x] Conversation Graph (edit_graph DAG, context_history with log/tree/checkout/fork)
-- [x] Focus Agent + Side Threads (side_thread table, thread_park, thread_list, classifier, focus agents)
-- [x] Integration (system prompt injection, plugin hooks, lifecycle sweeper)
-- [x] v2: query/toolName targeting, classifier_threads, distill_threads, /btw, /focus, /reset-context
-- [x] Config-based control (no feature toggles)
-- [x] Ephemeral commands (/threads, /history, /tree, /deref, /classify)
-- [x] /cost TUI command with usage dialog
-- [x] Verify tool (test/lint/typecheck with circuit breaker)
-- [x] Refine tool (evaluator-optimizer loop)
-- [x] Script discovery and execution from skills
-- [x] 40 bugs fixed (code review audits + ephemeral fixes)
-- [x] 25 regression tests for bug fixes
-- [x] Upstream backport Phase 1-4 (bug fixes + full rebase)
-- [x] Effect-ification B1-B10g: Instance decoupled, deleted from src/, test shim created
-- [x] ALS fallback elimination: 23 of 59 patterns removed (15 leaf state() + 8 non-state)
-- [x] TUI tests: 81 component tests + tmux integration harness (5 flows)
-- [x] Manual TUI testing: home, command palette, agent cycling, message submit, cost dialog — all pass
+Single site: `server/routes/experimental.ts:91` uses `zodToJsonSchema(... as any)`. Replace `zod-to-json-schema` with Zod v4's built-in `z.toJSONSchema()`. Also audit `hono-openapi` resolver/validator calls for v3 compatibility.
 
-## Next — PR to dev
+See `PLAN.md` for full site list.
 
-- [ ] PR `effect/complete-effectification` → `dev` (27 commits)
+## Priority 2: Upstream Re-sync
 
-## Done — All 59 ALS Fallbacks Eliminated
+Upstream (`anomalyco/opencode`) has diverged since our last rebase. Effect-ification PRs are landing (7+ still open). Strategy: cherry-pick applicable fixes first, then full rebase.
 
-- [x] Batch A: Session modules (20 fallbacks) — system, instruction, compaction, llm, index, prompt
-- [x] Batch B: Worktree + Pty + Bash (6 fallbacks) — ctx required, directory required
-- [x] Batch C: Wide-caller modules (10 fallbacks) — env (25 callers), plugin (31 callers), bus (78 callers)
+High-conflict areas: `session/prompt.ts`, `session/message-v2.ts`, `effect/`, `skill/skill.ts`.
 
-## Next — Remaining TUI Tests
+## Backlog: Testing
 
-- [ ] 9 dialog tests: command, provider, session-rename, stash, status, tag, workspace-list, mcp, cost (enhance)
-- [ ] Route tests: home, session
-- [ ] Interaction tests: dialog-select keyboard nav, prompt input, command palette
-
-## Backlog — Testing
-
-- [ ] Unit tests for CAS (store, get, dedup via ON CONFLICT)
-- [ ] Unit tests for filterEdited (hidden parts stripped, empty messages dropped)
-- [ ] Unit tests for EditGraph (commit chain, log walk, checkout restore)
+- [ ] Unit tests for CAS (store, get, dedup)
+- [ ] Unit tests for filterEdited (hidden parts stripped)
+- [ ] Unit tests for EditGraph (commit chain, log walk, checkout)
 - [ ] Unit tests for SideThread CRUD
-- [ ] Unit tests for ContextEdit validation (ownership, budget, recency, privileged agents)
+- [ ] Unit tests for ContextEdit validation (ownership, budget, recency)
 - [ ] Unit tests for lifecycle sweeper (discardable auto-hide, ephemeral auto-externalize)
+- [ ] TUI dialog tests (9 remaining: command, provider, session-rename, etc.)
+- [ ] TUI interaction tests (dialog-select keyboard nav, prompt input, command palette)
 
-## Backlog — Features
+## Backlog: Features
 
-- [ ] CAS garbage collection (orphan cleanup, size limits)
 - [ ] TUI rendering of edit indicators (hidden/replaced/annotated parts)
-- [ ] Session.remove() cleanup of EditGraph rows (add CASCADE or explicit delete)
-- [ ] CAS.store() ownership: stop overwriting session_id on hash collision
+- [ ] CAS garbage collection improvements (size limits, age-based cleanup)

@@ -4,23 +4,19 @@
 **Upstream:** `anomalyco/opencode` @ `dev`
 **Fork:** `e6qu/frankencode` @ `dev`
 
-## Current Focus
+## Summary
 
-Type safety audit complete. TUI types fixed. Logger types strengthened. 20 documented `any` remain at structural boundaries.
+All features implemented. Type safety audit complete. 0 open bugs.
 
-## Bug Status
+## Metrics
 
-- **0 open bugs**, 1 deferred (B51), 51 fixed
-
-## Type Safety Status
-
-- **~250+ `any` eliminated** across ~50 files
-- **20 remaining** — all documented (event emitters, SDK boundaries, generic patterns, upstream SDK)
-- **0 `z.any()` in our code** (3 in upstream OpenAI SDK)
-- **0 `unknown` types** in interfaces (removed from log.ts)
-- **Strong schemas:** `JsonValue`, `ProviderMeta`, `ToolInput`, `ToolMeta`
-
-## Test Status
-
-- **1448 tests passing**, 0 failures, 8 skipped
-- **0 tsgo errors** (`bun run typecheck`)
+| Metric | Value |
+|--------|-------|
+| Tests passing | 1448 (0 fail, 8 skip) |
+| tsgo errors | 0 |
+| Open bugs | 0 (1 deferred: B51) |
+| Fixed bugs | 51 |
+| `any` remaining | 20 (all documented structural exceptions) |
+| `z.any()` in our code | 0 (3 in upstream OpenAI SDK) |
+| Architecture docs | 8 (in `docs/`) |
+| PRs merged | #16-#23 |

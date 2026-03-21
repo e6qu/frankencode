@@ -2,41 +2,13 @@
 
 > **Frankencode** is a fork of [OpenCode](https://github.com/anomalyco/opencode) (`dev` branch) that adds context editing, content-addressable storage, and an edit graph.
 
-**Status (2026-03-21):** Features implemented. 51 bugs fixed, 0 open, 1 deferred. Type safety audit ~94% complete (29 `any` remain, mostly TUI). 1448 tests passing, 0 tsgo errors. See `STATUS.md`, `GAP_ANALYSIS.md`.
+**Status (2026-03-21):** Features implemented. 51 bugs fixed, 0 open. Type safety audit complete (20 documented `any` remain). 1448 tests passing, 0 tsgo errors. See `STATUS.md`.
 
 ---
 
-## Next: Remaining Type Safety Work
+## Next: Zod v3 → v4 Migration
 
-### TUI component `any` types (21 occurrences across 5 files)
-
-| File | Count | Pattern | Fix |
-|------|-------|---------|-----|
-| `cli/cmd/tui/routes/session/index.tsx` | 12 | `ToolProps<any>`, `(state as any).title`, `(props.input as any).url`, keybind cast | Narrow `ToolProps` generics, use `ToolStateCompleted` type guard, type tool inputs |
-| `cli/cmd/tui/context/kv.tsx` | 2 | `get(key, defaultValue?: any)`, `set(key, value: any)` | Use `JsonValueType` from `@/util/json` |
-| `cli/cmd/tui/context/local.tsx` | 1 | `.then((x: any) =>` | Type the response |
-| `cli/cmd/tui/ui/dialog.tsx` | 1 | `replace(input: any)` | Use component/element type |
-| `cli/cmd/tui/ui/toast.tsx` | 1 | `error: (err: any)` | Use `string \| Error` |
-
-### `util/log.ts` types
-
-`LogMessage = unknown` and `LogExtra = Record<string, unknown>` violate the AGENTS.md rule. Fix:
-- `LogMessage = string | Error`
-- `LogExtra = Record<string, string | number | boolean | null | Error | object>`
-- Cascade: ~15 callers need `e instanceof Error ? e : String(e)` narrowing
-
-### Documented `any` exceptions (8 — keep as-is)
-
-| File | Pattern | Reason |
-|------|---------|--------|
-| `instance-als.ts` | `(...args: any[]) => any` in `bind()` | TS generic function binding — contravariance |
-| `bus/index.ts` | `BusCallback = (event: any)` | Event emitter type erasure |
-| `bus/global.ts` | `payload: any` | EventEmitter heterogeneous payload |
-| `bus/bus-event.ts` | `.toArray() as any` | Zod discriminatedUnion API limitation |
-| `storage/db.ts` | `transaction as any` | Drizzle ORM API mismatch |
-| `util/filesystem.ts` | `Readable.fromWeb(stream as any)` | Bun/Node ReadableStream boundary |
-| `server/routes/experimental.ts` | `zodToJsonSchema(... as any)` | Zod v3/v4 library boundary |
-| `provider/provider.ts` | `BUNDLED_PROVIDERS (options: any)` | 20+ heterogeneous SDK constructors |
+See details below.
 
 ---
 
