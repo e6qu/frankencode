@@ -389,7 +389,11 @@ export namespace Agent {
     return pipe(
       await state(InstanceALS.directory),
       values(),
-      sortBy([(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "build"), "desc"]),
+      // Default agent first, then alphabetical for deterministic ordering (upstream #18261 by jorge g)
+      sortBy(
+        [(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "build"), "desc"],
+        [(x) => x.name, "asc"],
+      ),
     )
   }
 
