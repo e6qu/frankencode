@@ -20,4 +20,4 @@ CAS, edit graph, context editing (6 ops), side threads, objective tracker, class
 - **#29:** Phase 5 tests: filterEdited (8), filterEphemeral (6), ContextEdit validation (10) — 24 new tests
 - **#30:** Phase 6 Effect analysis: all 12 upstream Effect PRs reviewed — zero need reimplementation
 - **#31:** QA bug hunt: 18 console.log→Log.create() fixes, 5 code quality issues documented (Q1-Q5)
-- **#32:** Hardened git hooks: SAST checks, AI attribution stripping (pre-commit/commit-msg/pre-push), PR body cleaning
+- **#32:** Hardened git hooks + QA: SAST, AI attribution stripping, CI fixes, tmux tests passed, 5 bugs fixed (B53-B57 — transaction safety, shared CAS, synthetic ID), 5 false positives documented

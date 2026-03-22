@@ -4,7 +4,6 @@ set -e
 msg=$(head -1 "$1")
 
 # Conventional commit format: type(scope): description
-# or: type: description
 if ! echo "$msg" | grep -qE '^(feat|fix|docs|chore|refactor|test|perf|ci|build|revert)(\([a-zA-Z0-9_-]+\))?!?: .+'; then
   echo "ERROR: Commit message does not follow conventional commit format."
   echo ""
@@ -16,13 +15,26 @@ if ! echo "$msg" | grep -qE '^(feat|fix|docs|chore|refactor|test|perf|ci|build|r
   exit 1
 fi
 
-# Strip AI co-authorship trailers from commit message
-# These are injected by AI coding tools and misrepresent authorship.
-# See docs/AI_ATTRIBUTION_POLICY.md for the full list.
+# Strip AI co-authorship trailers from commit message.
+# Only 4 tools actually inject (verified from docs/source):
+#   Cursor:  Co-authored-by: Cursor <cursoragent@cursor.com>
+#   Claude:  Co-Authored-By: Claude <noreply@anthropic.com>
+#   Aider:   Co-authored-by: aider (MODEL) <noreply@aider.chat>
+#   Copilot: (commits as author, but strip if trailer found)
+# Also strips Claude Code body marker.
+# See docs/AI_ATTRIBUTION_POLICY.md
 if [ "$(uname)" = "Darwin" ]; then
-  sed -i '' '/^Co-authored-by:.*[Cc]laude\|[Cc]opilot\|[Cc]ursor\|[Cc]hat[Gg][Pp][Tt]\|[Oo]pen[Aa][Ii]\|[Aa]nthrop\|[Dd]evin\|[Aa]ider\|[Cc]odeium\|[Tt]abnine\|[Ww]indsurf\|[Cc]ody\|[Cc]ontinue\|[Aa]ugment\|[Ss]upermaven/d' "$1"
-  sed -i '' '/^Authored-by:.*AI\|^Written-by:.*AI\|^Generated-by:/d' "$1"
+  sed -i '' '/^[Cc]o-[Aa]uthored-[Bb]y:.*[Cc]ursor\|cursoragent@cursor/d' "$1"
+  sed -i '' '/^[Cc]o-[Aa]uthored-[Bb]y:.*[Cc]laude\|noreply@anthropic/d' "$1"
+  sed -i '' '/^[Cc]o-[Aa]uthored-[Bb]y:.*aider\|noreply@aider/d' "$1"
+  sed -i '' '/^[Cc]o-[Aa]uthored-[Bb]y:.*[Cc]opilot/d' "$1"
+  sed -i '' '/Generated with Claude Code/d' "$1"
+  sed -i '' '/Generated with \[Claude Code\]/d' "$1"
 else
-  sed -i '/^Co-authored-by:.*[Cc]laude\|[Cc]opilot\|[Cc]ursor\|[Cc]hat[Gg][Pp][Tt]\|[Oo]pen[Aa][Ii]\|[Aa]nthrop\|[Dd]evin\|[Aa]ider\|[Cc]odeium\|[Tt]abnine\|[Ww]indsurf\|[Cc]ody\|[Cc]ontinue\|[Aa]ugment\|[Ss]upermaven/d' "$1"
-  sed -i '/^Authored-by:.*AI\|^Written-by:.*AI\|^Generated-by:/d' "$1"
+  sed -i '/^[Cc]o-[Aa]uthored-[Bb]y:.*[Cc]ursor\|cursoragent@cursor/d' "$1"
+  sed -i '/^[Cc]o-[Aa]uthored-[Bb]y:.*[Cc]laude\|noreply@anthropic/d' "$1"
+  sed -i '/^[Cc]o-[Aa]uthored-[Bb]y:.*aider\|noreply@aider/d' "$1"
+  sed -i '/^[Cc]o-[Aa]uthored-[Bb]y:.*[Cc]opilot/d' "$1"
+  sed -i '/Generated with Claude Code/d' "$1"
+  sed -i '/Generated with \[Claude Code\]/d' "$1"
 fi
