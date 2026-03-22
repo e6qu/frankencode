@@ -67,7 +67,7 @@ _No open bugs._
 
 ---
 
-## False Positives / Intentional (15)
+## False Positives / Intentional (20)
 
 | Issue | Verdict |
 |-------|---------|
@@ -86,6 +86,11 @@ _No open bugs._
 | E1-fork: Fork session failure leaks | Already fixed in B21 |
 | PM1: edit/write use `always: ["*"]` | By design — "remember answer for type", not auto-approve |
 | PM2: bash doesn't ask edit permission | By design — bash has own permission level |
+| `updatePart()` creates orphaned parts if message deleted | False positive — FK constraint `message_id → MessageTable.id` prevents orphaned inserts |
+| Script paths with spaces in skill/scripts.ts | False positive — array-based `Process.text()` doesn't split on spaces |
+| Truncation boundary at exact maxBytes | False positive — `>` comparison is correct (include at limit, truncate above) |
+| Compaction during active prompt | False positive — `BusyError` prevents concurrent runs |
+| filterEdited + sweep modify same part | False positive — orthogonal concerns (edit vs lifecycle), no conflict |
 
 ---
 
