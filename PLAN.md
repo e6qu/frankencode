@@ -2,7 +2,7 @@
 
 > **Frankencode** is a fork of [OpenCode](https://github.com/anomalyco/opencode) (`dev` branch) that adds context editing, content-addressable storage, and an edit graph.
 
-**Status (2026-03-21):** All features implemented. 51 bugs fixed, 5 security issues open. Type safety complete. Zod v4 migrated. 1473 tests passing, 0 tsgo errors.
+**Status (2026-03-22):** All 6 phases complete. 51 bugs fixed, 4 security issues fixed, 1 mitigated. Type safety complete. Zod v4 migrated. 1512 tests passing, 0 tsgo errors. Upstream Effect analysis done — zero items need reimplementation.
 
 **Upstream divergence:** 23 ahead, 162 behind, ~195 open PRs catalogued. See [UPSTREAM_STATUS.md](UPSTREAM_STATUS.md).
 
@@ -102,18 +102,14 @@ Cherry-pick or reimplement the best community contributions:
 
 ---
 
-## Phase 6: Effect Behavioral Analysis
+## Phase 6: Effect Behavioral Analysis — COMPLETE
 
-For each of the 12 upstream Effect PRs, extract behavioral changes and reimplement in our architecture. NOT a rebase.
+Analyzed all 12 upstream Effect PRs. Result: **zero items need reimplementation.**
 
-Key PRs to analyze:
-- #17544 — LayerMap (foundational, already done differently)
-- #17849 — SkillService (we have content cache — check for new capabilities)
-- #18483 — InstanceState consolidation (extract any bug fixes)
-- #17829 — VcsService (contains HEAD filter bug fix)
-- #17835 — FileTimeService (Semaphore locks — evaluate benefit)
+- 2 bug fixes (VcsService HEAD filter, FileTimeService await+Semaphore) — already in our tree
+- 10 pure structural refactors — not applicable to our architecture
 
-**Exit criteria:** Behavioral changes extracted and reimplemented where valuable.
+See [UPSTREAM_STATUS.md](UPSTREAM_STATUS.md) for full per-PR analysis.
 
 ---
 
