@@ -99,30 +99,27 @@ These replace Bun-specific APIs with Node.js equivalents. Only valuable if we pl
 | `e9a17e448` | #17146 | AbigailJixiangyuyu | fix(windows): restore /editor support on Windows | Low |
 | `54ed87d53` | #18010 | Luke Parker | fix(windows): use cross-spawn for shim-backed commands | Low |
 
-## Effect-ification (12) — Kit Langton
+## Effect-ification (12) — Kit Langton — ANALYZED (Phase 6)
 
-**Cannot be cherry-picked.** These are architectural changes that conflict with Frankencode's approach:
+**Cannot be cherry-picked.** Architectural divergence — upstream uses `InstanceState` + `ScopedCache`, we deleted `Instance` entirely.
 
-- **Upstream:** `Instance` → `InstanceState` (using `ScopedCache` from Effect)
-- **Frankencode:** `Instance` deleted → `InstanceALS` + `InstanceLifecycle` + module-level state maps with `registerDisposer`
+**Phase 6 analysis result: zero items need reimplementation.** All behavioral changes are already in our tree. The 12 PRs are pure structural refactors (move to Effect service, rename, flatten facades) with no new runtime behavior.
 
-Each PR must be analyzed for **behavioral changes** (bug fixes, new capabilities) that we should reimplement in our architecture, versus pure structural refactors (rename, move) that don't apply.
-
-| SHA | PR | Description | Conflict |
+| SHA | PR | Description | Analysis |
 |-----|-----|-------------|----------|
-| `469c3a420` | #17544 | refactor(instance): move scoped services to LayerMap | **HIGH** |
-| `9e740d994` | #17827 | effectify FileWatcherService | Med |
-| `e5cbecf17` | #17829 | fix+refactor: effectify VcsService | Med |
-| `2cbdf04ec` | #17835 | effectify FileTimeService with Semaphore locks | Med |
-| `335356280` | #17675 | effectify FormatService | Med |
-| `69381f6ae` | #17845 | effectify FileService | Med |
-| `384982276` | #17849 | effectify SkillService | **HIGH** — we have skill cache |
-| `9e7c136de` | #17878 | effectify SnapshotService | Med |
-| `5dfe86dcb` | #17957 | effectify TruncateService, delete Scheduler | Med |
-| `a800583ae` | #18093 | unify service namespaces and align naming | High |
-| `e78944e9a` | #18266 | effectify Installation, drop Effect suffix | Med |
-| `38e0dc9cc` | #18483 | Move state into InstanceState, flatten facades | **HIGH** |
-| `5d2f8d77f` | #18158 | upgrade effect beta, fix test regressions (Luke Parker) | Med |
+| `469c3a420` | #17544 | move scoped services to LayerMap | Pure structural — we use registerDisposer |
+| `9e740d994` | #17827 | effectify FileWatcherService | Pure structural |
+| `e5cbecf17` | #17829 | fix+refactor VcsService | Bug fix (HEAD filter scoping) **already in our tree** |
+| `2cbdf04ec` | #17835 | effectify FileTimeService + Semaphore | Bug fix (await + Semaphore) **already in our tree** |
+| `335356280` | #17675 | effectify FormatService | Pure structural |
+| `69381f6ae` | #17845 | effectify FileService | Pure structural |
+| `384982276` | #17849 | effectify SkillService | Pure structural — our skill cache is separate |
+| `9e7c136de` | #17878 | effectify SnapshotService | Pure structural |
+| `5dfe86dcb` | #17957 | effectify TruncateService, delete Scheduler | Pure structural — we don't use Scheduler |
+| `a800583ae` | #18093 | unify service namespaces | Pure rename (drop "Service" suffix) |
+| `e78944e9a` | #18266 | effectify Installation | Pure structural |
+| `38e0dc9cc` | #18483 | InstanceState + flatten facades | Architectural divergence — N/A |
+| `5d2f8d77f` | #18158 | upgrade effect beta (Luke Parker) | Dependency update — we pin our own version |
 
 ## App/Desktop (20+) — Permanently Skip Desktop, Evaluate Web App
 

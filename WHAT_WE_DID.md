@@ -19,3 +19,4 @@ CAS, edit graph, context editing (6 ops), side threads, objective tracker, class
 - **#27:** Phase 2 upstream fixes: prompt parts (#17815), thinkingConfig guard (#18283), chunk timeout (#18264), error messages (#18165), event queue (#18259)
 - **#28:** Phase 3+4 merged: OpenTUI 0.1.88 upgrade, agent ordering stability. Most other items already applied or diverged.
 - **#29:** Phase 5 tests: filterEdited (8), filterEphemeral (6), ContextEdit validation (10) — 24 new tests
+- **#30:** Phase 6 Effect analysis: all 12 upstream Effect PRs reviewed — zero need reimplementation
