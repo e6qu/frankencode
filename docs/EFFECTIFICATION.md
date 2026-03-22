@@ -285,7 +285,7 @@ Frankencode completed the Effect-ification ahead of upstream in several areas:
 
 ## See Also
 
-- [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) — complete list of Frankencode vs OpenCode changes
+- [FRANKENCODE.md](FRANKENCODE.md) — complete list of Frankencode vs OpenCode changes
 - [API_PROVIDERS.md](API_PROVIDERS.md) — provider architecture (ProviderAuthService is an Effect service)
 - [context-editing.md](context-editing.md) — context editing tools (use Effect services for state management)
 - [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md) — ACP protocol (sessions boot via InstanceLifecycle)

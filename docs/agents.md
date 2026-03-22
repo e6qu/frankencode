@@ -154,25 +154,31 @@ All Frankencode agents inherit the session's model by default. Override per-agen
 
 ## Agent Visibility
 
-| Agent                 | Tab-selectable | Mode             | Default  |
-| --------------------- | :------------: | ---------------- | -------- |
-| build                 |      Yes       | primary          | enabled  |
-| plan                  |      Yes       | primary          | enabled  |
-| general               | Via `@general` | subagent         | enabled  |
-| explore               | Via `@explore` | subagent         | enabled  |
-| classifier            |       No       | subagent         | enabled  |
-| focus                 |       No       | primary (hidden) | disabled |
-| focus-rewrite-history |       No       | primary (hidden) | disabled |
-| compaction            |       No       | primary (hidden) | enabled  |
-| title                 |       No       | primary (hidden) | enabled  |
-| summary               |       No       | primary (hidden) | enabled  |
+| Agent                 | Shift+Tab cycle | Tab bar | Mode             | Default  |
+| --------------------- | :-------------: | :-----: | ---------------- | -------- |
+| build                 |       Yes       |    —    | primary          | enabled  |
+| plan                  |       Yes       |    —    | primary          | enabled  |
+| general               |       No        |   S*n*  | subagent         | enabled  |
+| explore               |       No        |   S*n*  | subagent         | enabled  |
+| classifier            |       No        |    —    | subagent         | enabled  |
+| focus                 |       No        |    —    | primary (hidden) | disabled |
+| focus-rewrite-history |       No        |    —    | primary (hidden) | disabled |
+| compaction            |       No        |    —    | primary (hidden) | enabled  |
+| title                 |       No        |    —    | primary (hidden) | enabled  |
+| summary               |       No        |    —    | primary (hidden) | enabled  |
+| *(fork agent)*        |       No        |   F*n*  | fork child       | N/A      |
+
+**Shift+Tab cycle** — cycles the agent type (Build/Plan/Docs) for the current session.
+**Tab bar** — subagents spawned by the LLM appear as S1, S2, etc. Fork agents appear as F1, F2, etc.
+
+See [FRANKENCODE.md](FRANKENCODE.md#tab-bar-and-subagent-tabs) for full tab bar documentation.
 
 ---
 
 ## See Also
 
+- [FRANKENCODE.md](FRANKENCODE.md) — tab bar, fork agents, and all Frankencode differences
 - [context-editing.md](context-editing.md) — tools used by focus/classifier agents
 - [API_PROVIDERS.md](API_PROVIDERS.md) — model selection for agents
 - [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md) — agents exposed via ACP protocol
 - [EFFECTIFICATION.md](EFFECTIFICATION.md) — AgentService Effect layer
-- [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) — all Frankencode additions

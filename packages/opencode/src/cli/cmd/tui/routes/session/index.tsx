@@ -53,6 +53,8 @@ import { useCommandDialog } from "@tui/component/dialog-command"
 import type { DialogContext } from "@tui/ui/dialog"
 import { useKeybind } from "@tui/context/keybind"
 import { Header } from "./header"
+import { TabBar } from "./tabbar"
+import { useTab } from "./tab"
 import { contextCommands } from "./context-commands"
 import { parsePatch } from "diff"
 import { useDialog } from "../../ui/dialog"
@@ -325,32 +327,42 @@ export function Session() {
 
   const local = useLocal()
 
-  function moveFirstChild() {
-    if (children().length === 1) return
-    const next = children().find((x) => !!x.parentID)
-    if (next) {
-      navigate({
-        type: "session",
-        sessionID: next.id,
-      })
+  // Tab bar — single hook owns all state and actions
+  const bar = useTab({
+    sessions: children,
+    current: () => route.sessionID,
+    permissions,
+    questions,
+    status: () => sync.data.session_status ?? {},
+    fork: (root) =>
+      sdk.client.session.fork({ sessionID: root, parentID: root }).then((r) => r.data?.id),
+    abort: (id) => sdk.client.session.abort({ sessionID: id }).catch(() => {}),
+    remove: (id) => sdk.client.session.delete({ sessionID: id }),
+    navigate: (id) => navigate({ type: "session", sessionID: id }),
+    exit,
+  })
+
+  // Focus management: blur prompt when tab bar focused, refocus when unfocused
+  createEffect(() => {
+    if (bar.focused()) {
+      promptRef.current?.blur()
+    } else {
+      promptRef.current?.focus()
     }
-  }
+  })
 
-  function moveChild(direction: number) {
-    if (children().length === 1) return
-
-    const sessions = children().filter((x) => !!x.parentID)
-    let next = sessions.findIndex((x) => x.id === session()?.id) + direction
-
-    if (next >= sessions.length) next = 0
-    if (next < 0) next = sessions.length - 1
-    if (sessions[next]) {
-      navigate({
-        type: "session",
-        sessionID: sessions[next].id,
-      })
-    }
-  }
+  // Tab bar keyboard handler — thin dispatcher to hook actions
+  useKeyboard((evt) => {
+    if (evt.name === "c" && evt.ctrl) { evt.preventDefault(); bar.ctrlc(); return }
+    if (evt.name === "tab" && !evt.shift && !evt.ctrl && !evt.meta) { evt.preventDefault(); bar.toggle(); return }
+    if (!bar.focused()) return
+    if (evt.name === "left" || evt.name === "h") { evt.preventDefault(); bar.move(-1); return }
+    if (evt.name === "right" || evt.name === "l") { evt.preventDefault(); bar.move(1); return }
+    if (evt.name === "return" || evt.name === "space") { evt.preventDefault(); bar.activate(); return }
+    if (evt.name === "down" || evt.name === "j") { evt.preventDefault(); bar.blur(); return }
+    if (evt.name === "x") { evt.preventDefault(); bar.kill(); return }
+    if (evt.name === "escape") { evt.preventDefault(); bar.blur(); return }
+  })
 
   function childSessionHandler(func: (dialog: DialogContext) => void) {
     return (dialog: DialogContext) => {
@@ -934,7 +946,7 @@ export function Session() {
       category: "Session",
       hidden: true,
       onSelect: (dialog) => {
-        moveFirstChild()
+        bar.cycle(1)
         dialog.clear()
       },
     },
@@ -944,7 +956,7 @@ export function Session() {
       keybind: "session_parent",
       category: "Session",
       hidden: true,
-      enabled: !!session()?.parentID,
+      enabled: !!session()?.parentID && !bar.focused(),
       onSelect: childSessionHandler((dialog) => {
         const parentID = session()?.parentID
         if (parentID) {
@@ -962,9 +974,9 @@ export function Session() {
       keybind: "session_child_cycle",
       category: "Session",
       hidden: true,
-      enabled: !!session()?.parentID,
+      enabled: bar.tabs().filter((t) => !t.spawn).length > 1 && !bar.focused(),
       onSelect: childSessionHandler((dialog) => {
-        moveChild(1)
+        bar.cycle(1)
         dialog.clear()
       }),
     },
@@ -974,9 +986,9 @@ export function Session() {
       keybind: "session_child_cycle_reverse",
       category: "Session",
       hidden: true,
-      enabled: !!session()?.parentID,
+      enabled: bar.tabs().filter((t) => !t.spawn).length > 1 && !bar.focused(),
       onSelect: childSessionHandler((dialog) => {
-        moveChild(-1)
+        bar.cycle(-1)
         dialog.clear()
       }),
     },
@@ -1053,8 +1065,18 @@ export function Session() {
       <box flexDirection="row">
         <box flexGrow={1} paddingBottom={1} paddingTop={1} paddingLeft={2} paddingRight={2} gap={1}>
           <Show when={session()}>
+            <TabBar
+              tabs={bar.tabs}
+              current={() => route.sessionID}
+              focused={bar.focused}
+              selected={bar.selected}
+              page={bar.page}
+              pending={bar.pending}
+              onClick={(id) => bar.click(id)}
+              onPage={(delta) => bar.paginate(delta)}
+            />
             <Show when={showHeader() && (!sidebarVisible() || !wide())}>
-              <Header />
+              <Header tabBar={true} />
             </Show>
             <scrollbox
               ref={(r) => (scroll = r)}
@@ -1171,14 +1193,14 @@ export function Session() {
               </For>
             </scrollbox>
             <box flexShrink={0}>
-              <Show when={permissions().length > 0}>
+              <Show when={permissions().length > 0 && !bar.focused()}>
                 <PermissionPrompt request={permissions()[0]} />
               </Show>
-              <Show when={permissions().length === 0 && questions().length > 0}>
+              <Show when={permissions().length === 0 && questions().length > 0 && !bar.focused()}>
                 <QuestionPrompt request={questions()[0]} />
               </Show>
               <Prompt
-                visible={!session()?.parentID && permissions().length === 0 && questions().length === 0}
+                visible={permissions().length === 0 && questions().length === 0}
                 ref={(r) => {
                   prompt = r
                   promptRef.set(r)
@@ -1193,6 +1215,27 @@ export function Session() {
                 }}
                 sessionID={route.sessionID}
               />
+            </box>
+            <box paddingLeft={2} flexShrink={0}>
+              <Show
+                when={bar.hint()}
+                fallback={
+                  <Show
+                    when={bar.focused()}
+                    fallback={
+                      <text fg={theme.textMuted}>
+                        tab switch to agents  shift+tab cycle agents
+                      </text>
+                    }
+                  >
+                    <text fg={theme.textMuted}>
+                      x kill agent  tab return to chat  ← → navigate  ↓ chat
+                    </text>
+                  </Show>
+                }
+              >
+                <text fg={theme.warning}>Press Ctrl+C again to close the app</text>
+              </Show>
             </box>
           </Show>
           <Toast />

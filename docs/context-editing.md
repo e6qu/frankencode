@@ -162,5 +162,5 @@ See `test/context-edit/integration.test.ts` for the proof tests.
 
 - [schema.md](schema.md) — database tables (cas_object, edit_graph_node/head, side_thread, PartBase extensions)
 - [agents.md](agents.md) — classifier, focus, and focus-rewrite-history agents
-- [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) — all Frankencode vs OpenCode changes
+- [FRANKENCODE.md](FRANKENCODE.md) — all Frankencode vs OpenCode changes
 - [EFFECTIFICATION.md](EFFECTIFICATION.md) — Effect services powering the context editing pipeline

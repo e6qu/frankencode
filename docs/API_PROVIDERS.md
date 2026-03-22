@@ -214,7 +214,7 @@ Frankencode adds features at the **session/tool layer** that work with all provi
 - **Refine tool** (`src/tool/refine.ts`) — evaluator-optimizer loop, spawns child sessions on the same provider
 - **Evaluator/optimizer agents** — use the session's model for code review scoring
 
-See [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) for the complete list.
+See [FRANKENCODE.md](FRANKENCODE.md) for the complete list.
 
 ---
 
@@ -223,4 +223,4 @@ See [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) for the complete li
 - [EFFECTIFICATION.md](EFFECTIFICATION.md) — Effect architecture (ProviderAuthService, ConfigService are Effect services)
 - [agents.md](agents.md) — agents that use providers (evaluator, optimizer inherit session model)
 - [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md) — model selection via ACP NewSessionRequest
-- [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) — all Frankencode vs OpenCode differences
+- [FRANKENCODE.md](FRANKENCODE.md) — all Frankencode vs OpenCode differences
