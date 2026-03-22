@@ -1,55 +1,34 @@
-# Frankencode
+# Frankencode: Technical Differences from OpenCode
 
-Frankencode is a fork of [OpenCode](https://github.com/anomalyco/opencode) that adds subagent tabs, fork agents, context editing, and a verification/refinement loop.
+Complete list of every change relative to upstream [OpenCode](https://github.com/anomalyco/opencode) (`dev` branch). For a feature overview, see [README.md](README.md).
 
 ---
 
 ## Tab Bar and Subagent Tabs
 
-OpenCode shows one session at a time. Frankencode adds a **tab bar** at the top of the session view:
+| File | Purpose |
+|------|---------|
+| `src/cli/cmd/tui/routes/session/tab.ts` | `useTab` hook — all tab state and actions |
+| `src/cli/cmd/tui/routes/session/tabbar.tsx` | Pure renderer for tab chips |
 
-```
-Main │ + │ S1 │ S2 │ F1
-```
+Tab labels: **Main** (root), **+** (fork spawn), **S1-Sn** (LLM subagents), **F1-Fn** (user forks).
 
-- **Main** — the root session (always present)
-- **+** — creates a fork agent (copies Main's conversation history)
-- **S1, S2, ...** — subagents spawned by the LLM's task tool
-- **F1, F2, ...** — fork agents created by the user via `+`
+### Keybinding changes
 
-**Navigation:**
-
-| Key | Action |
-|-----|--------|
-| Tab | Toggle focus between tab bar and chat prompt |
-| ←/→ | Navigate tabs (immediately shows selected session) |
-| ↓ / Escape | Return focus to chat prompt |
-| Enter/Space | Activate selected tab (spawn fork if on `+`) |
-| x | Kill selected agent |
-| Shift+Tab | Cycle agent type (Build/Plan/etc.) |
-| Ctrl+C | First: abort all + show hint. Second: exit app |
-| Click | Select any tab and focus bar |
-
-Implementation: [`tab.ts`](../packages/opencode/src/cli/cmd/tui/routes/session/tab.ts) (hook + logic), [`tabbar.tsx`](../packages/opencode/src/cli/cmd/tui/routes/session/tabbar.tsx) (renderer)
+| Keybind | OpenCode | Frankencode |
+|---------|----------|-------------|
+| Tab | Cycle agents | Toggle tab bar focus |
+| Shift+Tab | (none) | Cycle agents (Build/Plan/etc.) |
+| ←/→ (tab bar focused) | (N/A) | Navigate tabs |
+| Ctrl+C | Exit immediately (if input empty) | Double-press to exit |
 
 ---
 
 ## Fork Agents
 
-Fork agents are user-created branches of the main conversation. Pressing `+` in the tab bar forks Main's full conversation history into a new child session.
+Fork agents are child sessions created via `+` that copy Main's conversation history. They cannot spawn subagents (`task` permission denied + system prompt constraint). Colored yellow in the tab bar. See [README.md](README.md#subagent-tab-bar) for the comparison table.
 
-| Feature | Fork Agent (F) | Subagent (S) |
-|---------|---------------|--------------|
-| Created by | User via `+` | LLM via task tool |
-| Conversation history | Copied from Main | Starts empty |
-| Can spawn subagents | No (denied by permission) | Yes |
-| Tab color | Yellow | Agent color |
-| Lifetime | Until user kills with `x` | Auto-terminates when done |
-| Promptable | Yes (user types in chat) | LLM-driven |
-
-Fork agents receive a system prompt explaining they cannot spawn subagents and should suggest delegating to Main if needed.
-
-Implementation: `Session.fork()` in [`session/index.ts`](../packages/opencode/src/session/index.ts), fork system prompt in [`prompt.ts`](../packages/opencode/src/session/prompt.ts)
+Implementation: `Session.fork()` in `src/session/index.ts`, fork system prompt in `src/session/prompt.ts`.
 
 ---
 
@@ -57,33 +36,29 @@ Implementation: `Session.fork()` in [`session/index.ts`](../packages/opencode/sr
 
 | Module | Files | Purpose |
 |--------|-------|---------|
-| Content-Addressable Store | `src/cas/index.ts`, `src/cas/cas.sql.ts` | SHA-256 deduplicated content storage for edit originals |
+| Content-Addressable Store | `src/cas/index.ts`, `src/cas/cas.sql.ts` | SHA-256 deduplicated storage for edit originals |
 | Edit Graph | `src/cas/graph.ts` | DAG-based version history for context edits |
-| Context Editing | `src/context-edit/index.ts` | 6 edit operations (hide, unhide, replace, externalize, annotate, mark) |
-| Side Threads | `src/session/side-thread.ts`, `src/session/side-thread.sql.ts` | Project-level deferred findings that survive across sessions |
-| Objective Tracker | `src/session/objective.ts` | Extracts and tracks session objective from first user message |
-| Tab Bar | `src/cli/cmd/tui/routes/session/tab.ts`, `tabbar.tsx` | `useTab` hook + pure renderer for subagent tabs |
-
-See [context-editing.md](context-editing.md) and [schema.md](schema.md) for details.
+| Context Editing | `src/context-edit/index.ts` | 6 edit operations — see [context-editing.md](context-editing.md) |
+| Side Threads | `src/session/side-thread.ts`, `src/session/side-thread.sql.ts` | Project-level deferred findings |
+| Objective Tracker | `src/session/objective.ts` | Extracts session objective from first user message |
+| Tab Bar | `src/cli/cmd/tui/routes/session/tab.ts`, `tabbar.tsx` | `useTab` hook + pure renderer |
 
 ---
 
 ## New Tools (10)
 
-| Tool | File | Purpose |
-|------|------|---------|
-| `context_edit` | `src/tool/context-edit.ts` | Edit conversation parts (hide, replace, externalize, annotate, mark) |
-| `context_deref` | `src/tool/context-deref.ts` | Retrieve CAS content by hash |
-| `context_history` | `src/tool/context-history.ts` | Navigate edit DAG (log, tree, checkout, fork) |
-| `thread_park` | `src/tool/thread-park.ts` | Park off-topic findings as side threads |
-| `thread_list` | `src/tool/thread-list.ts` | List project-level side threads |
-| `classifier_threads` | `src/tool/classifier-threads.ts` | Run classifier agent, return structured JSON |
-| `distill_threads` | `src/tool/distill-threads.ts` | Classify + park side threads in one step |
-| `objective_set` | `src/tool/objective-set.ts` | Set/update session objective |
-| `verify` | `src/tool/verify.ts` | Run test/lint/typecheck with circuit breaker |
-| `refine` | `src/tool/refine.ts` | Evaluator-optimizer loop for iterative improvement |
-
-See [context-editing.md](context-editing.md) for usage details.
+| Tool | Purpose |
+|------|---------|
+| `context_edit` | Edit conversation parts (hide, replace, externalize, annotate, mark) |
+| `context_deref` | Retrieve CAS content by hash |
+| `context_history` | Navigate edit DAG (log, tree, checkout, fork) |
+| `thread_park` | Park off-topic findings as side threads |
+| `thread_list` | List project-level side threads |
+| `classifier_threads` | Run classifier agent, return structured JSON |
+| `distill_threads` | Classify + park side threads in one step |
+| `objective_set` | Set/update session objective |
+| `verify` | Run test/lint/typecheck with circuit breaker |
+| `refine` | Evaluator-optimizer loop for iterative improvement |
 
 ---
 
@@ -97,7 +72,7 @@ See [context-editing.md](context-editing.md) for usage details.
 | evaluator | Score code changes 1-10 with feedback | Enabled (hidden) |
 | optimizer | Improve code based on evaluator feedback | Enabled (hidden) |
 
-See [agents.md](agents.md) for configuration and model recommendations.
+See [agents.md](agents.md) for configuration, mode switching, and model recommendations.
 
 ---
 
@@ -105,11 +80,11 @@ See [agents.md](agents.md) for configuration and model recommendations.
 
 | Command | Type | Purpose |
 |---------|------|---------|
-| `/btw <question>` | Ephemeral | Side conversation in subagent, doesn't pollute context |
-| `/focus` | Ephemeral | Classify + externalize stale output + park side threads |
-| `/focus-rewrite-history` | Ephemeral | Full conversation rewrite with user confirmation |
-| `/reset-context` | Ephemeral | Restore all edited parts from CAS originals |
-| `/cost` | TUI dialog | Show session cost breakdown (tokens, pricing) |
+| `/btw <question>` | Ephemeral | Side conversation in subagent |
+| `/focus` | Ephemeral | Classify + externalize + park |
+| `/focus-rewrite-history` | Ephemeral | Full conversation rewrite |
+| `/reset-context` | Ephemeral | Restore all parts from CAS |
+| `/cost` | TUI dialog | Session cost breakdown |
 | `/verify` | Command | Run test/lint/typecheck |
 | `/threads` | Ephemeral | List side threads |
 | `/history` | Ephemeral | Show edit history |
@@ -118,107 +93,50 @@ See [agents.md](agents.md) for configuration and model recommendations.
 
 ---
 
-## Schema Changes (4 new tables)
+## Schema Changes
 
-| Table | Purpose |
-|-------|---------|
-| `cas_object` | Content-addressable store (SHA-256 keyed) |
-| `edit_graph_node` | Edit version DAG nodes |
-| `edit_graph_head` | Per-session DAG head tracking + branches |
-| `side_thread` | Project-level side threads |
-
-Plus 2 new fields on `PartBase` (all message parts): `edit` (EditMeta) and `lifecycle` (LifecycleMeta). See [schema.md](schema.md) for column details.
+4 new tables: `cas_object`, `edit_graph_node`, `edit_graph_head`, `side_thread`. 2 new fields on `PartBase`: `edit` (EditMeta), `lifecycle` (LifecycleMeta). See [schema.md](schema.md).
 
 ---
 
 ## Prompt Pipeline Changes
 
-Added to the message processing pipeline in `src/session/prompt.ts`:
-
-1. **`filterEdited()`** — removes hidden parts from LLM context (originals preserved in CAS)
-2. **`filterEphemeral()`** — drops ephemeral command messages entirely
-3. **Deterministic sweeper** — auto-hides/externalizes parts based on lifecycle markers
-4. **Focus status injection** — adds objective + parked threads to system prompt when context_edit is available
-5. **Fork agent prompt** — tells fork agents they cannot spawn subagents
-
----
-
-## Keybinding Changes
-
-| Keybind | OpenCode | Frankencode |
-|---------|----------|-------------|
-| Tab | Cycle agents | Toggle tab bar focus |
-| Shift+Tab | (none) | Cycle agents (Build/Plan/etc.) |
-| ←/→ (tab bar focused) | (N/A) | Navigate tabs |
-| Ctrl+C | Exit immediately (if input empty) | Double-press to exit (first press aborts + shows hint) |
+1. **`filterEdited()`** — removes hidden parts from LLM context
+2. **`filterEphemeral()`** — drops ephemeral command messages
+3. **Deterministic sweeper** — auto-hides/externalizes expired parts
+4. **Focus status injection** — objective + parked threads in system prompt
+5. **Fork agent prompt** — constrains fork agents from spawning subagents
 
 ---
 
 ## Promptable Agent Mode Switching
 
-Build and Plan agents switch via `plan_enter`/`plan_exit` tools — see [agents.md](agents.md#promptable-mode-switching) for details.
+Build/Plan agents switch via `plan_enter`/`plan_exit` tools with autonomous switching. See [agents.md](agents.md#promptable-mode-switching).
 
 ---
 
 ## Type Safety
 
-~236 `any` types eliminated. Strong Zod schemas for all message types. 14 documented exceptions at SDK boundaries.
-
-| Area | Changes |
-|------|---------|
-| Strong Zod schemas | `JsonValue`, `ProviderMeta`, `ToolInput`, `ToolMeta` defined in message-v2.ts |
-| z.any() elimination | All `z.any()` in message-v2.ts, config, permission, server routes replaced |
-| SDK boundary casts | ~15 documented cast points (AI SDK, Drizzle, Bun/Node boundaries) |
-| Remaining | 14 documented `any` at structural boundaries |
+~236 `any` types eliminated. Strong Zod schemas (`JsonValue`, `ProviderMeta`, `ToolInput`, `ToolMeta`). 14 documented exceptions at SDK boundaries.
 
 ---
 
 ## Effect-TS Architecture
 
-22 Effect services, dual-layer context model (InstanceALS + InstanceContext). See [EFFECTIFICATION.md](EFFECTIFICATION.md) for details.
-
-| Difference | Frankencode | Upstream |
-|------------|-------------|----------|
-| `src/project/instance.ts` | Deleted, split into InstanceALS + InstanceLifecycle + InstanceContext | Still has `instance-state.ts` using ScopedCache |
-| ALS fallback patterns | 0 remaining (all 59 eliminated) | ~36 deferred |
-| Test compatibility | `test/fixture/instance-shim.ts` for 58 test files | N/A |
+22 Effect services, dual-layer context (InstanceALS + InstanceContext). See [EFFECTIFICATION.md](EFFECTIFICATION.md).
 
 ---
 
 ## Bug Fixes (64 total)
 
-See `BUGS.md` at repo root for the complete bug tracker.
-
-| Range | Category |
-|-------|----------|
-| B1-B9 | Upstream backports (Phase 1) |
-| B10-B16 | Upstream backports (Phase 2) |
-| B17-B22 | Upstream app fixes (Phase 3) |
-| B23-B52 | Code review fixes (CAS, circuit breaker, evaluator, session cleanup, etc.) |
-| B53-B64 | QA rounds 1-6 (plugin hooks, markdown injection, MCP type mismatch, ripgrep, file count, processor timing) |
+See `BUGS.md` at repo root. Ranges: B1-B22 (upstream backports + app fixes), B23-B52 (code review), B53-B64 (QA rounds).
 
 ---
 
 ## What Is NOT Different
 
-These areas are identical to upstream OpenCode:
-
-- **API providers** — all 21+ providers, models.dev integration, transform pipeline (see [API_PROVIDERS.md](API_PROVIDERS.md))
-- **ACP support** — full ACP v1 protocol, same capabilities (see [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md))
+- **API providers** — all 21+ providers, models.dev, transform pipeline — see [API_PROVIDERS.md](API_PROVIDERS.md)
+- **ACP support** — full v1 protocol — see [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md)
 - **Session/message format** — same MessageV2 schema (extended with EditMeta/LifecycleMeta)
-- **Plugin system** — same plugin hooks (plus `context.edit.before`/`context.edit.after`)
+- **Plugin system** — same hooks (plus `context.edit.before`/`context.edit.after`)
 - **Permission system** — same PermissionNext framework
-
----
-
-## Documentation Index
-
-| Document | What it covers |
-|----------|---------------|
-| [agents.md](agents.md) | Agent config, mode switching, fork agents, model recommendations |
-| [context-editing.md](context-editing.md) | Edit operations, lifecycle markers, sweeper, slash commands |
-| [schema.md](schema.md) | Database schema (4 new tables, part extensions) |
-| [EFFECTIFICATION.md](EFFECTIFICATION.md) | Effect-TS services, layers, dual context |
-| [API_PROVIDERS.md](API_PROVIDERS.md) | 21+ LLM providers |
-| [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md) | ACP v1 protocol for IDEs |
-| [SECURITY_AUDIT.md](SECURITY_AUDIT.md) | CVEs, security issues |
