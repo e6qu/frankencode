@@ -1,6 +1,6 @@
 import { createHash } from "crypto"
 import { Database, eq, and, lt, isNull, not, inArray, sql } from "@/storage/db"
-import { CASObjectTable } from "./cas.sql"
+import { CASObjectTable, EditGraphNodeTable } from "./cas.sql"
 import { SessionTable } from "@/session/session.sql"
 import { Token } from "@/util/token"
 import { Log } from "@/util/log"
@@ -85,18 +85,21 @@ export namespace CAS {
    * Returns the number of entries deleted.
    */
   export function deleteBySession(sessionID: string): number {
-    const entries = Database.use((db) =>
-      db
+    let count = 0
+    Database.transaction((db) => {
+      const entries = db
         .select({ hash: CASObjectTable.hash })
         .from(CASObjectTable)
         .where(eq(CASObjectTable.session_id, sessionID))
-        .all(),
-    )
-    if (entries.length === 0) return 0
-
-    Database.use((db) => db.delete(CASObjectTable).where(eq(CASObjectTable.session_id, sessionID)).run())
-    log.info("deleted by session", { sessionID: sessionID.slice(0, 12), count: entries.length })
-    return entries.length
+        .all()
+      if (entries.length === 0) return
+      db.delete(CASObjectTable).where(eq(CASObjectTable.session_id, sessionID)).run()
+      count = entries.length
+    })
+    if (count > 0) {
+      log.info("deleted by session", { sessionID: sessionID.slice(0, 12), count })
+    }
+    return count
   }
 
   /**
@@ -116,10 +119,30 @@ export namespace CAS {
         .all(),
     )
     if (nullSessionEntries.length > 0) {
-      const hashes = nullSessionEntries.map((e) => e.hash)
-      Database.use((db) => db.delete(CASObjectTable).where(inArray(CASObjectTable.hash, hashes)).run())
-      totalDeleted += nullSessionEntries.length
-      log.info("deleted orphans (null session)", { count: nullSessionEntries.length, olderThanDays })
+      // Only delete CAS entries not referenced by any EditGraphNode
+      const referencedHashes = new Set(
+        Database.use((db) =>
+          db
+            .select({ cas_hash: EditGraphNodeTable.cas_hash })
+            .from(EditGraphNodeTable)
+            .where(
+              inArray(
+                EditGraphNodeTable.cas_hash,
+                nullSessionEntries.map((e) => e.hash),
+              ),
+            )
+            .all(),
+        )
+          .map((r) => r.cas_hash)
+          .filter(Boolean),
+      )
+      const safeToDel = nullSessionEntries.filter((e) => !referencedHashes.has(e.hash))
+      if (safeToDel.length > 0) {
+        const hashes = safeToDel.map((e) => e.hash)
+        Database.use((db) => db.delete(CASObjectTable).where(inArray(CASObjectTable.hash, hashes)).run())
+        totalDeleted += safeToDel.length
+      }
+      log.info("deleted orphans (null session)", { count: safeToDel.length, olderThanDays })
     }
 
     // 2. Delete entries referencing non-existent sessions (older than cutoff)
@@ -142,15 +165,31 @@ export namespace CAS {
     // Find entries with non-existent sessions
     const orphans = entriesWithSession.filter((e) => !existingSessions.has(e.session_id!))
     if (orphans.length > 0) {
-      const hashes = orphans.map((e) => e.hash)
-      // Delete in batches of 100 to avoid SQL parameter limits
+      // Only delete CAS entries not referenced by any EditGraphNode (across all sessions)
+      const orphanHashes = orphans.map((e) => e.hash)
+      const referencedOrphanHashes = new Set<string>()
       const batchSize = 100
-      for (let i = 0; i < hashes.length; i += batchSize) {
-        const batch = hashes.slice(i, i + batchSize)
+      for (let i = 0; i < orphanHashes.length; i += batchSize) {
+        const batch = orphanHashes.slice(i, i + batchSize)
+        const refs = Database.use((db) =>
+          db
+            .select({ cas_hash: EditGraphNodeTable.cas_hash })
+            .from(EditGraphNodeTable)
+            .where(inArray(EditGraphNodeTable.cas_hash, batch))
+            .all(),
+        )
+        for (const r of refs) {
+          if (r.cas_hash) referencedOrphanHashes.add(r.cas_hash)
+        }
+      }
+      const safeToDel = orphanHashes.filter((h) => !referencedOrphanHashes.has(h))
+      // Delete in batches of 100 to avoid SQL parameter limits
+      for (let i = 0; i < safeToDel.length; i += batchSize) {
+        const batch = safeToDel.slice(i, i + batchSize)
         Database.use((db) => db.delete(CASObjectTable).where(inArray(CASObjectTable.hash, batch)).run())
       }
-      totalDeleted += orphans.length
-      log.info("deleted orphans (missing session)", { count: orphans.length, olderThanDays })
+      totalDeleted += safeToDel.length
+      log.info("deleted orphans (missing session)", { count: safeToDel.length, olderThanDays })
     }
 
     return totalDeleted

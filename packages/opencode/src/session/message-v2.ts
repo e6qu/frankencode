@@ -1018,7 +1018,7 @@ export namespace MessageV2 {
           ...msg,
           parts: [
             {
-              id: firstPart.id,
+              id: PartID.ascending(),
               sessionID: firstPart.sessionID,
               messageID: firstPart.messageID,
               type: "text",

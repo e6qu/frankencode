@@ -225,35 +225,37 @@ export namespace EditGraph {
       nodesToUndo.push(node)
     }
 
-    // Undo nodes: restore parts from CAS
-    for (const node of nodesToUndo) {
-      if (!node.cas_hash) continue
-      const casEntry = CAS.get(node.cas_hash)
-      if (!casEntry) {
-        log.warn("CAS entry not found during checkout", { hash: node.cas_hash, nodeID: node.id })
-        continue
+    // Undo nodes and update head atomically
+    Database.transaction(() => {
+      for (const node of nodesToUndo) {
+        if (!node.cas_hash) continue
+        const casEntry = CAS.get(node.cas_hash)
+        if (!casEntry) {
+          log.warn("CAS entry not found during checkout", { hash: node.cas_hash, nodeID: node.id })
+          continue
+        }
+
+        try {
+          const originalPart = JSON.parse(casEntry.content) as MessageV2.Part
+          // Restore the original part (remove edit metadata)
+          Session.updatePart({
+            ...originalPart,
+            edit: undefined,
+          })
+        } catch (e) {
+          log.warn("Failed to restore part during checkout", { nodeID: node.id, error: String(e) })
+        }
       }
 
-      try {
-        const originalPart = JSON.parse(casEntry.content) as MessageV2.Part
-        // Restore the original part (remove edit metadata)
-        Session.updatePart({
-          ...originalPart,
-          edit: undefined,
-        })
-      } catch (e) {
-        log.warn("Failed to restore part during checkout", { nodeID: node.id, error: String(e) })
-      }
-    }
+      // Update head to target
+      Database.use((db) => {
+        db.update(EditGraphHeadTable)
+          .set({ node_id: targetNodeID })
+          .where(eq(EditGraphHeadTable.session_id, sessionID))
+          .run()
 
-    // Update head to target
-    Database.use((db) => {
-      db.update(EditGraphHeadTable)
-        .set({ node_id: targetNodeID })
-        .where(eq(EditGraphHeadTable.session_id, sessionID))
-        .run()
-
-      Database.effect(() => Bus.publish(Event.CheckedOut, { sessionID, nodeID: targetNodeID }, InstanceALS.directory))
+        Database.effect(() => Bus.publish(Event.CheckedOut, { sessionID, nodeID: targetNodeID }, InstanceALS.directory))
+      })
     })
 
     log.info("checked out", { sessionID, targetNodeID, undone: nodesToUndo.length })
@@ -317,21 +319,21 @@ export namespace EditGraph {
   }
 
   export function deleteBySession(sessionID: string): number {
-    const nodes = Database.use((db) =>
-      db
+    let count = 0
+    Database.transaction((db) => {
+      const nodes = db
         .select({ id: EditGraphNodeTable.id })
         .from(EditGraphNodeTable)
         .where(eq(EditGraphNodeTable.session_id, sessionID))
-        .all(),
-    )
-    Database.use((db) => {
+        .all()
       db.delete(EditGraphHeadTable).where(eq(EditGraphHeadTable.session_id, sessionID)).run()
       db.delete(EditGraphNodeTable).where(eq(EditGraphNodeTable.session_id, sessionID)).run()
+      count = nodes.length
     })
-    if (nodes.length > 0) {
-      log.info("deleted by session", { sessionID: sessionID.slice(0, 12), nodes: nodes.length })
+    if (count > 0) {
+      log.info("deleted by session", { sessionID: sessionID.slice(0, 12), nodes: count })
     }
-    return nodes.length
+    return count
   }
 
   function buildPathToRoot(nodeID: string, nodeMap?: Map<string, Node>): Node[] {

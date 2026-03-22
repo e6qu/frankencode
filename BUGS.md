@@ -19,6 +19,38 @@ All bugs tracked here. Do not create per-package bug files.
 | S4  | Server unauthenticated on non-loopback | Med | Server throws if bound to non-loopback without `OPENCODE_SERVER_PASSWORD` |
 | S5  | Read tool exposes .env files | Med | Sensitive file deny-list; `always: []` for sensitive files forces permission prompt |
 
+## Open — Bugs (0)
+
+_No open bugs._
+
+## Fixed — Bugs (QA deep dive, PR #32)
+
+| #   | Issue | Sev | Fix |
+| --- | ----- | --- | --- |
+| B53 | `CAS.deleteBySession()` race condition | High | Wrapped SELECT + DELETE in `Database.transaction()` |
+| B54 | `CAS.deleteOrphans()` deletes shared CAS entries | High | Added EditGraphNode reference check before deleting |
+| B55 | `EditGraph.checkout()` inconsistent on partial failure | High | Wrapped undo loop + head update in `Database.transaction()` |
+| B56 | `EditGraph.deleteBySession()` not atomic | Med | Wrapped in `Database.transaction()` |
+| B57 | `filterEdited()` synthetic placeholder reuses part ID | Med | Changed to `PartID.ascending()` for unique synthetic ID |
+
+## Open — Edge Cases (1)
+
+| #   | Issue | Sev | Location | Notes |
+| --- | ----- | --- | -------- | ----- |
+| E1  | `sweep()` clock skew: `turnWhenSet > currentTurn` | Low | `context-edit/index.ts:622-625` | Negative elapsed → never sweeps. Only possible from a bug upstream — turn counter is monotonic. |
+
+## False Positives — Edge Cases (5)
+
+Investigated and determined to be correct behavior or non-issues.
+
+| Issue | Verdict |
+|-------|---------|
+| E2: `EditGraph.getHead()` returns undefined vs null | **Correct** — `undefined` is standard TS for "not present"; all callers use `!head` which handles both |
+| E3: First commit creates self-referential branch | **Intentional** — `branches: { main: nodeID }` is standard DAG initialization; "main" → first node is correct |
+| E4: `Objective.extract()` concurrent race | **False positive** — prompt loop serializes calls per session; concurrency cannot occur |
+| E5: `SideThread.create()` duplicate ID not caught | **Correct** — `Identifier.ascending()` is unique (timestamp+counter+random); DB error on collision is the right behavior (fail loudly) |
+| E6: SHA-256 collision in CAS not detected | **Intentional** — SHA-256 has no known collisions; `onConflictDoNothing()` was explicitly chosen (B43 fix) |
+
 ## Open — Code Quality (5)
 
 Found during QA bug hunt (static analysis). Not crashes, but code quality issues.
