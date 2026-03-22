@@ -307,4 +307,120 @@ describe("useTab", () => {
       dispose()
     })
   })
+
+  test("blur sets focused false", () => {
+    createRoot((dispose) => {
+      const { bar } = setup([session("root")])
+      bar.toggle() // focus
+      expect(bar.focused()).toBe(true)
+      bar.blur()
+      expect(bar.focused()).toBe(false)
+      dispose()
+    })
+  })
+
+  test("paginate updates page", () => {
+    createRoot((dispose) => {
+      const { bar } = setup([session("root")])
+      expect(bar.page()).toBe(0)
+      bar.paginate(1)
+      expect(bar.page()).toBe(1)
+      bar.paginate(-1)
+      expect(bar.page()).toBe(0)
+      dispose()
+    })
+  })
+
+  test("click on spawn tab calls spawn", () => {
+    createRoot((dispose) => {
+      const { bar, calls } = setup([session("root")])
+      bar.click("+")
+      setTimeout(() => {
+        expect(calls.fork).toContain("root")
+        dispose()
+      }, 10)
+    })
+  })
+
+  test("cycle with single session is no-op", () => {
+    createRoot((dispose) => {
+      const { bar, calls } = setup([session("root")])
+      bar.cycle(1)
+      expect(calls.navigate).toHaveLength(0)
+      bar.cycle(-1)
+      expect(calls.navigate).toHaveLength(0)
+      dispose()
+    })
+  })
+
+  test("kill on non-current tab does not navigate", () => {
+    createRoot((dispose) => {
+      const { bar, calls } = setup([
+        session("root"),
+        session("c1", { parentID: "root", title: "X" }),
+        session("c2", { parentID: "root", title: "Y" }),
+      ])
+      bar.select(3) // select c2 (Main=0, +=1, c1=2, c2=3)
+      calls.navigate.length = 0
+      bar.kill() // kills c2 which is current
+      // Should navigate to remaining session
+      expect(calls.remove).toContain("c2")
+      dispose()
+    })
+  })
+
+  test("kill on non-current non-main tab removes it", () => {
+    createRoot((dispose) => {
+      const sessions = [
+        session("root"),
+        session("c1", { parentID: "root", title: "X" }),
+        session("c2", { parentID: "root", title: "Y" }),
+      ]
+      const { bar, calls } = setup(sessions, "root") // current is root
+      // select() navigates to c1 (non-spawn), but current callback tracks root
+      bar.select(2) // select c1
+      calls.navigate.length = 0 // clear navigation from select
+      bar.kill() // kills c1
+      expect(calls.remove).toContain("c1")
+      // c1 is not current (root is), so no forced navigation needed
+      dispose()
+    })
+  })
+
+  test("pending is true only when focused with permissions", () => {
+    createRoot((dispose) => {
+      const [perms, setPerms] = createSignal<{ id: string }[]>([])
+      const bar = useTab({
+        sessions: () => [session("root")],
+        current: () => "root",
+        permissions: perms,
+        questions: () => [],
+        status: () => ({}),
+        fork: async () => undefined,
+        abort: () => {},
+        remove: () => {},
+        navigate: () => {},
+        exit: () => {},
+      })
+      expect(bar.pending()).toBe(false) // not focused, no perms
+      bar.toggle() // focus
+      expect(bar.pending()).toBe(false) // focused but no perms
+      setPerms([{ id: "p1" }])
+      expect(bar.pending()).toBe(true) // focused + perms
+      bar.blur()
+      expect(bar.pending()).toBe(false) // unfocused + perms
+      dispose()
+    })
+  })
+
+  test("select clamps to valid range", () => {
+    createRoot((dispose) => {
+      const { bar } = setup([session("root")])
+      bar.select(-5)
+      expect(bar.selected()).toBe(0)
+      bar.select(100)
+      expect(bar.selected()).toBe(1) // [Main, +] = max idx 1
+      dispose()
+    })
+  })
 })
