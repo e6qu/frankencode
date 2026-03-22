@@ -42,6 +42,57 @@ Complete conversation rewrite agent. Asks user to confirm objective before proce
 
 Invoked via `/focus-rewrite-history` command. Always asks for confirmation before rewriting user messages.
 
+## Promptable Mode Switching
+
+Build and Plan agents can be switched via natural language prompts — the same way Claude Code supports "enter plan mode". The LLM calls the appropriate tool, the user confirms, and the TUI updates automatically.
+
+### How it works
+
+| Direction | Tool | Permission | TUI Update |
+|-----------|------|------------|------------|
+| Build → Plan | `plan_enter` | Build agent has `plan_enter: "allow"` | `local.agent.set("plan")` |
+| Plan → Build | `plan_exit` | Plan agent has `plan_exit: "allow"` | `local.agent.set("build")` |
+
+**Flow:**
+1. User types a natural language prompt, OR the agent decides autonomously that switching would be beneficial
+2. The current agent calls `plan_enter` (Build → Plan) or `plan_exit` (Plan → Build)
+3. A confirmation dialog appears asking the user to approve the switch
+4. On approval, a synthetic user message is created with `agent: "plan"` or `agent: "build"`, switching the active agent
+5. The TUI watcher in `session/index.tsx` detects the completed tool call and updates the agent display
+6. Subsequent messages use the new agent's system prompt and permissions
+
+### Autonomous switching
+
+Agents can decide to switch modes based on their own reasoning — they do not need the user to explicitly ask. The Build agent will proactively switch to Plan when it determines a task is complex enough to benefit from planning. The Plan agent will switch to Build when planning is complete and implementation should begin. Agents can switch back and forth as many times as needed during a session.
+
+**Build → Plan (autonomous):** The Build agent realizes mid-implementation that the task is more complex than expected, involves multiple files, or requires architectural decisions. It calls `plan_enter` to step back and plan first.
+
+**Plan → Build (autonomous):** The Plan agent completes the plan file, has no remaining questions, and determines the plan is ready. It calls `plan_exit` to begin implementation.
+
+### Example prompts (user-triggered)
+
+**Switch to Plan mode:**
+```
+Let's plan this before implementing.
+Enter plan mode.
+I need to think through the architecture first.
+```
+
+**Switch back to Build mode:**
+```
+The plan looks good, let's implement it.
+Start building.
+Exit plan mode and execute the plan.
+```
+
+### Implementation details
+
+- **Tools:** `plan_enter` and `plan_exit` defined in `src/tool/plan.ts`
+- **TUI watcher:** `src/cli/cmd/tui/routes/session/index.tsx:221-236` listens for tool completions
+- **Permissions:** Build agent allows `plan_enter`; Plan agent allows `plan_exit` (cross-permissions)
+- **Confirmation:** Both tools use `Question.ask()` to get user consent before switching
+- **Plan file:** Stored at `$XDG_DATA_HOME/opencode/plans/<session-slug>.md`
+
 ## Modified Agents
 
 ### build / plan

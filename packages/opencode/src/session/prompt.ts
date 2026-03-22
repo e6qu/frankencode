@@ -719,7 +719,8 @@ export namespace SessionPrompt {
       if ("context_edit" in tools) {
         const parts: string[] = []
         const objective = await Objective.get(sessionID)
-        if (objective) parts.push(`**Objective:** ${objective}`)
+        // Escape objective to prevent markdown injection into system prompt (B60)
+        if (objective) parts.push(`**Objective:** ${objective.replace(/\n/g, " ").replace(/[`#*_~]/g, "\\$&")}`)
         const { threads } = SideThread.list({ projectID: _pid, status: "parked" })
         if (threads.length > 0) {
           parts.push(`**Parked side threads (${threads.length}):**`)

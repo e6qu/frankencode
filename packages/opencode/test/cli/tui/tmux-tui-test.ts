@@ -274,6 +274,192 @@ const flows: TestFlow[] = [
       return issues
     },
   },
+  {
+    name: "slash-command",
+    async run() {
+      const issues: string[] = []
+
+      // Wait for TUI ready
+      await waitFor((f) => f.includes("tab agents"), { timeout: 15000, desc: "TUI ready" })
+      await sleep(500)
+
+      // Type /cost to trigger autocomplete
+      sendText("/cost")
+      await sleep(1000)
+
+      const autocompleteFrame = capture()
+      saveScreenshot("slash-autocomplete", autocompleteFrame)
+
+      // Check autocomplete appeared
+      if (!autocompleteFrame.includes("cost") && !autocompleteFrame.includes("Cost")) {
+        issues.push("Slash command autocomplete not showing cost option")
+      }
+
+      // Select the option
+      sendKeys("Enter")
+      await sleep(1000)
+
+      const dialogFrame = capture()
+      saveScreenshot("slash-cost-dialog", dialogFrame)
+
+      // Check cost dialog appeared
+      if (!dialogFrame.includes("Usage") && !dialogFrame.includes("$") && !dialogFrame.includes("Sess")) {
+        issues.push("Cost dialog did not appear after /cost slash command")
+      }
+
+      // Close
+      sendKeys("Escape")
+      await sleep(500)
+
+      return issues
+    },
+  },
+
+  {
+    name: "multi-agent-verify",
+    async run() {
+      const issues: string[] = []
+
+      // Wait for TUI ready
+      await waitFor((f) => f.includes("tab agents"), { timeout: 15000, desc: "TUI ready" })
+      await sleep(500)
+
+      // Cycle through all agents and verify each renders with its name
+      const expectedAgents = ["Build", "Plan"]
+      const seenAgents: string[] = []
+
+      for (let i = 0; i < 5; i++) {
+        const frame = capture()
+        const match = frame.match(/┃\s+(Build|Plan|Docs|Explore|General)\s/)
+        if (match && !seenAgents.includes(match[1])) {
+          seenAgents.push(match[1])
+        }
+        sendKeys("Tab")
+        await sleep(400)
+      }
+
+      saveScreenshot("multi-agent-final", capture())
+
+      // Verify Build and Plan are present (these are the primary agents)
+      for (const expected of expectedAgents) {
+        if (!seenAgents.includes(expected)) {
+          issues.push(`Expected agent '${expected}' not found during Tab cycling. Seen: ${seenAgents.join(", ")}`)
+        }
+      }
+
+      if (seenAgents.length < 2) {
+        issues.push(`Only ${seenAgents.length} unique agent(s) found: ${seenAgents.join(", ")}`)
+      }
+
+      return issues
+    },
+  },
+  {
+    name: "slash-classify",
+    async run() {
+      const issues: string[] = []
+
+      // Wait for TUI ready
+      await waitFor((f) => f.includes("tab agents"), { timeout: 15000, desc: "TUI ready" })
+      await sleep(500)
+
+      // Build a multi-turn conversation first
+      sendText("what is 2+2")
+      sendKeys("Enter")
+      await waitFor((f) => f.includes("4") || f.includes("four"), { timeout: 60000, desc: "first response" })
+      await sleep(1000)
+
+      sendText("now what about 3+3")
+      sendKeys("Enter")
+      await waitFor((f) => f.includes("6") || f.includes("six"), { timeout: 60000, desc: "second response" })
+      await sleep(1000)
+
+      // Run /classify
+      sendText("/classify")
+      await sleep(500)
+      // Select from autocomplete
+      sendKeys("Enter")
+
+      try {
+        // Wait for classification output — ephemeral tool result
+        const frame = await waitFor(
+          (f) => f.includes("classif") || f.includes("topic") || f.includes("main") || f.includes("Main"),
+          { timeout: 60000, desc: "classification output" },
+        )
+        saveScreenshot("classify-result", frame)
+
+        // Check for any classification-related content
+        if (!frame.includes("classif") && !frame.includes("topic") && !frame.includes("Main")) {
+          issues.push("Classification output not visible")
+        }
+      } catch (e: any) {
+        issues.push(`Classification timed out: ${e.message}`)
+        saveScreenshot("classify-error", capture())
+      }
+
+      return issues
+    },
+  },
+
+  {
+    name: "slash-threads",
+    async run() {
+      const issues: string[] = []
+
+      // Wait for TUI ready
+      await waitFor((f) => f.includes("tab agents"), { timeout: 15000, desc: "TUI ready" })
+      await sleep(500)
+
+      // Run /threads
+      sendText("/threads")
+      await sleep(500)
+      sendKeys("Enter")
+
+      try {
+        // Wait for threads output (might be "No threads" or a thread list)
+        const frame = await waitFor(
+          (f) => f.includes("thread") || f.includes("Thread") || f.includes("No") || f.includes("parked"),
+          { timeout: 60000, desc: "threads output" },
+        )
+        saveScreenshot("threads-result", frame)
+      } catch (e: any) {
+        issues.push(`Threads command timed out: ${e.message}`)
+        saveScreenshot("threads-error", capture())
+      }
+
+      return issues
+    },
+  },
+
+  {
+    name: "slash-history",
+    async run() {
+      const issues: string[] = []
+
+      // Wait for TUI ready
+      await waitFor((f) => f.includes("tab agents"), { timeout: 15000, desc: "TUI ready" })
+      await sleep(500)
+
+      // Run /history
+      sendText("/history")
+      await sleep(500)
+      sendKeys("Enter")
+
+      try {
+        // Wait for history output (might be "No edits" or edit log)
+        const frame = await waitFor(
+          (f) => f.includes("history") || f.includes("History") || f.includes("edit") || f.includes("No"),
+          { timeout: 60000, desc: "history output" },
+        )
+        saveScreenshot("history-result", frame)
+      } catch (e: any) {
+        issues.push(`History command timed out: ${e.message}`)
+        saveScreenshot("history-error", capture())
+      }
+
+      return issues
+    },
+  },
 ]
 
 // ── Main ────────────────────────────────────────────────────────────

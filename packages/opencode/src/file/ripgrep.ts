@@ -374,7 +374,14 @@ export namespace Ripgrep {
     // Parse JSON lines from ripgrep output
 
     return lines
-      .map((line) => JSON.parse(line))
+      .flatMap((line) => {
+        try {
+          return [JSON.parse(line)]
+        } catch {
+          log.warn("malformed ripgrep JSON line", { line: line.slice(0, 120) })
+          return []
+        }
+      })
       .map((parsed) => Result.parse(parsed))
       .filter((r) => r.type === "match")
       .map((r) => r.data)

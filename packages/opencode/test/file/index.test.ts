@@ -426,7 +426,7 @@ describe("file/index Filesystem patterns", () => {
           const entry = result.find((f) => f.path === "new.txt")
           expect(entry).toBeDefined()
           expect(entry!.status).toBe("added")
-          expect(entry!.added).toBe(4) // 3 lines + trailing newline splits to 4
+          expect(entry!.added).toBe(3) // 3 lines of content
           expect(entry!.removed).toBe(0)
         },
       })

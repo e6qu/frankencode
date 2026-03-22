@@ -26,20 +26,25 @@ export namespace ContextEdit {
     op: string,
     input: { sessionID: string; partID?: string; messageID?: string; agent: string },
   ): Promise<EditResult | null> {
-    const result = await Plugin.trigger(
-      "context.edit.before",
-      {
-        operation: op,
-        sessionID: input.sessionID,
-        partID: input.partID,
-        messageID: input.messageID,
-        agent: input.agent,
-      },
-      { allow: true, reason: undefined },
-      InstanceALS.directory,
-    )
-    if (!result.allow) return { success: false, error: result.reason ?? "Blocked by plugin" }
-    return null
+    try {
+      const result = await Plugin.trigger(
+        "context.edit.before",
+        {
+          operation: op,
+          sessionID: input.sessionID,
+          partID: input.partID,
+          messageID: input.messageID,
+          agent: input.agent,
+        },
+        { allow: true, reason: undefined },
+        InstanceALS.directory,
+      )
+      if (!result.allow) return { success: false, error: result.reason ?? "Blocked by plugin" }
+      return null
+    } catch (e) {
+      log.error("plugin guard error", { op, error: e instanceof Error ? e.message : String(e) })
+      return { success: false, error: `Plugin error: ${e instanceof Error ? e.message : String(e)}` }
+    }
   }
 
   async function pluginNotify(
@@ -47,19 +52,23 @@ export namespace ContextEdit {
     input: { sessionID: string; partID?: string; messageID?: string; agent: string },
     success: boolean,
   ) {
-    await Plugin.trigger(
-      "context.edit.after",
-      {
-        operation: op,
-        sessionID: input.sessionID,
-        partID: input.partID,
-        messageID: input.messageID,
-        agent: input.agent,
-        success,
-      },
-      {},
-      InstanceALS.directory,
-    )
+    try {
+      await Plugin.trigger(
+        "context.edit.after",
+        {
+          operation: op,
+          sessionID: input.sessionID,
+          partID: input.partID,
+          messageID: input.messageID,
+          agent: input.agent,
+          success,
+        },
+        {},
+        InstanceALS.directory,
+      )
+    } catch (e) {
+      log.warn("plugin notify error", { op, error: e instanceof Error ? e.message : String(e) })
+    }
   }
 
   // ── Types ──────────────────────────────────────────────
@@ -626,40 +635,47 @@ export namespace ContextEdit {
 
         const lifecycle = part.lifecycle
         if (lifecycle.hint === "discardable") {
-          Database.transaction(() => {
-            const casHash = CAS.store(JSON.stringify(part), {
-              contentType: part.type === "tool" ? "tool-output" : part.type,
-              sessionID: msg.info.sessionID,
-              partID: part.id,
-              tokens: Token.estimate(getPartContent(part)),
-            })
+          try {
+            Database.transaction(() => {
+              const casHash = CAS.store(JSON.stringify(part), {
+                contentType: part.type === "tool" ? "tool-output" : part.type,
+                sessionID: msg.info.sessionID,
+                partID: part.id,
+                tokens: Token.estimate(getPartContent(part)),
+              })
 
-            // Track in EditGraph for reversibility
-            const version = EditGraph.commit({
-              sessionID: msg.info.sessionID,
-              partID: part.id,
-              operation: "sweep-discard",
-              casHash,
-              agent: "sweeper",
-            })
-
-            Session.updatePart({
-              ...part,
-              edit: {
-                hidden: true,
+              // Track in EditGraph for reversibility
+              const version = EditGraph.commit({
+                sessionID: msg.info.sessionID,
+                partID: part.id,
+                operation: "sweep-discard",
                 casHash,
-                editedAt: Date.now(),
-                editedBy: "sweeper",
-                version,
-              },
+                agent: "sweeper",
+              })
+
+              Session.updatePart({
+                ...part,
+                edit: {
+                  hidden: true,
+                  casHash,
+                  editedAt: Date.now(),
+                  editedBy: "sweeper",
+                  version,
+                },
+              })
+              log.info("swept discardable", {
+                partID: part.id.slice(0, 12),
+                reason: lifecycle.reason ?? null,
+                casHash: casHash.slice(0, 12),
+              })
             })
-            log.info("swept discardable", {
+            changed = true
+          } catch (e) {
+            log.error("sweep transaction failed", {
               partID: part.id.slice(0, 12),
-              reason: lifecycle.reason ?? null,
-              casHash: casHash.slice(0, 12),
+              error: e instanceof Error ? e.message : String(e),
             })
-          })
-          changed = true
+          }
         }
       }
     }
