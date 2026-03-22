@@ -6,8 +6,7 @@
 
 | Document | Description |
 |----------|-------------|
-| [FRANKENCODE.md](FRANKENCODE.md) | **Start here** — overview of all Frankencode features (tab bar, fork agents, context editing) |
-| [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) | Exhaustive diff vs upstream (every module, tool, agent, schema change) |
+| [FRANKENCODE.md](FRANKENCODE.md) | **Start here** — all Frankencode features, diff vs upstream, tab bar, fork agents, context editing |
 | [context-editing.md](context-editing.md) | Context editing tools, lifecycle markers, and deterministic sweeper |
 | [agents.md](agents.md) | Agents, mode switching, fork agents, model recommendations |
 | [schema.md](schema.md) | Database schema changes (4 new tables, PartBase extensions) |

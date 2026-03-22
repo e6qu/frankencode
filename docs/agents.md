@@ -182,8 +182,3 @@ See [FRANKENCODE.md](FRANKENCODE.md#tab-bar-and-subagent-tabs) for full tab bar 
 - [API_PROVIDERS.md](API_PROVIDERS.md) — model selection for agents
 - [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md) — agents exposed via ACP protocol
 - [EFFECTIFICATION.md](EFFECTIFICATION.md) — AgentService Effect layer
-- [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) — all Frankencode additions
-- [API_PROVIDERS.md](API_PROVIDERS.md) — model selection for agents
-- [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md) — agents exposed via ACP protocol
-- [EFFECTIFICATION.md](EFFECTIFICATION.md) — AgentService Effect layer
-- [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) — all Frankencode additions

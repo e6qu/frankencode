@@ -142,7 +142,7 @@ The ACP protocol implementation is identical to upstream OpenCode — no Franken
 
 However, Frankencode's additional tools are **transparently available** to ACP clients. When an ACP client sends a prompt, the agent can use all Frankencode tools including `context_edit`, `thread_park`, `classifier_threads`, `distill_threads`, `verify`, `refine`, and `objective_set`. These appear as standard tool calls in the ACP event stream — no client-side changes needed.
 
-See [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) for the complete list of Frankencode additions.
+See [FRANKENCODE.md](FRANKENCODE.md) for the complete list of Frankencode additions.
 
 ---
 
@@ -152,4 +152,4 @@ See [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) for the complete li
 - [API_PROVIDERS.md](API_PROVIDERS.md) — provider/model selection (used in ACP NewSessionRequest)
 - [context-editing.md](context-editing.md) — context editing tools available through ACP
 - [EFFECTIFICATION.md](EFFECTIFICATION.md) — Effect architecture (ACP sessions boot via InstanceLifecycle)
-- [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) — all Frankencode vs OpenCode differences
+- [FRANKENCODE.md](FRANKENCODE.md) — all Frankencode vs OpenCode differences

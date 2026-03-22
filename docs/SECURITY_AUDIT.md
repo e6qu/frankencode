@@ -119,5 +119,5 @@ From `SECURITY.md`:
 ## See Also
 
 - [UPSTREAM_STATUS.md](../UPSTREAM_STATUS.md) — full upstream commit catalogue
-- [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) — Frankencode vs OpenCode differences
+- [FRANKENCODE.md](FRANKENCODE.md) — Frankencode vs OpenCode differences
 - [EFFECTIFICATION.md](EFFECTIFICATION.md) — Effect architecture (relevant to service isolation)

@@ -1,4 +1,4 @@
-import { type Accessor, createEffect, createMemo, createSignal } from "solid-js"
+import { type Accessor, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import type { Session } from "@opencode-ai/sdk/v2"
 
 export const PER_PAGE = 6
@@ -56,6 +56,9 @@ export function useTab(input: {
   const [page, setPage] = createSignal(0)
   const [hint, setHint] = createSignal(false)
   let timer: ReturnType<typeof setTimeout> | undefined
+  onCleanup(() => {
+    if (timer) clearTimeout(timer)
+  })
 
   const tabs = createMemo(() => buildTabs(input.sessions()))
 
