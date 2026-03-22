@@ -42,6 +42,9 @@ import { writeHeapSnapshot } from "v8"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import { TuiConfigProvider } from "./context/tui-config"
 import { TuiConfig } from "@/config/tui"
+import { Log } from "@/util/log"
+
+const log = Log.create({ service: "tui" })
 
 async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
   // can't set raw mode if not a TTY
@@ -191,7 +194,7 @@ export function tui(input: {
           keyBindings: [{ name: "y", ctrl: true, action: "copy-selection" }],
           onCopySelection: (text) => {
             Clipboard.copy(text).catch((error) => {
-              console.error(`Failed to copy console selection to clipboard: ${error}`)
+              log.error(`Failed to copy console selection to clipboard: ${error}`)
             })
           },
         },
@@ -258,7 +261,7 @@ function App() {
   const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
 
   createEffect(() => {
-    console.log(JSON.stringify(route.data))
+    log.debug("route changed", { data: route.data })
   })
 
   // Update terminal window title based on current route and session

@@ -19,6 +19,18 @@ All bugs tracked here. Do not create per-package bug files.
 | S4  | Server unauthenticated on non-loopback | Med | Server throws if bound to non-loopback without `OPENCODE_SERVER_PASSWORD` |
 | S5  | Read tool exposes .env files | Med | Sensitive file deny-list; `always: []` for sensitive files forces permission prompt |
 
+## Open — Code Quality (5)
+
+Found during QA bug hunt (static analysis). Not crashes, but code quality issues.
+
+| #   | Issue | Sev | Location | Notes |
+| --- | ----- | --- | -------- | ----- |
+| Q1  | 95 empty `.catch(() => {})` blocks across 29 files | Low | Various | Most intentional (file ops), ~10 mask real errors in `config.ts`, `lsp/client.ts`, `sdk.tsx` |
+| Q2  | 17 TODO/FIXME/HACK comments | Low | 13 files | Track as tech debt; key ones: copilot lost type safety (#374), process.env vs Env.set (#300, #524) |
+| Q3  | `console.log` in TUI production code | Low | `cli/cmd/tui/` | **FIXED** in this PR — replaced 18 calls with `Log.create()` |
+| Q4  | Copilot SDK lost chunk type safety | Med | `provider/sdk/copilot/chat/openai-compatible-chat-language-model.ts:374` | TODO says "MUST FIX" — type safety lost on Chunk due to error schema |
+| Q5  | `process.env` used directly instead of `Env.set` | Low | `provider/provider.ts:300,524` | Env.set only updates shallow copy, not process.env — architectural issue |
+
 ## Open — Bugs (0)
 
 _No open bugs._

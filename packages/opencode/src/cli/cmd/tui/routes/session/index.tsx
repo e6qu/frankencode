@@ -15,6 +15,7 @@ import {
 import { Dynamic } from "solid-js/web"
 import path from "path"
 import { useRoute, useRouteData } from "@tui/context/route"
+import { Log } from "@/util/log"
 import { useSync } from "@tui/context/sync"
 import { SplitBorder } from "@tui/component/border"
 import { Spinner } from "@tui/component/spinner"
@@ -82,6 +83,8 @@ import { DialogExportOptions } from "../../ui/dialog-export-options"
 import { formatTranscript } from "../../util/transcript"
 import { UI } from "@/cli/ui.ts"
 import { useTuiConfig } from "../../context/tui-config"
+
+const log = Log.create({ service: "tui" })
 
 addDefaultParsers(parsers.parsers)
 
@@ -196,7 +199,7 @@ export function Session() {
         if (scroll) scroll.scrollBy(100_000)
       })
       .catch((e) => {
-        console.error(e)
+        log.error("session sync failed", { error: e as Error })
         toast.show({
           message: `Session not found: ${route.sessionID}`,
           variant: "error",

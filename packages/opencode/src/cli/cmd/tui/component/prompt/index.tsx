@@ -27,6 +27,7 @@ import { TuiEvent } from "../../event"
 import { iife } from "@/util/iife"
 import { Locale } from "@/util/locale"
 import { formatDuration } from "@/util/format"
+import { Log } from "@/util/log"
 import { createColors, createFrames } from "../../ui/spinner.ts"
 import { useDialog } from "@tui/ui/dialog"
 import { DialogProvider as DialogProviderConnect } from "../dialog-provider"
@@ -35,6 +36,8 @@ import { useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv"
 import { useTextareaKeybindings } from "../textarea-keybindings"
 import { DialogSkill } from "../dialog-skill"
+
+const log = Log.create({ service: "tui" })
 
 export type PromptProps = {
   sessionID?: string
@@ -549,7 +552,7 @@ export function Prompt(props: PromptProps) {
       })
 
       if (res.error) {
-        console.log("Creating a session failed:", res.error)
+        log.error("Creating a session failed", { error: res.error })
 
         toast.show({
           message: "Creating a session failed. Open console for more details.",

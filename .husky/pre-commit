@@ -5,6 +5,12 @@ set -e
 bun prettier --write "packages/opencode/src/**/*.ts" "packages/plugin/src/**/*.ts"
 git update-index --again
 
+# Strip AI tool attribution from staged files
+scripts/strip-ai-attribution.sh
+
+# SAST: check for security anti-patterns in staged files
+scripts/sast-check.sh
+
 # Typecheck
 bun turbo typecheck 2>&1 | tail -5
 

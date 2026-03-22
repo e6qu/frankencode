@@ -15,3 +15,14 @@ if ! echo "$msg" | grep -qE '^(feat|fix|docs|chore|refactor|test|perf|ci|build|r
   echo "Got: $msg"
   exit 1
 fi
+
+# Strip AI co-authorship trailers from commit message
+# These are injected by AI coding tools and misrepresent authorship.
+# See docs/AI_ATTRIBUTION_POLICY.md for the full list.
+if [ "$(uname)" = "Darwin" ]; then
+  sed -i '' '/^Co-authored-by:.*[Cc]laude\|[Cc]opilot\|[Cc]ursor\|[Cc]hat[Gg][Pp][Tt]\|[Oo]pen[Aa][Ii]\|[Aa]nthrop\|[Dd]evin\|[Aa]ider\|[Cc]odeium\|[Tt]abnine\|[Ww]indsurf\|[Cc]ody\|[Cc]ontinue\|[Aa]ugment\|[Ss]upermaven/d' "$1"
+  sed -i '' '/^Authored-by:.*AI\|^Written-by:.*AI\|^Generated-by:/d' "$1"
+else
+  sed -i '/^Co-authored-by:.*[Cc]laude\|[Cc]opilot\|[Cc]ursor\|[Cc]hat[Gg][Pp][Tt]\|[Oo]pen[Aa][Ii]\|[Aa]nthrop\|[Dd]evin\|[Aa]ider\|[Cc]odeium\|[Tt]abnine\|[Ww]indsurf\|[Cc]ody\|[Cc]ontinue\|[Aa]ugment\|[Ss]upermaven/d' "$1"
+  sed -i '/^Authored-by:.*AI\|^Written-by:.*AI\|^Generated-by:/d' "$1"
+fi
