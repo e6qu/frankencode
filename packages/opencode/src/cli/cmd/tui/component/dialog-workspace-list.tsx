@@ -9,6 +9,9 @@ import { useToast } from "../ui/toast"
 import { useKeybind } from "../context/keybind"
 import { DialogSessionList } from "./workspace/dialog-session-list"
 import { createOpencodeClient } from "@opencode-ai/sdk/v2"
+import { Log } from "@/util/log"
+
+const log = Log.create({ service: "tui" })
 
 async function openWorkspace(input: {
   dialog: ReturnType<typeof useDialog>
@@ -112,10 +115,10 @@ function DialogWorkspaceCreate(props: { onSelect: (workspaceID: string) => Promi
     setCreating(type)
 
     const result = await sdk.client.experimental.workspace.create({ type, branch: null }).catch((err) => {
-      console.log(err)
+      log.error("workspace create failed", { error: err as Error })
       return undefined
     })
-    console.log(JSON.stringify(result, null, 2))
+    log.debug("workspace create result", { data: result ?? "undefined" })
     const workspace = result?.data
     if (!workspace) {
       setCreating(undefined)

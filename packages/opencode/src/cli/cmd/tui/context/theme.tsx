@@ -2,6 +2,7 @@ import { SyntaxStyle, RGBA, type TerminalColors } from "@opentui/core"
 import path from "path"
 import { createEffect, createMemo, onMount } from "solid-js"
 import { createSimpleContext } from "./helper"
+import { Log } from "@/util/log"
 import { Glob } from "../../../../util/glob"
 import aura from "./theme/aura.json" with { type: "json" }
 import ayu from "./theme/ayu.json" with { type: "json" }
@@ -42,6 +43,8 @@ import { createStore, produce } from "solid-js/store"
 import { Global } from "@/global"
 import { Filesystem } from "@/util/filesystem"
 import { useTuiConfig } from "./tui-config"
+
+const log = Log.create({ service: "tui" })
 
 type ThemeColors = {
   primary: RGBA
@@ -317,13 +320,13 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     onMount(init)
 
     function resolveSystemTheme() {
-      console.log("resolveSystemTheme")
+      log.debug("resolveSystemTheme")
       renderer
         .getPalette({
           size: 16,
         })
         .then((colors) => {
-          console.log(colors.palette)
+          log.debug("system palette", { palette: colors.palette })
           if (!colors.palette[0]) {
             if (store.active === "system") {
               setStore(
