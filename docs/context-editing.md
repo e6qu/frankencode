@@ -90,6 +90,74 @@ Park and list project-level side threads. Threads survive across sessions.
 
 ---
 
+## How to Elicit History Editing
+
+The context editing system is available to the agent when `context_edit` is in the tool set. The agent can use it autonomously, or you can prompt it directly.
+
+### Direct prompts to trigger editing
+
+**Hide stale content:**
+```
+Hide the file read output from 3 turns ago — it's outdated since we edited the file.
+```
+
+**Replace incorrect information:**
+```
+The grep result from earlier is wrong — replace it with a note saying "file was restructured".
+```
+
+**Externalize verbose output:**
+```
+Externalize that long test output — just keep a summary of what passed and failed.
+```
+
+**Mark for automatic cleanup:**
+```
+Mark that debug logging as discardable — it's only useful for the next 2 turns.
+```
+
+**Park a side thread:**
+```
+Park that security issue we noticed — it's not related to our current task.
+```
+
+### Slash commands
+
+| Command | What it does |
+|---------|-------------|
+| `/focus` | Runs the classifier agent to label messages by topic, then externalizes stale output and parks off-topic threads. Requires the focus agent to be enabled in config. |
+| `/focus-rewrite-history` | Full conversation rewrite with user confirmation. The agent reviews all messages, classifies them, and rewrites the history to focus on the current objective. Disabled by default — enable in agent config. |
+| `/btw <question>` | Ask a side question without polluting the main conversation. Runs in a forked ephemeral session. |
+| `/reset-context` | Restore all edited parts to their originals from CAS. Undo all context edits. |
+| `/classify` | Run the classifier agent to see how messages are labeled (main/side/mixed). Read-only, no side effects. |
+| `/threads` | List all parked side threads for this project. |
+| `/history` | Show the edit history (linear log from HEAD). |
+| `/tree` | Show the full edit DAG with branches. |
+
+### Enabling focus agents
+
+By default, the focus and focus-rewrite-history agents are disabled. Enable them in your `opencode.json`:
+
+```jsonc
+{
+  "agent": {
+    "focus": {},                    // remove "disable": true
+    "focus-rewrite-history": {}    // remove "disable": true
+  }
+}
+```
+
+### How history editing is verified
+
+Integration tests prove the editing pipeline works end-to-end:
+- **hide → filterEdited**: secret content removed from LLM context, CAS preserves original, synthetic placeholder created
+- **unhide**: original content restored from CAS
+- **mark → sweep**: discardable content auto-cleaned after N turns
+
+See `test/context-edit/integration.test.ts` for the proof tests.
+
+---
+
 ## See Also
 
 - [schema.md](schema.md) — database tables (cas_object, edit_graph_node/head, side_thread, PartBase extensions)
