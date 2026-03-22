@@ -6,8 +6,12 @@ Call this tool:
 - After you have written a complete plan to the plan file
 - After you have clarified any questions with the user
 - When you are confident the plan is ready for implementation
+- When you realize mid-planning that the task is simple enough to implement directly
+
+You should proactively decide to switch to build mode based on your own reasoning — you do not need the user to explicitly ask. If you determine that planning is complete and implementation should begin, switch. You can switch back and forth between plan and build as many times as needed during a session.
 
 Do NOT call this tool:
 - Before you have created or finalized the plan
 - If you still have unanswered questions about the implementation
 - If the user has indicated they want to continue planning
+- When you are already in build mode

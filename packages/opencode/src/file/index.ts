@@ -519,7 +519,7 @@ export class FileService extends ServiceMap.Service<FileService, FileService.Ser
             for (const filepath of untrackedFiles) {
               try {
                 const content = await Filesystem.readText(path.join(instance.directory, filepath))
-                const lines = content.split("\n").length
+                const lines = content.trimEnd().split("\n").length
                 changedFiles.push({
                   path: filepath,
                   added: lines,

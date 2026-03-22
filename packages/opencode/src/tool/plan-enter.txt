@@ -1,4 +1,4 @@
-Use this tool to suggest switching to plan agent when the user's request would benefit from planning before implementation.
+Use this tool to switch to plan agent for research and planning before implementation.
 
 If they explicitly mention wanting to create a plan ALWAYS call this tool first.
 
@@ -8,7 +8,13 @@ Call this tool when:
 - The user's request is complex and would benefit from planning first
 - You want to research and design before making changes
 - The task involves multiple files or significant architectural decisions
+- You realize mid-implementation that you need to step back and plan
+- You are unsure about the right approach and need to explore options
+- The current task has grown in scope beyond what was originally expected
+
+You should proactively decide to switch to plan mode based on your own reasoning — you do not need the user to explicitly ask. If you determine that planning would produce better results, switch. You can switch back and forth between plan and build as many times as needed.
 
 Do NOT call this tool:
 - For simple, straightforward tasks
 - When the user explicitly wants immediate implementation
+- When you are already in plan mode

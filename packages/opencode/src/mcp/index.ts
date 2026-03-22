@@ -311,13 +311,12 @@ export namespace MCP {
     const s = await state(InstanceALS.directory)
     const result = await create(name, mcp, InstanceALS.directory)
     if (!result) {
-      const status = {
+      s.status[name] = {
         status: "failed" as const,
         error: "unknown error",
       }
-      s.status[name] = status
       return {
-        status,
+        status: s.status,
       }
     }
     if (!result.mcpClient) {
