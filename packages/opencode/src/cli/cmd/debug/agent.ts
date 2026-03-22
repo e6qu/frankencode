@@ -96,7 +96,7 @@ function parseToolParams(input?: string) {
       return JSON.parse(trimmed)
     } catch (jsonError) {
       try {
-        return new Function(`return (${trimmed})`)()
+        return new Function(`return (${trimmed})`)() // sast-ignore — debug-only command, not user-facing
       } catch (evalError) {
         throw new Error(
           `Failed to parse --params. Use JSON or a JS object literal. JSON error: ${jsonError}. Eval error: ${evalError}.`,
