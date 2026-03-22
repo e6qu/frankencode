@@ -14,6 +14,7 @@
 | [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md) | ACP v1 protocol support for IDE integration |
 | [API_PROVIDERS.md](API_PROVIDERS.md) | 21+ LLM providers, models.dev API, transform pipeline |
 | [SECURITY_AUDIT.md](SECURITY_AUDIT.md) | CVEs, upstream security issues, Frankencode-specific vulnerabilities |
+| [AI_ATTRIBUTION_POLICY.md](AI_ATTRIBUTION_POLICY.md) | AI tool attribution stripping policy, SAST checks |
 
 ## Architecture at a Glance
 
