@@ -13,11 +13,13 @@ permissions:
 
 jobs:
   ci:
-    name: format + typecheck + test
+    name: format + sast + typecheck + test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
@@ -29,6 +31,39 @@ jobs:
 
       - name: Format check
         run: bun prettier --check "packages/opencode/src/**/*.ts" "packages/plugin/src/**/*.ts"
+
+      - name: SAST check
+        run: |
+          ERRORS=0
+          SRC_FILES=$(find packages/opencode/src -name '*.ts' -o -name '*.tsx' | grep -v node_modules | grep -v '\.test\.' | grep -v '\.snap')
+          if grep -rn '\beval(' $SRC_FILES 2>/dev/null | grep -v '// sast-ignore'; then
+            echo "SAST ERROR: eval() detected"; ERRORS=$((ERRORS + 1))
+          fi
+          if grep -rn 'new Function(' $SRC_FILES 2>/dev/null | grep -v '// sast-ignore'; then
+            echo "SAST ERROR: new Function() detected"; ERRORS=$((ERRORS + 1))
+          fi
+          if grep -rnE "(password|secret|token|api[_-]?key)\s*[:=]\s*['\"][A-Za-z0-9_/+=]{8,}['\"]" $SRC_FILES 2>/dev/null | grep -v '// sast-ignore' | grep -v test | grep -v example | grep -v placeholder; then
+            echo "SAST ERROR: Possible hardcoded secret"; ERRORS=$((ERRORS + 1))
+          fi
+          if [ "$ERRORS" -gt 0 ]; then echo "SAST: $ERRORS error(s)"; exit 1; fi
+          echo "SAST: passed"
+
+      - name: AI attribution check
+        run: |
+          PATTERN="co-authored-by:.*(cursor|claude|anthropic|aider|copilot)"
+          FOUND=0
+          for commit in $(git log origin/${{ github.base_ref }}..HEAD --format="%H" 2>/dev/null || echo ""); do
+            if git log -1 --format="%B" "$commit" | grep -qiE "$PATTERN"; then
+              echo "ERROR: AI attribution in $(git log -1 --format='%h %s' $commit)"
+              FOUND=$((FOUND + 1))
+            fi
+            if git log -1 --format="%B" "$commit" | grep -q "Generated with Claude Code"; then
+              echo "ERROR: Claude Code marker in $(git log -1 --format='%h %s' $commit)"
+              FOUND=$((FOUND + 1))
+            fi
+          done
+          if [ "$FOUND" -gt 0 ]; then exit 1; fi
+          echo "AI attribution check: passed"
 
       - name: Typecheck
         run: bun turbo typecheck
