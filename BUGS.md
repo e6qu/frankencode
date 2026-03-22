@@ -51,6 +51,7 @@ _No open bugs._
 | B57 | `filterEdited()` synthetic ID collision | Med | `PartID.ascending()` |
 | B58 | `pluginGuard()` uncaught Plugin.trigger() errors | High | try-catch → EditResult error |
 | B59 | `pluginNotify()` silent Plugin.trigger() errors | Med | try-catch → log.warn |
+| B60 | Objective markdown injection into system prompt | Med | Escaped newlines + markdown chars in objective text |
 | Q3  | `console.log` in TUI production code | Low | 18 calls → `Log.create()` (PR #31) |
 
 ## Fixed — Bugs (PRs #10-#22)
@@ -67,7 +68,7 @@ _No open bugs._
 
 ---
 
-## False Positives / Intentional (20)
+## False Positives / Intentional (23)
 
 | Issue | Verdict |
 |-------|---------|
@@ -86,6 +87,9 @@ _No open bugs._
 | E1-fork: Fork session failure leaks | Already fixed in B21 |
 | PM1: edit/write use `always: ["*"]` | By design — "remember answer for type", not auto-approve |
 | PM2: bash doesn't ask edit permission | By design — bash has own permission level |
+| Protected message window timing race | False positive — part marked hidden regardless; filter runs next prompt |
+| Side thread system prompt staleness | False positive — thread list queried fresh from DB per prompt |
+| Sweep transaction silent failure | Fixed — added try-catch with log.error (this PR) |
 | `updatePart()` creates orphaned parts if message deleted | False positive — FK constraint `message_id → MessageTable.id` prevents orphaned inserts |
 | Script paths with spaces in skill/scripts.ts | False positive — array-based `Process.text()` doesn't split on spaces |
 | Truncation boundary at exact maxBytes | False positive — `>` comparison is correct (include at limit, truncate above) |
