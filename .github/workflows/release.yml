@@ -1,0 +1,34 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Create release
+        run: gh release create ${{ github.ref_name }} --repo ${{ github.repository }} --title ${{ github.ref_name }} --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and upload binaries
+        run: |
+          cd packages/opencode
+          OPENCODE_RELEASE=1 OPENCODE_VERSION=${GITHUB_REF#refs/tags/v} GH_REPO=${{ github.repository }} bun run build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
