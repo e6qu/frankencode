@@ -245,6 +245,7 @@ export namespace Session {
     z.object({
       sessionID: SessionID.zod,
       messageID: MessageID.zod.optional(),
+      parentID: SessionID.zod.optional(),
     }),
     async (input) => {
       const original = await get(input.sessionID)
@@ -256,7 +257,10 @@ export namespace Session {
         directory,
         projectID,
         workspaceID: original.workspaceID,
+        parentID: input.parentID,
         title,
+        // Fork children cannot spawn further subagents
+        ...(input.parentID && { permission: [{ permission: "task", pattern: "*", action: "deny" as const }] }),
       })
       const msgs = await messages({ sessionID: input.sessionID })
       const idMap = new Map<string, MessageID>()

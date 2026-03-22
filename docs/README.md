@@ -1,14 +1,15 @@
 # Frankencode Documentation
 
-> **Frankencode** is a fork of [OpenCode](https://github.com/anomalyco/opencode) that adds context editing, content-addressable storage, an edit graph, focus agents, side threads, and a verification/refinement loop.
+> **Frankencode** is a fork of [OpenCode](https://github.com/anomalyco/opencode) that adds context editing, subagent tabs, fork agents, content-addressable storage, an edit graph, focus agents, side threads, and a verification/refinement loop.
 
 ## Documentation Map
 
 | Document | Description |
 |----------|-------------|
-| [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) | All differences between Frankencode and upstream OpenCode |
+| [FRANKENCODE.md](FRANKENCODE.md) | **Start here** — overview of all Frankencode features (tab bar, fork agents, context editing) |
+| [FRANKENCODE_DIFFERENCES.md](FRANKENCODE_DIFFERENCES.md) | Exhaustive diff vs upstream (every module, tool, agent, schema change) |
 | [context-editing.md](context-editing.md) | Context editing tools, lifecycle markers, and deterministic sweeper |
-| [agents.md](agents.md) | Frankencode-specific agents (classifier, focus, evaluator, optimizer) |
+| [agents.md](agents.md) | Agents, mode switching, fork agents, model recommendations |
 | [schema.md](schema.md) | Database schema changes (4 new tables, PartBase extensions) |
 | [EFFECTIFICATION.md](EFFECTIFICATION.md) | Effect-TS architecture, 22 services, LayerMap, dual-layer context |
 | [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md) | ACP v1 protocol support for IDE integration |
@@ -22,6 +23,8 @@
   User / IDE Client
        |
   ACP (JSON-RPC/stdio) or TUI or HTTP API
+       |
+  TUI Tab Bar: Main │ + │ S1 │ F1
        |
   InstanceLifecycle.boot(directory)
        |

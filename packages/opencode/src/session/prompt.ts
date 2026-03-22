@@ -737,6 +737,21 @@ export namespace SessionPrompt {
         }
       }
 
+      // Fork agent instructions: no subagents, suggest delegating to parent
+      if (session.parentID && session.title.includes("(fork #")) {
+        system.push(`## Fork Agent Constraints
+You are running in a **fork session** — a user-created branch of the main conversation. You have the full conversation history from the main agent up to when this fork was created.
+
+**Restrictions:**
+- You CANNOT spawn subagents or subtasks. The task/Agent tool is not available to you.
+- If a task requires spawning subagents, suggest to the user that they ask the main agent instead.
+
+**Purpose:**
+- You are a manually promptable agent for focused, independent work.
+- The user can switch between you and the main agent via the tab bar.
+- Work within your scope — do not try to coordinate with other agents.`)
+      }
+
       const result = await processor.process({
         user: lastUser,
         agent,

@@ -1,6 +1,6 @@
 # Frankencode vs OpenCode: All Differences
 
-This document lists every change Frankencode makes relative to upstream [OpenCode](https://github.com/anomalyco/opencode) (`dev` branch).
+This document lists every change Frankencode makes relative to upstream [OpenCode](https://github.com/anomalyco/opencode) (`dev` branch). For an overview of key features, see [FRANKENCODE.md](FRANKENCODE.md).
 
 ---
 
@@ -136,13 +136,38 @@ See `BUGS.md` at repo root for the complete bug tracker.
 
 ---
 
+## TUI Changes
+
+### Tab Bar and Subagent Tabs
+
+Frankencode adds a tab bar at the top of the session view for navigating between the main agent and its subagents/fork agents. See [FRANKENCODE.md](FRANKENCODE.md#tab-bar-and-subagent-tabs) for full details.
+
+| File | Purpose |
+|------|---------|
+| `src/cli/cmd/tui/routes/session/tab.ts` | `useTab` hook — all tab bar state and actions |
+| `src/cli/cmd/tui/routes/session/tabbar.tsx` | Pure renderer for tab chips |
+
+### Fork Agents
+
+Users can fork the main conversation via `+` to create independent promptable sessions. Fork agents inherit conversation history but cannot spawn subagents. See [FRANKENCODE.md](FRANKENCODE.md#fork-agents) for details.
+
+### Keybinding Changes
+
+| Keybind | OpenCode | Frankencode |
+|---------|----------|-------------|
+| Tab | Cycle agents | Toggle tab bar focus |
+| Shift+Tab | (none) | Cycle agents (Build/Plan/Docs) |
+| ←/→ (tab bar focused) | (N/A) | Navigate tabs |
+| Ctrl+C | Exit immediately (if input empty) | Double-press to exit (first press aborts + shows hint) |
+
+---
+
 ## What Is NOT Different
 
 These areas are identical to upstream OpenCode:
 
 - **API providers** — all 21+ providers, models.dev integration, transform pipeline (see [API_PROVIDERS.md](API_PROVIDERS.md))
 - **ACP support** — full ACP v1 protocol, same capabilities (see [AGENT_CLIENT_PROTOCOL.md](AGENT_CLIENT_PROTOCOL.md))
-- **TUI** — same terminal UI (OpenTUI + SolidJS)
 - **Session/message format** — same MessageV2 schema (extended with EditMeta/LifecycleMeta)
 - **Plugin system** — same plugin hooks (plus `context.edit.before`/`context.edit.after`)
 - **Permission system** — same PermissionNext framework

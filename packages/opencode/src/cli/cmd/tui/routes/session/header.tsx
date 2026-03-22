@@ -41,7 +41,7 @@ const WorkspaceInfo = (props: { workspace: Accessor<string | undefined> }) => {
   )
 }
 
-export function Header() {
+export function Header(props: { tabBar?: boolean }) {
   const route = useRouteData("session")
   const sync = useSync()
   const session = createMemo(() => sync.session.get(route.sessionID)!)
@@ -100,7 +100,7 @@ export function Header() {
         backgroundColor={theme.backgroundPanel}
       >
         <Switch>
-          <Match when={session()?.parentID}>
+          <Match when={session()?.parentID && !props.tabBar}>
             <box flexDirection="column" gap={1}>
               <box flexDirection={narrow() ? "column" : "row"} justifyContent="space-between" gap={narrow() ? 1 : 0}>
                 {Flag.OPENCODE_EXPERIMENTAL_WORKSPACES ? (

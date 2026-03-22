@@ -434,6 +434,12 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
               options={{ once: "Allow once", always: "Allow always", reject: "Reject" }}
               escapeKey="reject"
               fullscreen
+              onReject={() => {
+                sdk.client.permission.reply({
+                  reply: "reject",
+                  requestID: props.request.id,
+                })
+              }}
               onSelect={(option) => {
                 if (option === "always") {
                   setStore("stage", "always")
@@ -477,9 +483,15 @@ function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: (
   useKeyboard((evt) => {
     if (dialog.stack.length > 0) return
 
-    if (evt.name === "escape" || keybind.match("app_exit", evt)) {
+    if (evt.name === "escape") {
       evt.preventDefault()
       props.onCancel()
+      return
+    }
+    // Ctrl+C auto-confirms rejection (empty feedback)
+    if (keybind.match("app_exit", evt)) {
+      evt.preventDefault()
+      props.onConfirm("")
       return
     }
     if (evt.name === "return") {
@@ -545,6 +557,7 @@ function Prompt<const T extends Record<string, string>>(props: {
   escapeKey?: keyof T
   fullscreen?: boolean
   onSelect: (option: keyof T) => void
+  onReject?: () => void
 }) {
   const { theme } = useTheme()
   const keybind = useKeybind()
@@ -580,9 +593,14 @@ function Prompt<const T extends Record<string, string>>(props: {
       props.onSelect(store.selected)
     }
 
-    if (props.escapeKey && (evt.name === "escape" || keybind.match("app_exit", evt))) {
+    if (props.escapeKey && evt.name === "escape") {
       evt.preventDefault()
       props.onSelect(props.escapeKey)
+    }
+
+    // Ctrl+C rejects permission directly (no reject-reason prompt)
+    if (props.escapeKey && keybind.match("app_exit", evt)) {
+      props.onReject?.()
     }
 
     if (props.fullscreen && diffKey && Keybind.match(diffKey, keybind.parse(evt))) {

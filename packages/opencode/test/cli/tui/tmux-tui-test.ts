@@ -172,13 +172,13 @@ const flows: TestFlow[] = [
       await waitFor((f) => f.includes("tab agents"), { timeout: 15000, desc: "TUI ready" })
       await sleep(500)
 
-      // Cycle through agents with Tab
+      // Cycle through agents with Shift+Tab (Tab now focuses tab bar)
       const agents: string[] = []
       for (let i = 0; i < 4; i++) {
         const frame = capture()
         const match = frame.match(/┃\s+(Build|Plan|Docs|Explore|General)\s/)
         if (match) agents.push(match[1])
-        sendKeys("Tab")
+        sendKeys("BTab")
         await sleep(300)
       }
       saveScreenshot("agent-cycle", capture())
@@ -334,7 +334,7 @@ const flows: TestFlow[] = [
         if (match && !seenAgents.includes(match[1])) {
           seenAgents.push(match[1])
         }
-        sendKeys("Tab")
+        sendKeys("BTab")
         await sleep(400)
       }
 
@@ -354,6 +354,71 @@ const flows: TestFlow[] = [
       return issues
     },
   },
+  {
+    name: "tab-bar-navigate",
+    async run() {
+      const issues: string[] = []
+
+      await waitFor((f) => f.includes("tab agents") || f.includes("tab switch"), { timeout: 15000, desc: "TUI ready" })
+      await sleep(500)
+
+      // Press Tab to focus tab bar
+      sendKeys("Tab")
+      await sleep(500)
+      const focused = capture()
+      saveScreenshot("tabbar-focused", focused)
+
+      // Tab bar should be focused (Main tab visible at top)
+      if (!focused.includes("Main") || !focused.includes("+")) {
+        issues.push("Tab bar not visible after Tab press")
+      }
+
+      // Main should be highlighted
+      if (!focused.includes("Main")) {
+        issues.push("Main tab not visible in tab bar")
+      }
+
+      // Press Down to unfocus
+      sendKeys("Down")
+      await sleep(500)
+      const unfocused = capture()
+
+      if (!unfocused.includes("tab switch") && !unfocused.includes("tab agents")) {
+        issues.push("Tab bar hints did not return to normal after Down")
+      }
+
+      return issues
+    },
+  },
+
+  {
+    name: "tab-bar-fork",
+    async run() {
+      const issues: string[] = []
+
+      await waitFor((f) => f.includes("tab agents") || f.includes("tab switch"), { timeout: 15000, desc: "TUI ready" })
+      await sleep(500)
+
+      // Focus tab bar, navigate to +, press Enter to fork
+      sendKeys("Tab")
+      await sleep(300)
+      sendKeys("Right") // from Main to +
+      await sleep(300)
+      sendKeys("Enter") // spawn fork
+      await sleep(2000) // wait for fork creation
+
+      const forked = capture()
+      saveScreenshot("tabbar-forked", forked)
+
+      // Verify F1 label appears
+      if (!forked.includes("F1")) {
+        issues.push("Fork tab F1 not visible after + spawn")
+      }
+
+      return issues
+    },
+  },
+
   {
     name: "slash-classify",
     async run() {

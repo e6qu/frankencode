@@ -58,6 +58,7 @@ function init() {
   const suspended = () => suspendCount() > 0
 
   useKeyboard((evt) => {
+    if (evt.defaultPrevented) return
     if (suspended()) return
     if (dialog.stack.length > 0) return
     for (const option of entries()) {
