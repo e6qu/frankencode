@@ -26,20 +26,25 @@ export namespace ContextEdit {
     op: string,
     input: { sessionID: string; partID?: string; messageID?: string; agent: string },
   ): Promise<EditResult | null> {
-    const result = await Plugin.trigger(
-      "context.edit.before",
-      {
-        operation: op,
-        sessionID: input.sessionID,
-        partID: input.partID,
-        messageID: input.messageID,
-        agent: input.agent,
-      },
-      { allow: true, reason: undefined },
-      InstanceALS.directory,
-    )
-    if (!result.allow) return { success: false, error: result.reason ?? "Blocked by plugin" }
-    return null
+    try {
+      const result = await Plugin.trigger(
+        "context.edit.before",
+        {
+          operation: op,
+          sessionID: input.sessionID,
+          partID: input.partID,
+          messageID: input.messageID,
+          agent: input.agent,
+        },
+        { allow: true, reason: undefined },
+        InstanceALS.directory,
+      )
+      if (!result.allow) return { success: false, error: result.reason ?? "Blocked by plugin" }
+      return null
+    } catch (e) {
+      log.error("plugin guard error", { op, error: e instanceof Error ? e.message : String(e) })
+      return { success: false, error: `Plugin error: ${e instanceof Error ? e.message : String(e)}` }
+    }
   }
 
   async function pluginNotify(
@@ -47,19 +52,23 @@ export namespace ContextEdit {
     input: { sessionID: string; partID?: string; messageID?: string; agent: string },
     success: boolean,
   ) {
-    await Plugin.trigger(
-      "context.edit.after",
-      {
-        operation: op,
-        sessionID: input.sessionID,
-        partID: input.partID,
-        messageID: input.messageID,
-        agent: input.agent,
-        success,
-      },
-      {},
-      InstanceALS.directory,
-    )
+    try {
+      await Plugin.trigger(
+        "context.edit.after",
+        {
+          operation: op,
+          sessionID: input.sessionID,
+          partID: input.partID,
+          messageID: input.messageID,
+          agent: input.agent,
+          success,
+        },
+        {},
+        InstanceALS.directory,
+      )
+    } catch (e) {
+      log.warn("plugin notify error", { op, error: e instanceof Error ? e.message : String(e) })
+    }
   }
 
   // ── Types ──────────────────────────────────────────────
