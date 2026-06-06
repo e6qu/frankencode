@@ -64,7 +64,21 @@ export namespace LSPServer {
     extensions: string[]
     global?: boolean
     root: RootFunction
+    args?(root: string, directory: string): Promise<{ tsserver: string; args: string[] } | undefined>
     spawn(root: string, directory: string, worktree: string): Promise<Handle | undefined>
+  }
+
+  async function ts(root: string, directory: string) {
+    const tsserver = Module.resolve("typescript/lib/tsserver.js", directory)
+    if (!tsserver) return
+    const args = ["x", "typescript-language-server", "--stdio", "--tsserver-path", tsserver]
+    if (
+      !(await pathExists(path.join(root, "tsconfig.json"))) &&
+      !(await pathExists(path.join(root, "jsconfig.json")))
+    ) {
+      args.push("--ignore-node-modules")
+    }
+    return { tsserver, args }
   }
 
   export const Deno: Info = {
@@ -102,11 +116,12 @@ export namespace LSPServer {
       ["deno.json", "deno.jsonc"],
     ),
     extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"],
+    args: ts,
     async spawn(root, directory, worktree) {
-      const tsserver = Module.resolve("typescript/lib/tsserver.js", directory)
-      log.info("typescript server", { tsserver: tsserver ?? null })
-      if (!tsserver) return
-      const proc = spawn(BunProc.which(), ["x", "typescript-language-server", "--stdio"], {
+      const cfg = await ts(root, directory)
+      log.info("typescript server", { tsserver: cfg?.tsserver ?? null })
+      if (!cfg) return
+      const proc = spawn(BunProc.which(), cfg.args, {
         cwd: root,
         env: {
           ...process.env,
@@ -117,7 +132,7 @@ export namespace LSPServer {
         process: proc,
         initialization: {
           tsserver: {
-            path: tsserver,
+            path: cfg.tsserver,
           },
         },
       }

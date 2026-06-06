@@ -173,26 +173,33 @@ Use `context_history` to navigate the edit DAG:
 - Log all bugs in root `BUGS.md`, not per-package. Do not create `packages/*/BUGS.md`.
 - Tracking docs (`PLAN.md`, `STATUS.md`, `WHAT_WE_DID.md`, `DO_NEXT.md`, `BUGS.md`, `GAP_ANALYSIS.md`, `UPSTREAM_STATUS.md`) live at repo root.
 - Do not create tracking/status markdown files inside `packages/`.
+- Update continuity docs at the end of every task, before committing the implementation PR.
+- Write continuity docs in past tense so they remain accurate after the PR merges. Avoid wording like "PR is open", "waiting for merge", or "monitor checks" unless the user explicitly asks for a pre-merge handoff.
+- Bundle continuity-doc updates with the same feature/fix PR that changed the work. Do not create a separate docs-only PR just to mark a prior PR merged or advance the phase; instead, make the docs accurate for the post-merge state before opening the implementation PR.
 
 ## Phase Methodology
 
 Work follows the phased plan in `PLAN.md`. Each phase has exit criteria.
 
 **Before starting a phase:**
+
 1. Read `PLAN.md` to understand the phase scope and exit criteria
 2. Read `GAP_ANALYSIS.md` to understand current state vs target
 3. Read `DO_NEXT.md` for immediate actions
 4. Read `BUGS.md` for any open issues that might affect the phase
 
 **After completing a phase:**
+
 1. Update `BUGS.md` — close fixed issues, add any new ones found
 2. Update `STATUS.md` — refresh metrics (test count, error count, phase progress)
 3. Update `WHAT_WE_DID.md` — add summary of work done
 4. Update `GAP_ANALYSIS.md` — mark completed gaps, update current state
 5. Update `DO_NEXT.md` — point to the next phase
-6. Update `PLAN.md` — mark phase as complete, note PR number
+6. Update `PLAN.md` — mark phase as complete, note that the PR merged, and leave next-phase instructions
+7. Keep all continuity wording accurate after merge, even before the PR has actually merged locally
 
 **When starting a new session:**
+
 1. Review `STATUS.md` and `DO_NEXT.md` to orient
 2. Verify tests pass and tsgo has 0 errors before making changes
 3. Follow the current phase in `PLAN.md`

@@ -7,6 +7,7 @@ import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js"
 import {
   CallToolResultSchema,
   type Tool as MCPToolDef,
+  ToolSchema,
   ToolListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js"
 import { Config } from "../config/config"
@@ -127,6 +128,15 @@ export namespace MCP {
   )
 
   type MCPClient = Client
+  type Closable = {
+    close: () => Promise<void>
+  }
+
+  const TolerantToolSchema = ToolSchema.omit({ outputSchema: true }).passthrough()
+  const TolerantListToolsResultSchema = z.looseObject({
+    tools: z.array(TolerantToolSchema),
+    nextCursor: z.string().optional(),
+  })
 
   export const Status = z
     .discriminatedUnion("status", [
@@ -209,6 +219,37 @@ export namespace MCP {
           },
         )
       },
+    })
+  }
+
+  async function dispose(key: string, target: Closable) {
+    await target.close().catch((error) => {
+      log.error("Failed to close MCP resource", { key, error })
+    })
+  }
+
+  function isSchemaError(error: Error) {
+    return error.message.includes("outputSchema") || error.message.includes("can't resolve reference")
+  }
+
+  async function list(key: string, client: MCPClient, timeout: number) {
+    return withTimeout(client.listTools(undefined, { timeout }), timeout).catch(async (error) => {
+      const err = error instanceof Error ? error : new Error(String(error))
+      if (!isSchemaError(err)) throw err
+
+      log.warn("retrying MCP tools list without outputSchema validation", { key, error: err.message })
+      const result = await withTimeout(
+        client.request({ method: "tools/list" }, TolerantListToolsResultSchema, { timeout }),
+        timeout,
+      )
+      return {
+        ...result,
+        tools: result.tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.inputSchema,
+        })),
+      }
     })
   }
 
@@ -397,11 +438,11 @@ export namespace MCP {
       let lastError: Error | undefined
       const connectTimeout = mcp.timeout ?? DEFAULT_TIMEOUT
       for (const { name, transport } of transports) {
+        const client = new Client({
+          name: "opencode",
+          version: Installation.VERSION,
+        })
         try {
-          const client = new Client({
-            name: "opencode",
-            version: Installation.VERSION,
-          })
           await withTimeout(client.connect(transport), connectTimeout)
           registerNotificationHandlers(client, key)
           mcpClient = client
@@ -427,6 +468,8 @@ export namespace MCP {
                 status: "needs_client_registration" as const,
                 error: "Server does not support dynamic client registration. Please provide clientId in config.",
               }
+              await dispose(key, client)
+              await dispose(key, transport)
               // Show toast for needs_client_registration
               Bus.publish(
                 TuiEvent.ToastShow,
@@ -463,6 +506,8 @@ export namespace MCP {
             url: mcp.url,
             error: lastError.message,
           })
+          await dispose(key, client)
+          await dispose(key, transport)
           status = {
             status: "failed" as const,
             error: lastError.message,
@@ -490,11 +535,11 @@ export namespace MCP {
       })
 
       const connectTimeout = mcp.timeout ?? DEFAULT_TIMEOUT
+      const client = new Client({
+        name: "opencode",
+        version: Installation.VERSION,
+      })
       try {
-        const client = new Client({
-          name: "opencode",
-          version: Installation.VERSION,
-        })
         await withTimeout(client.connect(transport), connectTimeout)
         registerNotificationHandlers(client, key)
         mcpClient = client
@@ -512,6 +557,8 @@ export namespace MCP {
           status: "failed" as const,
           error: error instanceof Error ? error.message : String(error),
         }
+        await dispose(key, client)
+        await dispose(key, transport)
       }
     }
 
@@ -529,16 +576,12 @@ export namespace MCP {
       }
     }
 
-    const result = await withTimeout(mcpClient.listTools(), mcp.timeout ?? DEFAULT_TIMEOUT).catch((err) => {
+    const result = await list(key, mcpClient, mcp.timeout ?? DEFAULT_TIMEOUT).catch((err) => {
       log.error("failed to get tools from client", { key, error: err })
       return undefined
     })
     if (!result) {
-      await mcpClient.close().catch((error) => {
-        log.error("Failed to close MCP client", {
-          error,
-        })
-      })
+      await dispose(key, mcpClient)
       status = {
         status: "failed",
         error: "Failed to get tools",
@@ -643,7 +686,10 @@ export namespace MCP {
 
     const toolsResults = await Promise.all(
       connectedClients.map(async ([clientName, client]) => {
-        const toolsResult = await client.listTools().catch((e) => {
+        const mcpConfig = config[clientName]
+        const entry = isMcpConfigured(mcpConfig) ? mcpConfig : undefined
+        const timeout = entry?.timeout ?? defaultTimeout ?? DEFAULT_TIMEOUT
+        const toolsResult = await list(clientName, client, timeout).catch(async (e) => {
           log.error("failed to get tools", { clientName, error: e.message })
           const failedStatus = {
             status: "failed" as const,
@@ -651,17 +697,15 @@ export namespace MCP {
           }
           s.status[clientName] = failedStatus
           delete s.clients[clientName]
+          await dispose(clientName, client)
           return undefined
         })
-        return { clientName, client, toolsResult }
+        return { clientName, client, timeout, toolsResult }
       }),
     )
 
-    for (const { clientName, client, toolsResult } of toolsResults) {
+    for (const { clientName, client, timeout, toolsResult } of toolsResults) {
       if (!toolsResult) continue
-      const mcpConfig = config[clientName]
-      const entry = isMcpConfigured(mcpConfig) ? mcpConfig : undefined
-      const timeout = entry?.timeout ?? defaultTimeout
       for (const mcpTool of toolsResult.tools) {
         const sanitizedClientName = clientName.replace(/[^a-zA-Z0-9_-]/g, "_")
         const sanitizedToolName = mcpTool.name.replace(/[^a-zA-Z0-9_-]/g, "_")
