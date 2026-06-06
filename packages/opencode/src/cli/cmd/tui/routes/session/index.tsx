@@ -334,8 +334,7 @@ export function Session() {
     permissions,
     questions,
     status: () => sync.data.session_status ?? {},
-    fork: (root) =>
-      sdk.client.session.fork({ sessionID: root, parentID: root }).then((r) => r.data?.id),
+    fork: (root) => sdk.client.session.fork({ sessionID: root, parentID: root }).then((r) => r.data?.id),
     abort: (id) => sdk.client.session.abort({ sessionID: id }).catch(() => {}),
     remove: (id) => sdk.client.session.delete({ sessionID: id }),
     navigate: (id) => navigate({ type: "session", sessionID: id }),
@@ -353,15 +352,47 @@ export function Session() {
 
   // Tab bar keyboard handler — thin dispatcher to hook actions
   useKeyboard((evt) => {
-    if (evt.name === "c" && evt.ctrl) { evt.preventDefault(); bar.ctrlc(); return }
-    if (evt.name === "tab" && !evt.shift && !evt.ctrl && !evt.meta) { evt.preventDefault(); bar.toggle(); return }
+    if (evt.name === "c" && evt.ctrl) {
+      evt.preventDefault()
+      bar.ctrlc()
+      return
+    }
+    if (evt.name === "tab" && !evt.shift && !evt.ctrl && !evt.meta) {
+      evt.preventDefault()
+      bar.toggle()
+      return
+    }
     if (!bar.focused()) return
-    if (evt.name === "left" || evt.name === "h") { evt.preventDefault(); bar.move(-1); return }
-    if (evt.name === "right" || evt.name === "l") { evt.preventDefault(); bar.move(1); return }
-    if (evt.name === "return" || evt.name === "space") { evt.preventDefault(); bar.activate(); return }
-    if (evt.name === "down" || evt.name === "j") { evt.preventDefault(); bar.blur(); return }
-    if (evt.name === "x") { evt.preventDefault(); bar.kill(); return }
-    if (evt.name === "escape") { evt.preventDefault(); bar.blur(); return }
+    if (evt.name === "left" || evt.name === "h") {
+      evt.preventDefault()
+      bar.move(-1)
+      return
+    }
+    if (evt.name === "right" || evt.name === "l") {
+      evt.preventDefault()
+      bar.move(1)
+      return
+    }
+    if (evt.name === "return" || evt.name === "space") {
+      evt.preventDefault()
+      bar.activate()
+      return
+    }
+    if (evt.name === "down" || evt.name === "j") {
+      evt.preventDefault()
+      bar.blur()
+      return
+    }
+    if (evt.name === "x") {
+      evt.preventDefault()
+      bar.kill()
+      return
+    }
+    if (evt.name === "escape") {
+      evt.preventDefault()
+      bar.blur()
+      return
+    }
   })
 
   function childSessionHandler(func: (dialog: DialogContext) => void) {
@@ -1222,15 +1253,9 @@ export function Session() {
                 fallback={
                   <Show
                     when={bar.focused()}
-                    fallback={
-                      <text fg={theme.textMuted}>
-                        tab switch to agents  shift+tab cycle agents
-                      </text>
-                    }
+                    fallback={<text fg={theme.textMuted}>tab switch to agents shift+tab cycle agents</text>}
                   >
-                    <text fg={theme.textMuted}>
-                      x kill agent  tab return to chat  ← → navigate  ↓ chat
-                    </text>
+                    <text fg={theme.textMuted}>x kill agent tab return to chat ← → navigate ↓ chat</text>
                   </Show>
                 }
               >
@@ -1469,6 +1494,8 @@ const PART_MAPPING = {
   reasoning: ReasoningPart,
 }
 
+const INLINE_TOOL_ICON_WIDTH = 2
+
 function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: AssistantMessage }) {
   const { theme, subtleSyntax } = useTheme()
   const ctx = use()
@@ -1672,7 +1699,9 @@ function GenericTool(props: ToolProps<Tool.Info>) {
   )
 }
 
-function ToolTitle(props: { fallback: string; when: unknown; icon: string; children: JSX.Element }) {
+type ToolComplete = string | number | boolean | undefined
+
+function ToolTitle(props: { fallback: string; when: ToolComplete; icon: string; children: JSX.Element }) {
   const { theme } = useTheme()
   return (
     <text paddingLeft={3} fg={props.when ? theme.textMuted : theme.text}>
@@ -1686,31 +1715,24 @@ function ToolTitle(props: { fallback: string; when: unknown; icon: string; child
 function InlineTool(props: {
   icon: string
   iconColor?: RGBA
-  complete: unknown
+  complete: ToolComplete
   pending: string
   spinner?: boolean
   children: JSX.Element
   part: ToolPart
   onClick?: () => void
 }) {
-  const [margin, setMargin] = createSignal(0)
   const { theme } = useTheme()
   const ctx = use()
   const sync = useSync()
   const renderer = useRenderer()
   const [hover, setHover] = createSignal(false)
+  const [errorExpanded, setErrorExpanded] = createSignal(false)
 
   const permission = createMemo(() => {
     const callID = sync.data.permission[ctx.sessionID]?.at(0)?.tool?.callID
     if (!callID) return false
     return callID === props.part.callID
-  })
-
-  const fg = createMemo(() => {
-    if (permission()) return theme.warning
-    if (hover() && props.onClick) return theme.text
-    if (props.complete) return theme.textMuted
-    return theme.text
   })
 
   const error = createMemo(() => (props.part.state.status === "error" ? props.part.state.error : undefined))
@@ -1721,54 +1743,133 @@ function InlineTool(props: {
       error()?.includes("specified a rule") ||
       error()?.includes("user dismissed"),
   )
+  const failed = createMemo(() => Boolean(error() && !denied()))
+  const clickable = createMemo(() => Boolean(props.onClick || failed()))
+  const fg = createMemo(() => {
+    if (permission()) return theme.warning
+    if (failed()) return theme.error
+    if (hover() && props.onClick) return theme.text
+    if (props.complete) return theme.textMuted
+    return theme.text
+  })
+
+  return (
+    <InlineToolRow
+      icon={props.icon}
+      iconColor={props.iconColor}
+      color={fg()}
+      errorColor={theme.error}
+      failed={failed()}
+      denied={Boolean(denied())}
+      error={error()}
+      errorExpanded={errorExpanded()}
+      complete={props.complete}
+      pending={props.pending}
+      spinner={props.spinner}
+      separateAfter={(id) =>
+        sync.data.message[ctx.sessionID]?.some((message) => message.role === "user" && message.id === id) ?? false
+      }
+      onMouseOver={() => clickable() && setHover(true)}
+      onMouseOut={() => setHover(false)}
+      onMouseUp={() => {
+        if (renderer.getSelection()?.getSelectedText()) return
+        if (failed()) {
+          setErrorExpanded((value) => !value)
+          return
+        }
+        props.onClick?.()
+      }}
+    >
+      {props.children}
+    </InlineToolRow>
+  )
+}
+
+export function InlineToolRow(props: {
+  icon: string
+  iconColor?: RGBA
+  color?: RGBA
+  errorColor?: RGBA
+  failed?: boolean
+  denied?: boolean
+  error?: string
+  errorExpanded?: boolean
+  complete: ToolComplete
+  pending: string
+  spinner?: boolean
+  children: JSX.Element
+  separateAfter?: (id: string | undefined) => boolean
+  onMouseOver?: () => void
+  onMouseOut?: () => void
+  onMouseUp?: () => void
+}) {
+  const [margin, setMargin] = createSignal(0)
 
   return (
     <box
       marginTop={margin()}
       paddingLeft={3}
-      onMouseOver={() => props.onClick && setHover(true)}
-      onMouseOut={() => setHover(false)}
-      onMouseUp={() => {
-        if (renderer.getSelection()?.getSelectedText()) return
-        props.onClick?.()
-      }}
+      onMouseOver={props.onMouseOver}
+      onMouseOut={props.onMouseOut}
+      onMouseUp={props.onMouseUp}
       renderBefore={function () {
         const el = this as BoxRenderable
         const parent = el.parent
         if (!parent) {
           return
         }
-        if (el.height > 1) {
-          setMargin(1)
-          return
-        }
         const children = parent.getChildren()
         const index = children.indexOf(el)
         const previous = children[index - 1]
-        if (!previous) {
-          setMargin(0)
-          return
-        }
-        if (previous.height > 1 || previous.id.startsWith("text-")) {
-          setMargin(1)
-          return
-        }
+        setMargin(
+          previous?.id.startsWith("text-") ||
+            previous?.id.startsWith("tool-block-") ||
+            props.separateAfter?.(previous?.id)
+            ? 1
+            : 0,
+        )
       }}
     >
       <Switch>
         <Match when={props.spinner}>
-          <Spinner color={fg()} children={props.children} />
+          <Spinner color={props.color} children={props.children} />
         </Match>
         <Match when={true}>
-          <text paddingLeft={3} fg={fg()} attributes={denied() ? TextAttributes.STRIKETHROUGH : undefined}>
-            <Show fallback={<>~ {props.pending}</>} when={props.complete}>
-              <span style={{ fg: props.iconColor }}>{props.icon}</span> {props.children}
-            </Show>
-          </text>
+          <Show
+            fallback={
+              <text
+                paddingLeft={3}
+                fg={props.color}
+                attributes={props.denied ? TextAttributes.STRIKETHROUGH : undefined}
+              >
+                ~ {props.pending}
+              </text>
+            }
+            when={props.complete}
+          >
+            <box flexDirection="row">
+              <text
+                width={INLINE_TOOL_ICON_WIDTH}
+                fg={props.failed ? props.errorColor : (props.iconColor ?? props.color)}
+                attributes={props.denied ? TextAttributes.STRIKETHROUGH : undefined}
+              >
+                {props.icon}
+              </text>
+              <text
+                flexGrow={1}
+                fg={props.failed ? props.errorColor : props.color}
+                attributes={props.denied ? TextAttributes.STRIKETHROUGH : undefined}
+              >
+                {props.children}
+              </text>
+            </box>
+          </Show>
         </Match>
       </Switch>
-      <Show when={error() && !denied()}>
-        <text fg={theme.error}>{error()}</text>
+      <Show when={props.failed && props.errorExpanded}>
+        <box paddingLeft={INLINE_TOOL_ICON_WIDTH}>
+          <text fg={props.errorColor}>{props.error}</text>
+        </box>
       </Show>
     </box>
   )
@@ -1787,6 +1888,7 @@ function BlockTool(props: {
   const error = createMemo(() => (props.part?.state.status === "error" ? props.part.state.error : undefined))
   return (
     <box
+      id={props.part ? "tool-block-" + props.part.id : undefined}
       border={["left"]}
       paddingTop={1}
       paddingBottom={1}
@@ -2005,7 +2107,8 @@ function CodeSearch(props: {
 }) {
   return (
     <InlineTool icon="◇" pending="Searching code..." complete={props.input.query} part={props.part}>
-      Exa Code Search "{props.input.query}" <Show when={props.metadata.results}>({props.metadata.results} results)</Show>
+      Exa Code Search "{props.input.query}"{" "}
+      <Show when={props.metadata.results}>({props.metadata.results} results)</Show>
     </InlineTool>
   )
 }
@@ -2045,7 +2148,11 @@ function Task(props: ToolProps<typeof TaskTool>) {
     )
   })
 
-  const current = createMemo(() => tools().findLast((x) => x.state.status !== "pending" && x.state.status !== "error" && "title" in x.state && x.state.title))
+  const current = createMemo(() =>
+    tools().findLast(
+      (x) => x.state.status !== "pending" && x.state.status !== "error" && "title" in x.state && x.state.title,
+    ),
+  )
 
   const isRunning = createMemo(() => props.part.state.status === "running")
 
@@ -2064,10 +2171,9 @@ function Task(props: ToolProps<typeof TaskTool>) {
       // content[0] += ` · ${tools().length} toolcalls`
       if (current()) {
         const st = current()!.state
-        const title = (st.status === "running" || st.status === "completed") ? st.title : undefined
+        const title = st.status === "running" || st.status === "completed" ? st.title : undefined
         content.push(`↳ ${Locale.titlecase(current()!.tool)} ${title}`)
-      }
-      else content.push(`↳ ${tools().length} toolcalls`)
+      } else content.push(`↳ ${tools().length} toolcalls`)
     }
 
     if (props.part.state.status === "completed") {

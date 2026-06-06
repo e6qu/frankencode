@@ -449,6 +449,27 @@ export const ProvidersLoginCommand = cmd({
         )
       }
 
+      if (provider === "snowflake-cortex") {
+        const account = await prompts.text({
+          message: "Snowflake Account Identifier",
+          placeholder: "xy12345.us-east-1",
+          validate: (x) => (x && x.length > 0 ? undefined : "Required"),
+        })
+        if (prompts.isCancel(account)) throw new UI.CancelledError()
+        const key = await prompts.password({
+          message: "Programmatic Access Token (PAT)",
+          validate: (x) => (x && x.length > 0 ? undefined : "Required"),
+        })
+        if (prompts.isCancel(key)) throw new UI.CancelledError()
+        await Auth.set(provider, {
+          type: "api",
+          key,
+          metadata: { account },
+        })
+        prompts.outro("Done")
+        return
+      }
+
       const key = await prompts.password({
         message: "Enter your API key",
         validate: (x) => (x && x.length > 0 ? undefined : "Required"),

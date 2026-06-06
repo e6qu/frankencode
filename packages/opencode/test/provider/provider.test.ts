@@ -1,4 +1,5 @@
 import { test, expect } from "bun:test"
+import { streamText } from "ai"
 import path from "path"
 
 import { tmpdir } from "../fixture/fixture"
@@ -6,6 +7,36 @@ import { Instance } from "../fixture/instance-shim"
 import { Provider } from "../../src/provider/provider"
 import { ProviderID, ModelID } from "../../src/provider/schema"
 import { Env } from "../../src/env"
+import { Auth } from "../../src/auth"
+
+type ServerInfo = {
+  url: string
+  stop: () => void
+}
+
+function model() {
+  return {
+    name: "Test Model",
+    tool_call: true,
+    limit: {
+      context: 128000,
+      output: 4096,
+    },
+  }
+}
+
+function server(fn: (req: Request) => Response | Promise<Response>): ServerInfo {
+  const app = Bun.serve({
+    port: 0,
+    async fetch(req) {
+      return fn(req)
+    },
+  })
+  return {
+    url: app.url.origin,
+    stop: () => app.stop(true),
+  }
+}
 
 test("provider loaded from env variable", async () => {
   await using tmp = await tmpdir({
@@ -616,6 +647,330 @@ test("closest finds model by partial match", async () => {
       expect(String(result?.modelID)).toContain("sonnet-4")
     },
   })
+})
+
+test("nvidia provider adds invoke origin headers", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            nvidia: {
+              name: "NVIDIA",
+              npm: "@ai-sdk/openai-compatible",
+              env: [],
+              models: {
+                llama: model(),
+              },
+              options: {
+                apiKey: "key",
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const providers = await Provider.list()
+      const headers = providers["nvidia"].options.headers as Record<string, string>
+      expect(headers["HTTP-Referer"]).toBe("https://opencode.ai/")
+      expect(headers["X-Title"]).toBe("opencode")
+      expect(headers["X-BILLING-INVOKE-ORIGIN"]).toBe("OpenCode")
+    },
+  })
+})
+
+test("nvidia provider preserves configured invoke origin header", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            nvidia: {
+              name: "NVIDIA",
+              npm: "@ai-sdk/openai-compatible",
+              env: [],
+              models: {
+                llama: model(),
+              },
+              options: {
+                apiKey: "key",
+                headers: {
+                  "X-BILLING-INVOKE-ORIGIN": "Frankencode",
+                },
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const providers = await Provider.list()
+      const headers = providers["nvidia"].options.headers as Record<string, string>
+      expect(headers["X-BILLING-INVOKE-ORIGIN"]).toBe("Frankencode")
+    },
+  })
+})
+
+test("snowflake cortex provider derives endpoint from config credentials", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            "snowflake-cortex": {
+              name: "Snowflake Cortex",
+              npm: "@ai-sdk/openai-compatible",
+              env: [],
+              models: {
+                "claude-4-sonnet": model(),
+              },
+              options: {
+                account: "xy12345.us-east-1",
+                apiKey: "pat-config",
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const providers = await Provider.list()
+      expect(providers["snowflake-cortex"].options.baseURL).toBe(
+        "https://xy12345.us-east-1.snowflakecomputing.com/api/v2/cortex/v1",
+      )
+      expect(providers["snowflake-cortex"].options.apiKey).toBe("pat-config")
+      expect(providers["snowflake-cortex"].options.includeUsage).toBe(true)
+    },
+  })
+})
+
+test("snowflake cortex provider reads account metadata from auth", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            "snowflake-cortex": {
+              name: "Snowflake Cortex",
+              npm: "@ai-sdk/openai-compatible",
+              env: [],
+              models: {
+                "claude-4-sonnet": model(),
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      await Auth.set("snowflake-cortex", {
+        type: "api",
+        key: "pat-auth",
+        metadata: {
+          account: "auth-account",
+        },
+      })
+    },
+    fn: async () => {
+      const providers = await Provider.list()
+      expect(providers["snowflake-cortex"].options.baseURL).toBe(
+        "https://auth-account.snowflakecomputing.com/api/v2/cortex/v1",
+      )
+      expect(providers["snowflake-cortex"].options.apiKey).toBe("pat-auth")
+    },
+  })
+})
+
+test("cortex fetch rewrites max_tokens requests", async () => {
+  let body = ""
+  const app = server(async (req) => {
+    body = await req.text()
+    return Response.json({ ok: true })
+  })
+  try {
+    await Provider.cortexFetch(fetch)(app.url, {
+      method: "POST",
+      body: JSON.stringify({ max_tokens: 42, messages: [] }),
+    })
+    expect(JSON.parse(body)).toEqual({ max_completion_tokens: 42, messages: [] })
+  } finally {
+    app.stop()
+  }
+})
+
+test("cortex fetch converts conversation-complete errors to stop responses", async () => {
+  const app = server(() => Response.json({ message: "Conversation complete" }, { status: 400 }))
+  try {
+    const res = await Provider.cortexFetch(fetch)(app.url)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      choices: [{ finish_reason: "stop", message: { content: "", role: "assistant" } }],
+    })
+  } finally {
+    app.stop()
+  }
+})
+
+test("cortex fetch fills empty assistant roles in SSE chunks", async () => {
+  const app = server(
+    () =>
+      new Response('data: {"choices":[{"delta":{"role":"","content":"hi"}}]}\n\n', {
+        headers: { "content-type": "text/event-stream" },
+      }),
+  )
+  try {
+    const res = await Provider.cortexFetch(fetch)(app.url)
+    expect(await res.text()).toContain('"role":"assistant"')
+  } finally {
+    app.stop()
+  }
+})
+
+test("provider headerTimeout aborts before delayed response headers", async () => {
+  const app = server(
+    () =>
+      new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(Response.json({ choices: [{ message: { role: "assistant", content: "late" } }] }))
+        }, 100)
+      }),
+  )
+  try {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "opencode.json"),
+          JSON.stringify({
+            $schema: "https://opencode.ai/config.json",
+            provider: {
+              timeout: {
+                name: "Timeout",
+                npm: "@ai-sdk/openai-compatible",
+                env: [],
+                models: {
+                  chat: model(),
+                },
+                options: {
+                  apiKey: "key",
+                  baseURL: app.url,
+                  headerTimeout: 10,
+                },
+              },
+            },
+          }),
+        )
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const item = await Provider.getModel(ProviderID.make("timeout"), ModelID.make("chat"))
+        const result = streamText({
+          model: await Provider.getLanguage(item),
+          messages: [{ role: "user", content: "hello" }],
+          onError() {},
+        })
+        const errors: string[] = []
+        for await (const part of result.fullStream) {
+          if (part.type === "error" && part.error instanceof Error) errors.push(part.error.message)
+        }
+        expect(errors.some((msg) => msg.includes("response headers timed out"))).toBe(true)
+      },
+    })
+  } finally {
+    app.stop()
+  }
+})
+
+test("provider headerTimeout allows slow bodies after response headers", async () => {
+  const app = server(() => {
+    let id: ReturnType<typeof setTimeout> | undefined
+    return new Response(
+      new ReadableStream<Uint8Array>({
+        start(ctrl) {
+          ctrl.enqueue(
+            new TextEncoder().encode(
+              'data: {"choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}\n\n',
+            ),
+          )
+          id = setTimeout(() => {
+            ctrl.enqueue(
+              new TextEncoder().encode(
+                'data: {"choices":[{"index":0,"delta":{"content":"late"},"finish_reason":null}]}\n\n' +
+                  "data: [DONE]\n\n",
+              ),
+            )
+            ctrl.close()
+          }, 50)
+        },
+        cancel() {
+          if (id) clearTimeout(id)
+        },
+      }),
+      { headers: { "content-type": "text/event-stream" } },
+    )
+  })
+  try {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "opencode.json"),
+          JSON.stringify({
+            $schema: "https://opencode.ai/config.json",
+            provider: {
+              timeout: {
+                name: "Timeout",
+                npm: "@ai-sdk/openai-compatible",
+                env: [],
+                models: {
+                  chat: model(),
+                },
+                options: {
+                  apiKey: "key",
+                  baseURL: app.url,
+                  headerTimeout: 25,
+                },
+              },
+            },
+          }),
+        )
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const item = await Provider.getModel(ProviderID.make("timeout"), ModelID.make("chat"))
+        const result = streamText({
+          model: await Provider.getLanguage(item),
+          messages: [{ role: "user", content: "hello" }],
+        })
+        expect(await result.text).toBe("late")
+      },
+    })
+  } finally {
+    app.stop()
+  }
 })
 
 test("closest returns undefined for nonexistent provider", async () => {

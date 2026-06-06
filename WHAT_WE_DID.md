@@ -47,6 +47,25 @@ Compressed continuity log. Use git history and PRs for full details.
 - Verified `cd packages/plugin && bun typecheck` passed.
 - Verified `cd packages/opencode && bun test test/cli/mcp-add.test.ts test/cli/plugin-auth-picker.test.ts test/plugin/dispose.test.ts` passed with `18 pass`, `0 fail`.
 - Verified user-approved unsandboxed `cd packages/opencode && bun test --timeout 30000` passed with `1565 pass`, `8 skip`, `0 fail`.
+- PR #40 merged on 2026-06-06 at `26c38384b`.
+- Began the provider/TUI bundle on branch `feat/upstream-provider-tui-bundle`.
+- Ported provider `headerTimeout` config from https://github.com/anomalyco/opencode/commit/f965db9e13e1e7d96b8cbca55667f3bf1a47b7b7 / https://github.com/anomalyco/opencode/pull/29484, including config schema, OpenAI default header timeout, retryable header-timeout error serialization, provider fetch wrapping, and SDK type regeneration.
+- Ported Snowflake Cortex provider support from https://github.com/anomalyco/opencode/commit/2859ce6e73a46b44ba50618592e12a9b35c61971 / https://github.com/anomalyco/opencode/pull/29901, including account metadata on API auth, CLI login prompts, Cortex endpoint construction, `max_tokens` request rewriting, conversation-complete handling, and SSE role normalization.
+- Ported NVIDIA invoke-origin headers from https://github.com/anomalyco/opencode/commit/d34a0194ecc9e546ba14740aaf96cf3386d6a71d / https://github.com/anomalyco/opencode/pull/27394.
+- Ported wide-character paste safety from https://github.com/anomalyco/opencode/commit/bba76009a8842db4265787cb364c64bd114e7c9f / https://github.com/anomalyco/opencode/pull/29710 by adding display-offset helpers and applying them to tracked pasted text extmarks.
+- Ported wrapped inline tool row layout from https://github.com/anomalyco/opencode/commit/5fb85a6aa3a3782bca9d1af3f18f75af8ccc1f27 / https://github.com/anomalyco/opencode/pull/28664 by adding a reusable `InlineToolRow`, separating the icon column from wrapped text, and preserving error expansion.
+- Fixed a pre-existing MCP OAuth browser test timeout encountered during the full package run by completing the real callback endpoint instead of waiting for server shutdown to reject pending auth.
+- Ran `./packages/sdk/js/script/build.ts`; the sandboxed run logged a `models.dev` network failure, so the approved rerun completed cleanly and regenerated `packages/sdk/js/src/v2/gen/types.gen.ts`.
+- Verified `cd packages/opencode && bun typecheck` passed.
+- Verified `cd packages/opencode && bun test test/auth/auth.test.ts test/provider/provider.test.ts test/cli/cmd/tui/prompt-part.test.ts test/session/retry.test.ts test/cli/tui/inline-tool-row-ui.test.tsx` passed with `110 pass`, `0 fail`.
+- Verified `cd packages/opencode && bun test test/mcp/oauth-browser.test.ts --timeout 30000` passed with `3 pass`, `0 fail`.
+- Verified user-approved unsandboxed `cd packages/opencode && bun test --timeout 30000` passed with `1579 pass`, `8 skip`, `0 fail`.
+- Opened the provider/TUI bundle PR as https://github.com/e6qu/frankencode/pull/41.
+- Investigated the PR #41 CI failure at https://github.com/e6qu/frankencode/actions/runs/27070113975/job/79897723037.
+- Found that `bun turbo typecheck` ran `@opencode-ai/desktop:typecheck` before `@opencode-ai/app:typecheck`, so desktop read app declaration output while app declarations were not finished.
+- Fixed the CI race by making Turbo `typecheck` tasks depend on workspace dependency `typecheck` tasks with `dependsOn: ["^typecheck"]`.
+- Verified `bun turbo typecheck` passed.
+- Verified `TURBO_FORCE=true bun turbo typecheck` passed with `13 successful`, `0 cached`, `0 fail`.
 
 ## Completed Baseline Through 2026-03-22
 

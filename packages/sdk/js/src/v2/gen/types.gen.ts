@@ -1392,14 +1392,18 @@ export type ProviderConfig = {
      */
     setCacheKey?: boolean
     /**
-     * Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout.
+     * Timeout in milliseconds for full requests to this provider. Set to false to disable timeout.
      */
     timeout?: number | false
+    /**
+     * Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout.
+     */
+    headerTimeout?: number | false
     /**
      * Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted.
      */
     chunkTimeout?: number
-    [key: string]: JsonValue | string | boolean | number | false | number | undefined
+    [key: string]: JsonValue | string | boolean | number | false | number | false | number | undefined
   }
 }
 
@@ -1744,6 +1748,9 @@ export type OAuth = {
 export type ApiAuth = {
   type: "api"
   key: string
+  metadata?: {
+    [key: string]: string
+  }
 }
 
 export type WellKnownAuth = {

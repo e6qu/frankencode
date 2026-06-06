@@ -45,10 +45,11 @@ import { createVercel } from "@ai-sdk/vercel"
 import { createGitLab, VERSION as GITLAB_PROVIDER_VERSION } from "@gitlab/gitlab-ai-provider"
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers"
 import { GoogleAuth } from "google-auth-library"
+import { ProviderError } from "./error"
 import { ProviderTransform } from "./transform"
 import { Installation } from "../installation"
 import { ModelID, ProviderID } from "./schema"
-import { JsonValue } from "@/util/json"
+import { JsonValue, type JsonValueType } from "@/util/json"
 
 // Chunk timeout disabled by default — prevents false timeouts on slow providers
 // (upstream #18264 by James Long). Enable via provider config chunkTimeout option.
@@ -84,6 +85,14 @@ registerDisposer(async (directory) => {
 
 export namespace Provider {
   const log = Log.create({ service: "provider" })
+  const OPENAI_HEADER_TIMEOUT_DEFAULT = 10_000
+
+  type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+  type CortexBody = {
+    max_tokens?: JsonValueType
+    max_completion_tokens?: JsonValueType
+    [key: string]: JsonValueType | undefined
+  }
 
   function shouldUseCopilotResponsesApi(modelID: string): boolean {
     const match = /^gpt-(\d+)/.exec(modelID)
@@ -137,6 +146,78 @@ export namespace Provider {
       status: res.status,
       statusText: res.statusText,
     })
+  }
+
+  function timeoutController(ms: number) {
+    const ctl = new AbortController()
+    const id = setTimeout(() => ctl.abort(new ProviderError.HeaderTimeoutError(ms)), ms)
+    return {
+      signal: ctl.signal,
+      clear: () => clearTimeout(id),
+    }
+  }
+
+  export function cortexFetch(upstream: FetchLike = fetch) {
+    return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+      let opts = init
+      if (opts?.body && typeof opts.body === "string") {
+        try {
+          const body = JSON.parse(opts.body) as CortexBody
+          if ("max_tokens" in body) {
+            body.max_completion_tokens = body.max_tokens
+            delete body.max_tokens
+            opts = { ...opts, body: JSON.stringify(body) }
+          }
+        } catch {}
+      }
+
+      const response = await upstream(input, opts)
+      if (!response.ok && response.status === 400) {
+        try {
+          const body = (await response.clone().json()) as { message?: string; error?: string }
+          if (
+            String(body.message || body.error || "")
+              .toLowerCase()
+              .includes("conversation complete")
+          ) {
+            return new Response(
+              JSON.stringify({ choices: [{ finish_reason: "stop", message: { content: "", role: "assistant" } }] }),
+              { status: 200, headers: new Headers({ "content-type": "application/json" }) },
+            )
+          }
+        } catch {}
+      }
+
+      if (response.body && response.headers.get("content-type")?.includes("text/event-stream")) {
+        const reader = response.body.getReader()
+        const encoder = new TextEncoder()
+        const decoder = new TextDecoder()
+        const stream = new ReadableStream<Uint8Array>({
+          async pull(ctrl) {
+            const part = await reader.read()
+            if (part.done) {
+              ctrl.close()
+              return
+            }
+            ctrl.enqueue(
+              encoder.encode(
+                decoder.decode(part.value, { stream: true }).replace(/"role"\s*:\s*""/g, '"role":"assistant"'),
+              ),
+            )
+          },
+          async cancel(reason) {
+            await reader.cancel(reason)
+          },
+        })
+        return new Response(stream, {
+          headers: response.headers,
+          status: response.status,
+          statusText: response.statusText,
+        })
+      }
+
+      return response
+    }
   }
 
   // SDK boundary: each createXXX() takes provider-specific settings and returns a provider-specific SDK
@@ -224,7 +305,7 @@ export namespace Provider {
         async getModel(sdk: ProviderSDK, modelID: string, _options?: Record<string, JSONValue>) {
           return sdk.responses(modelID)
         },
-        options: {},
+        options: { headerTimeout: OPENAI_HEADER_TIMEOUT_DEFAULT },
       }
     },
     "github-copilot": async () => {
@@ -445,6 +526,18 @@ export namespace Provider {
           headers: {
             "http-referer": "https://opencode.ai/",
             "x-title": "opencode",
+          },
+        },
+      }
+    },
+    nvidia: async (provider) => {
+      return {
+        autoload: provider.source === "config",
+        options: {
+          headers: {
+            "HTTP-Referer": "https://opencode.ai/",
+            "X-Title": "opencode",
+            "X-BILLING-INVOKE-ORIGIN": "OpenCode",
           },
         },
       }
@@ -682,6 +775,42 @@ export namespace Provider {
           return aigateway(unified(modelID))
         },
         options: {},
+      }
+    },
+    "snowflake-cortex": async (input) => {
+      const env = Env.all(InstanceALS.directory)
+      const auth = await Auth.get(input.id)
+      const account =
+        env["SNOWFLAKE_ACCOUNT"] ??
+        (auth?.type === "api" ? auth.metadata?.account : undefined) ??
+        (typeof input.options.account === "string" ? input.options.account : undefined)
+      const key =
+        env["SNOWFLAKE_CORTEX_PAT"] ??
+        (auth?.type === "api" ? auth.key : undefined) ??
+        (typeof input.options.apiKey === "string" ? input.options.apiKey : undefined)
+
+      if (!account || !key) {
+        const missing = [!account ? "SNOWFLAKE_ACCOUNT" : undefined, !key ? "SNOWFLAKE_CORTEX_PAT" : undefined]
+          .filter((item): item is string => Boolean(item))
+          .join(", ")
+        return {
+          autoload: false,
+          async getModel() {
+            throw new Error(
+              `Snowflake Cortex: missing credentials (${missing}). Set via env var, opencode auth, or provider options.`,
+            )
+          },
+        }
+      }
+
+      return {
+        autoload: input.source === "config",
+        options: {
+          baseURL: `https://${account}.snowflakecomputing.com/api/v2/cortex/v1`,
+          apiKey: key,
+          includeUsage: true,
+          fetch: cortexFetch(),
+        },
       }
     },
     cerebras: async () => {
@@ -1190,7 +1319,9 @@ export namespace Provider {
 
       const customFetch = options["fetch"] as unknown as typeof globalThis.fetch | undefined
       const chunkTimeout = options["chunkTimeout"] as number | undefined
+      const headerTimeout = options["headerTimeout"] as number | false | undefined
       delete options["chunkTimeout"]
+      delete options["headerTimeout"]
 
       // @ts-expect-error fetch function stored in JSON options object
       options["fetch"] = async (input: string | URL | Request, init?: BunFetchRequestInit) => {
@@ -1198,10 +1329,13 @@ export namespace Provider {
         const fetchFn = customFetch ?? fetch
         const opts = init ?? {}
         const chunkAbortCtl = typeof chunkTimeout === "number" && chunkTimeout > 0 ? new AbortController() : undefined
+        const headerTimeoutCtl =
+          typeof headerTimeout === "number" && headerTimeout > 0 ? timeoutController(headerTimeout) : undefined
         const signals: AbortSignal[] = []
 
         if (opts.signal) signals.push(opts.signal)
         if (chunkAbortCtl) signals.push(chunkAbortCtl.signal)
+        if (headerTimeoutCtl) signals.push(headerTimeoutCtl.signal)
         if (options["timeout"] !== undefined && options["timeout"] !== null && options["timeout"] !== false)
           signals.push(AbortSignal.timeout(options["timeout"] as number))
 
@@ -1230,7 +1364,7 @@ export namespace Provider {
           ...opts,
           // @ts-ignore see here: https://github.com/oven-sh/bun/issues/16682
           timeout: false,
-        })
+        }).finally(() => headerTimeoutCtl?.clear())
 
         if (!chunkAbortCtl || !chunkTimeout) return res
         return wrapSSE(res, chunkTimeout, chunkAbortCtl)
