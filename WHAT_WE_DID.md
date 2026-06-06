@@ -36,6 +36,17 @@ Compressed continuity log. Use git history and PRs for full details.
 - Verified `cd packages/opencode && bun typecheck` passed.
 - Verified `cd packages/opencode && bun test test/lsp/server.test.ts test/mcp/lifecycle.test.ts test/tool/webfetch.test.ts` passed with `6 pass`, `0 fail`.
 - Verified user-approved unsandboxed `cd packages/opencode && bun test --timeout 30000` passed with `1557 pass`, `8 skip`, `0 fail`.
+- PR #39 merged on 2026-06-06 at `d10c548a7`.
+- Began the Phase 3 small CLI/plugin slice on branch `feat/upstream-small-cli-features`.
+- Ported upstream non-interactive `mcp add` by adding a positional server name, `--url`, `--header`, `--env`, and `--` command handling while preserving interactive mode with no arguments.
+- Ported upstream auth logout search behavior by changing interactive logout selection to autocomplete and allowing a provider id or provider name argument.
+- Ported upstream plugin `dispose` by adding the hook to the plugin package type and running it through Frankencode's instance disposal registry.
+- Left provider `headerTimeout` for a provider-specific PR because it touched broader provider/session retry behavior.
+- Kept interrupted assistant finalization and compaction tail restoration deferred for dedicated session/compaction work, as recorded in `PLAN.md`, `BUGS.md`, and `DO_NEXT.md`.
+- Verified `cd packages/opencode && bun typecheck` passed.
+- Verified `cd packages/plugin && bun typecheck` passed.
+- Verified `cd packages/opencode && bun test test/cli/mcp-add.test.ts test/cli/plugin-auth-picker.test.ts test/plugin/dispose.test.ts` passed with `18 pass`, `0 fail`.
+- Verified user-approved unsandboxed `cd packages/opencode && bun test --timeout 30000` passed with `1565 pass`, `8 skip`, `0 fail`.
 
 ## Completed Baseline Through 2026-03-22
 

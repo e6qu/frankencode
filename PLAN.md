@@ -6,15 +6,15 @@ Frankencode is a fork of OpenCode that adds context editing, content-addressable
 
 Resync with upstream `anomalyco/opencode` by porting selected fixes and features from `upstream/dev` into Frankencode.
 
-**Snapshot:** 2026-06-06 after PR #38 merged
+**Snapshot:** 2026-06-06 after PR #39 merged
 
-| Item                        | State                                        |
-| --------------------------- | -------------------------------------------- |
-| Frankencode branch          | `dev` at `9d8296e32` before PR 2 branch work |
-| Upstream branch             | `upstream/dev` at `4519a1da3`                |
-| Divergence                  | `34 ahead / 3613 behind`                     |
-| Upstream package version    | `packages/opencode` `1.16.2`                 |
-| Frankencode package version | `packages/opencode` `1.2.27`                 |
+| Item                        | State                                    |
+| --------------------------- | ---------------------------------------- |
+| Frankencode branch          | `dev` at `d10c548a7` before Phase 3 work |
+| Upstream branch             | `upstream/dev` at `4519a1da3`            |
+| Divergence                  | `34 ahead / 3613 behind`                 |
+| Upstream package version    | `packages/opencode` `1.16.2`             |
+| Frankencode package version | `packages/opencode` `1.2.27`             |
 
 ## Strategy
 
@@ -79,23 +79,41 @@ Exit criteria:
 - `cd packages/opencode && bun test test/lsp/server.test.ts test/mcp/lifecycle.test.ts test/tool/webfetch.test.ts` passed on 2026-06-06.
 - User-approved unsandboxed `cd packages/opencode && bun test --timeout 30000` passed on 2026-06-06 with `1557 pass`, `8 skip`, `0 fail`.
 
-## Active Phase: Phase 3, Feature Candidates
+PR 2 merged as #39 on 2026-06-06.
+
+## Completed Phase: PR 3, Small CLI And Plugin Features
+
+PR 3 ported the Phase 3 candidates that were useful and contained without touching upstream's V2 runtime, package split, session, or compaction architecture.
+
+| SHA         | Upstream PR | Area     | Feature                       | Status                                                                   |
+| ----------- | ----------- | -------- | ----------------------------- | ------------------------------------------------------------------------ |
+| `ba57718b0` | #31054      | CLI/MCP  | Non-interactive `mcp add`     | Ported with argument/config builder coverage                             |
+| `3f0ef9b71` | #31053      | CLI/Auth | Search in auth logout command | Ported with provider id/name resolution coverage                         |
+| `519d34447` | #29493      | Plugin   | Plugin dispose hook           | Ported with real local plugin disposal coverage through instance dispose |
+
+Exit criteria:
+
+- The selected CLI/plugin features were ported manually into Frankencode's current command and plugin architecture.
+- Upstream help snapshot changes were skipped because Frankencode did not have the upstream help snapshot suite.
+- `cd packages/opencode && bun typecheck` passed on 2026-06-06.
+- `cd packages/plugin && bun typecheck` passed on 2026-06-06.
+- `cd packages/opencode && bun test test/cli/mcp-add.test.ts test/cli/plugin-auth-picker.test.ts test/plugin/dispose.test.ts` passed on 2026-06-06 with `18 pass`, `0 fail`.
+- User-approved unsandboxed `cd packages/opencode && bun test --timeout 30000` passed on 2026-06-06 with `1565 pass`, `8 skip`, `0 fail`.
+
+## Active Phase: Phase 3, Remaining Feature Candidates
 
 Evaluate only after the bugfix phases. Prefer features with direct CLI/provider/plugin value and low architectural coupling.
 
-| SHA                     | Upstream PR            | Area            | Feature                                  | Notes                       |
-| ----------------------- | ---------------------- | --------------- | ---------------------------------------- | --------------------------- |
-| `ba57718b0`             | #31054                 | CLI/MCP         | Non-interactive `mcp add`                | Likely useful and contained |
-| `3f0ef9b71`             | #31053                 | CLI/Auth        | Search in auth logout command            | Small UX improvement        |
-| `519d34447`             | #29493                 | Plugin          | Plugin dispose hook                      | Useful for cleanup          |
-| `f965db9e1`             | #29484                 | Provider        | `headerTimeout` config                   | Reliability feature         |
-| `2859ce6e7`             | #29901                 | Provider        | Snowflake Cortex provider                | Provider expansion          |
-| `d34a0194e`             | #27394                 | Provider        | NVIDIA endpoints origin header           | Small provider correctness  |
-| `159964b17`             | #26095                 | Provider/plugin | DigitalOcean OAuth and inference routers | Medium size                 |
-| `0de5f1ff3`             | #28255                 | TUI             | Configurable prompt size                 | Small TUI UX                |
-| `bba76009a`             | #29710                 | TUI             | Wide-character paste safety              | Bugfix-grade TUI item       |
-| `5fb85a6aa`             | #28664                 | TUI             | Wrapped inline tool row layout           | Bugfix-grade TUI item       |
-| `17d66ee4f` + followups | #28476, #28728, #30935 | TUI             | Diff viewer and hunk navigation          | Larger feature set          |
+| SHA                     | Upstream PR            | Area            | Feature                                  | Notes                      |
+| ----------------------- | ---------------------- | --------------- | ---------------------------------------- | -------------------------- |
+| `f965db9e1`             | #29484                 | Provider        | `headerTimeout` config                   | Reliability feature        |
+| `2859ce6e7`             | #29901                 | Provider        | Snowflake Cortex provider                | Provider expansion         |
+| `d34a0194e`             | #27394                 | Provider        | NVIDIA endpoints origin header           | Small provider correctness |
+| `159964b17`             | #26095                 | Provider/plugin | DigitalOcean OAuth and inference routers | Medium size                |
+| `0de5f1ff3`             | #28255                 | TUI             | Configurable prompt size                 | Small TUI UX               |
+| `bba76009a`             | #29710                 | TUI             | Wide-character paste safety              | Bugfix-grade TUI item      |
+| `5fb85a6aa`             | #28664                 | TUI             | Wrapped inline tool row layout           | Bugfix-grade TUI item      |
+| `17d66ee4f` + followups | #28476, #28728, #30935 | TUI             | Diff viewer and hunk navigation          | Larger feature set         |
 
 ## Deferred Architecture Work
 

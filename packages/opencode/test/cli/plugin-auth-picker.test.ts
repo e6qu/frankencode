@@ -1,5 +1,5 @@
 import { test, expect, describe } from "bun:test"
-import { resolvePluginProviders } from "../../src/cli/cmd/providers"
+import { resolveLogoutProvider, resolvePluginProviders } from "../../src/cli/cmd/providers"
 import type { Hooks } from "@opencode-ai/plugin"
 
 function hookWithAuth(provider: string): Hooks {
@@ -116,5 +116,41 @@ describe("resolvePluginProviders", () => {
       providerNames: {},
     })
     expect(result).toEqual([])
+  })
+})
+
+describe("resolveLogoutProvider", () => {
+  test("matches configured provider id", () => {
+    expect(
+      resolveLogoutProvider({
+        provider: "openai",
+        credentials: ["anthropic", "openai"],
+        names: {},
+      }),
+    ).toBe("openai")
+  })
+
+  test("matches configured provider name case-insensitively", () => {
+    expect(
+      resolveLogoutProvider({
+        provider: "openai",
+        credentials: ["custom-openai"],
+        names: {
+          "custom-openai": "OpenAI",
+        },
+      }),
+    ).toBe("custom-openai")
+  })
+
+  test("returns undefined for an unknown configured provider", () => {
+    expect(
+      resolveLogoutProvider({
+        provider: "missing",
+        credentials: ["openai"],
+        names: {
+          openai: "OpenAI",
+        },
+      }),
+    ).toBeUndefined()
   })
 })

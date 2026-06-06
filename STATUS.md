@@ -4,25 +4,26 @@
 
 ## Current State
 
-Frankencode completed the PR 2 reliability slice of the June upstream maintenance plan. The old March roadmap stayed complete and was no longer the active plan.
+Frankencode completed PR #39 and then ported the first Phase 3 CLI/plugin feature slice. The old March roadmap stayed complete and was no longer the active plan.
 
-| Item                              | Value                                                                                                                                                       |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Implementation branch             | `fix/upstream-reliability-batch-2`                                                                                                                          |
-| Base branch                       | `dev`                                                                                                                                                       |
-| Default branch                    | `dev`                                                                                                                                                       |
-| Current upstream target           | `upstream/dev`                                                                                                                                              |
-| Upstream commit reviewed          | `4519a1da3`                                                                                                                                                 |
-| Divergence after fetch            | `34 ahead / 3613 behind`                                                                                                                                    |
-| Latest merged continuity baseline | #38 at `9d8296e32`                                                                                                                                          |
-| Last full verified baseline       | 2026-03-22: 1512 pass, 0 fail, 8 skip, 0 tsgo errors                                                                                                        |
-| Current typecheck                 | 2026-06-06: `cd packages/opencode && bun typecheck` passed                                                                                                  |
-| Current focused tests             | 2026-06-06: `cd packages/opencode && bun test test/lsp/server.test.ts test/mcp/lifecycle.test.ts test/tool/webfetch.test.ts` passed with `6 pass`, `0 fail` |
-| Current full package tests        | 2026-06-06: approved unsandboxed `cd packages/opencode && bun test --timeout 30000` passed with `1557 pass`, `8 skip`, `0 fail`                             |
+| Item                           | Value                                                                                                                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implementation branch          | `feat/upstream-small-cli-features`                                                                                                                                      |
+| Base branch                    | `dev`                                                                                                                                                                   |
+| Default branch                 | `dev`                                                                                                                                                                   |
+| Current upstream target        | `upstream/dev`                                                                                                                                                          |
+| Upstream commit reviewed       | `4519a1da3`                                                                                                                                                             |
+| Divergence after fetch         | `34 ahead / 3613 behind`                                                                                                                                                |
+| Latest merged upstream-sync PR | #39 at `d10c548a7`                                                                                                                                                      |
+| Last full verified baseline    | 2026-03-22: 1512 pass, 0 fail, 8 skip, 0 tsgo errors                                                                                                                    |
+| Current typecheck              | 2026-06-06: `cd packages/opencode && bun typecheck` passed                                                                                                              |
+| Current plugin typecheck       | 2026-06-06: `cd packages/plugin && bun typecheck` passed                                                                                                                |
+| Current focused tests          | 2026-06-06: `cd packages/opencode && bun test test/cli/mcp-add.test.ts test/cli/plugin-auth-picker.test.ts test/plugin/dispose.test.ts` passed with `18 pass`, `0 fail` |
+| Current full package tests     | 2026-06-06: approved unsandboxed `cd packages/opencode && bun test --timeout 30000` passed with `1565 pass`, `8 skip`, `0 fail`                                         |
 
 ## Active Work
 
-Start Phase 3 from `PLAN.md` after the PR 2 implementation merged. The best next candidates were small CLI/MCP/auth/provider/plugin features that did not require upstream's package split or V2 runtime.
+Continue Phase 3 from `PLAN.md` after the small CLI/plugin feature slice merged. The best next contained candidate was provider `headerTimeout` config; the deferred session and compaction fixes from PR #39 remained separate dedicated tasks.
 
 ## Fresh Session Checklist
 
@@ -48,8 +49,9 @@ Run these before implementation work:
 ## Validation Notes
 
 - `bun test test/session/retry.test.ts` and the full package suite require local server binds. In the sandbox they failed with `EADDRINUSE`; rerunning outside the sandbox passed.
-- Full package test count increased from the March baseline due existing repository changes plus PR 1 and PR 2 tests; current verified result is `1557 pass`, `8 skip`, `0 fail`.
+- Full package test count increased from the March baseline due existing repository changes plus upstream-sync tests; current verified result is `1565 pass`, `8 skip`, `0 fail`.
 - PR #37 merged on 2026-06-06.
 - PR #38 merged on 2026-06-06 and established the rule that continuity docs were updated in implementation PRs, not separate docs-only PRs.
-- PR 2 focused validation passed on 2026-06-06 for TypeScript LSP args, MCP schema tolerance, and existing webfetch behavior.
-- PR 2 full-suite validation passed on 2026-06-06 after user-approved unsandboxed execution.
+- PR #39 merged on 2026-06-06 and landed the PR 2 TypeScript LSP and MCP reliability slice.
+- The Phase 3 CLI/plugin slice passed focused validation on 2026-06-06 for non-interactive `mcp add`, auth logout provider matching, and plugin disposal.
+- The Phase 3 CLI/plugin slice full-suite validation passed on 2026-06-06 after user-approved unsandboxed execution.

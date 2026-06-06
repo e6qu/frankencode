@@ -193,6 +193,16 @@ export function resolvePluginProviders(input: {
   return result
 }
 
+export function resolveLogoutProvider(input: {
+  provider: string
+  credentials: string[]
+  names: Record<string, string | undefined>
+}) {
+  return input.credentials.find(
+    (id) => id === input.provider || input.names[id]?.toLowerCase() === input.provider.toLowerCase(),
+  )
+}
+
 export const ProvidersCommand = cmd({
   command: "providers",
   aliases: ["auth"],
@@ -455,9 +465,14 @@ export const ProvidersLoginCommand = cmd({
 })
 
 export const ProvidersLogoutCommand = cmd({
-  command: "logout",
+  command: "logout [provider]",
   describe: "log out from a configured provider",
-  async handler(_args) {
+  builder: (yargs) =>
+    yargs.positional("provider", {
+      describe: "provider id or name to log out from",
+      type: "string",
+    }),
+  async handler(args) {
     UI.empty()
     const credentials = await Auth.all().then((x) => Object.entries(x))
     prompts.intro("Remove credential")
@@ -466,15 +481,27 @@ export const ProvidersLogoutCommand = cmd({
       return
     }
     const database = await ModelsDev.get()
-    const providerID = await prompts.select({
-      message: "Select provider",
-      options: credentials.map(([key, value]) => ({
-        label: (database[key]?.name || key) + UI.Style.TEXT_DIM + " (" + value.type + ")",
-        value: key,
-      })),
-    })
-    if (prompts.isCancel(providerID)) throw new UI.CancelledError()
-    await Auth.remove(providerID)
+    const options = credentials.map(([key, value]) => ({
+      label: (database[key]?.name || key) + UI.Style.TEXT_DIM + " (" + value.type + ")",
+      value: key,
+    }))
+    const provider = args.provider
+      ? resolveLogoutProvider({
+          provider: args.provider,
+          credentials: options.map((option) => option.value),
+          names: Object.fromEntries(options.map((option) => [option.value, database[option.value]?.name])),
+        })
+      : await prompts.autocomplete({
+          message: "Select provider",
+          maxItems: 8,
+          options,
+        })
+    if (!provider) {
+      prompts.log.error(`Unknown configured provider "${args.provider}"`)
+      return
+    }
+    if (prompts.isCancel(provider)) throw new UI.CancelledError()
+    await Auth.remove(provider)
     prompts.outro("Logout successful")
   },
 })
