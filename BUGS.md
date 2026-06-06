@@ -16,7 +16,7 @@ If a test, typecheck, lint, or runtime failure appears during upstream backports
 
 ## Open Test Failures
 
-No confirmed open test failures. A sandboxed full-suite run failed on 2026-06-06 with socket, watcher, dependency-resolution, and MCP OAuth browser symptoms, but the user-approved unsandboxed rerun passed with `1557 pass`, `8 skip`, `0 fail`.
+No confirmed open test failures. A sandboxed full-suite run failed on 2026-06-06 with socket, watcher, dependency-resolution, and MCP OAuth browser symptoms, but the latest user-approved unsandboxed rerun passed with `1565 pass`, `8 skip`, `0 fail`.
 
 ## Open Edge Cases
 
@@ -47,7 +47,8 @@ The upstream shell truncation stream cleanup `e26abd8da` was skipped because Fra
 ## Fixed Summary
 
 - PR 1 June upstream sync: prompt tool enables already present, `context_length_exceeded` overflow parsing already present, compaction transforms already present, LiteLLM `_noop` discouragement, subagent `todowrite` permissions, Bun `ZlibError` retryability, configured `model.limit.input`, `Tool.define()` wrapper mutation, read permission relative paths, and Plan Mode subagent deny inheritance.
-- PR 2 June upstream sync: TypeScript LSP native `tsserver` args, MCP cleanup on failed connection/tool listing/refresh, MCP tolerant tool listing for invalid `outputSchema`, and webfetch timeout cleanup already present.
+- PR 2 June upstream sync, merged as #39: TypeScript LSP native `tsserver` args, MCP cleanup on failed connection/tool listing/refresh, MCP tolerant tool listing for invalid `outputSchema`, and webfetch timeout cleanup already present.
+- Phase 3 CLI/plugin sync: non-interactive `mcp add`, searchable/provider-name `auth logout`, and plugin `dispose` hook.
 - Security fixed: S1 symlink containment bypass, S2 command injection in GitHub open flow, S4 unauthenticated non-loopback server, S5 sensitive `.env` read exposure.
 - QA fixed: B53-B64, including CAS transaction/reference safety, edit graph transactions, synthetic ID collisions, plugin trigger errors, objective prompt escaping, MCP add return shape, text timing preservation, ripgrep JSON parse handling, and untracked line counts.
 - Earlier fixed bugs: PRs #10-#33 in git history.

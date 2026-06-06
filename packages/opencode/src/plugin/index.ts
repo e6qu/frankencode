@@ -15,9 +15,6 @@ import { CopilotAuthPlugin } from "./copilot"
 import { gitlabAuthPlugin as GitlabAuthPlugin } from "@gitlab/opencode-gitlab-auth"
 
 export const pluginStates = new Map<string, Promise<{ hooks: Hooks[]; input: PluginInput }>>()
-registerDisposer(async (directory) => {
-  pluginStates.delete(directory)
-})
 
 export namespace Plugin {
   const log = Log.create({ service: "plugin" })
@@ -169,4 +166,28 @@ export namespace Plugin {
       }
     }, directory)
   }
+
+  export async function shutdown(directory: string) {
+    const state = pluginStates.get(directory)
+    pluginStates.delete(directory)
+    if (!state) return
+
+    const hooks = await state
+      .then((x) => x.hooks)
+      .catch((err) => {
+        log.error("failed to load plugins before dispose", { error: err })
+        return []
+      })
+    await Promise.all(
+      hooks.map((hook) =>
+        Promise.resolve(hook.dispose?.()).catch((err) => {
+          log.error("plugin dispose hook failed", { error: err })
+        }),
+      ),
+    )
+  }
 }
+
+registerDisposer(async (directory) => {
+  await Plugin.shutdown(directory)
+})

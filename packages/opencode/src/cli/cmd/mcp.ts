@@ -412,12 +412,98 @@ async function addMcpToConfig(name: string, mcpConfig: Config.Mcp, configPath: s
   return configPath
 }
 
+type McpAddArgs = {
+  name?: string
+  url?: string
+  env?: string[]
+  header?: string[]
+  "--"?: string[]
+}
+
+function pairs(values: string[] | undefined, kind: string) {
+  return Object.fromEntries(
+    (values ?? []).map((entry) => {
+      const index = entry.indexOf("=")
+      if (index < 1) throw new Error(`Invalid ${kind}: ${entry}. Expected KEY=VALUE`)
+      return [entry.slice(0, index), entry.slice(index + 1)]
+    }),
+  )
+}
+
+export function resolveMcpAdd(args: McpAddArgs): { name: string; config: Config.Mcp } | undefined {
+  const command = args["--"] ?? []
+  if (!args.name) {
+    if (args.url || args.env?.length || args.header?.length || command.length) {
+      throw new Error("A server name is required for non-interactive MCP configuration")
+    }
+    return undefined
+  }
+
+  if (!!args.url === !!command.length) {
+    throw new Error("Provide either --url <url> or a command after --")
+  }
+  if (args.url && !URL.canParse(args.url)) {
+    throw new Error(`Invalid URL: ${args.url}`)
+  }
+  if (args.url && args.env?.length) {
+    throw new Error("--env is only valid for local MCP servers")
+  }
+  if (command.length && args.header?.length) {
+    throw new Error("--header is only valid for remote MCP servers")
+  }
+
+  const environment = pairs(args.env, "environment variable")
+  const headers = pairs(args.header, "HTTP header")
+  return {
+    name: args.name,
+    config: args.url
+      ? {
+          type: "remote",
+          url: args.url,
+          ...(Object.keys(headers).length ? { headers } : {}),
+        }
+      : {
+          type: "local",
+          command,
+          ...(Object.keys(environment).length ? { environment } : {}),
+        },
+  }
+}
+
 export const McpAddCommand = cmd({
-  command: "add",
+  command: "add [name]",
   describe: "add an MCP server",
-  async handler() {
+  builder: (yargs) =>
+    yargs
+      .positional("name", {
+        describe: "name of the MCP server",
+        type: "string",
+      })
+      .option("url", {
+        describe: "URL for a remote MCP server",
+        type: "string",
+      })
+      .option("env", {
+        describe: "environment variable for a local MCP server (KEY=VALUE)",
+        type: "string",
+        array: true,
+      })
+      .option("header", {
+        describe: "HTTP header for a remote MCP server (KEY=VALUE)",
+        type: "string",
+        array: true,
+      }),
+  async handler(args) {
     const ctx = await InstanceLifecycle.boot(process.cwd())
     return InstanceALS.run(ctx, async () => {
+      const resolved = resolveMcpAdd(args)
+      if (resolved) {
+        const configPath = await resolveConfigPath(Global.Path.config, true)
+        await addMcpToConfig(resolved.name, resolved.config, configPath)
+        prompts.log.success(`MCP server "${resolved.name}" added to ${configPath}`)
+        return
+      }
+
       UI.empty()
       prompts.intro("Add MCP server")
 

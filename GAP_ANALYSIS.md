@@ -7,6 +7,7 @@
 | Gap                                | Priority | Status                               | Next action                                                                               |
 | ---------------------------------- | -------- | ------------------------------------ | ----------------------------------------------------------------------------------------- |
 | S3 workspace trust prompt          | Medium   | Warning mitigation remained in place | Design a workspace trust prompt before loading local MCP/plugin config                    |
+| Provider `headerTimeout` config    | Medium   | Phase 3 candidate remained           | Port upstream #29484 in a provider-focused PR with retry/error coverage                   |
 | Interrupted assistant finalization | Medium   | Deferred from PR 2                   | Port upstream #27254 only with focused session interruption coverage                      |
 | Compaction tail restoration        | Medium   | Deferred from PR 2                   | Port upstream #27145 only after mapping Frankencode's current compaction flow             |
 | TUI edit indicators                | Low      | Backlog                              | Add visual indicators for hidden/replaced/annotated parts when touching TUI context views |
@@ -23,6 +24,7 @@
 | March Phase 6   | Effect behavioral analysis           | Done; 0 reimplementations needed                                                         |
 | June PR 1       | Low-risk upstream bugfix backports   | Done and merged as #37                                                                   |
 | June PR 2       | Reliability fixes with more coupling | Done; portable LSP/MCP fixes landed and divergent session/compaction items were deferred |
+| June PR 3       | Small CLI/plugin feature backports   | Done; non-interactive `mcp add`, auth logout search, and plugin disposal were ported     |
 
 ## Permanently Out Of Scope
 
