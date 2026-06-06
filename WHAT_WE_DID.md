@@ -23,6 +23,7 @@ Compressed continuity log. Use git history and PRs for full details.
 - Verified `cd packages/opencode && bun test --timeout 30000` passed with `1554 pass`, `8 skip`, `0 fail`.
 - Noted that socket-based tests need to run outside the sandbox; sandboxed local binds failed with `EADDRINUSE`.
 - Committed the batch as `4ab1837d1` and opened PR #37 against `dev`.
+- PR #37 merged on 2026-06-06 at `e6c148f54`.
 
 ## Completed Baseline Through 2026-03-22
 

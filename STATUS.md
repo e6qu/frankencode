@@ -8,24 +8,25 @@ Frankencode is ready for a new upstream maintenance phase. The old March roadmap
 
 | Item | Value |
 | --- | --- |
-| Working branch | `fix/upstream-bugfix-batch-1` |
+| Working branch | `docs/pr37-merged-next-phase` |
 | Base branch | `dev` |
 | Default branch | `dev` |
 | Current upstream target | `upstream/dev` |
 | Upstream commit reviewed | `4519a1da3` |
 | Divergence after fetch | `34 ahead / 3613 behind` |
-| Current PR | #37 |
+| Latest merged PR | #37 at `e6c148f54` |
 | Last full verified baseline | 2026-03-22: 1512 pass, 0 fail, 8 skip, 0 tsgo errors |
 | Current typecheck | 2026-06-06: `cd packages/opencode && bun typecheck` passed |
 | Current full package tests | 2026-06-06: `cd packages/opencode && bun test --timeout 30000` passed with `1554 pass`, `8 skip`, `0 fail` |
 
 ## Active Work
 
-Finish PR 1 of the June 2026 upstream resync plan:
+Start PR 2 of the June 2026 upstream resync plan:
 
-1. Monitor PR #37 checks/review.
-2. Merge PR #37 when approved.
-3. Start PR 2 reliability fixes from `PLAN.md`.
+1. Start from fresh `dev` after this docs handoff is merged or applied.
+2. Create `fix/upstream-reliability-batch-2`.
+3. Evaluate the PR 2 queue in `PLAN.md`.
+4. Port each fix manually, add focused tests, and update continuity docs before PR creation.
 
 ## Fresh Session Checklist
 
@@ -52,4 +53,4 @@ Run these before implementation work:
 
 - `bun test test/session/retry.test.ts` and the full package suite require local server binds. In the sandbox they failed with `EADDRINUSE`; rerunning outside the sandbox passed.
 - Full package test count increased from the March baseline due existing repository changes plus PR 1 tests; current verified result is `1554 pass`, `8 skip`, `0 fail`.
-- PR #37 is open for the PR 1 bugfix batch.
+- PR #37 merged on 2026-06-06.
