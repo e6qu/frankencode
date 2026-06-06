@@ -4,6 +4,7 @@ import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../fixture/instance-shim"
 import { Agent } from "../../src/agent/agent"
 import { PermissionNext } from "../../src/permission/next"
+import { derive } from "../../src/agent/subagent-permissions"
 
 // Helper to evaluate permission for a tool with wildcard pattern
 function evalPerm(agent: Agent.Info | undefined, permission: string): PermissionNext.Action | undefined {
@@ -100,6 +101,47 @@ test("general agent denies todo tools", async () => {
       expect(general?.hidden).toBeUndefined()
       expect(evalPerm(general, "todoread")).toBe("deny")
       expect(evalPerm(general, "todowrite")).toBe("deny")
+    },
+  })
+})
+
+test("plan caller denies edit for general subagent", async () => {
+  await using tmp = await tmpdir()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const plan = await Agent.get("plan")
+      const general = await Agent.get("general")
+      expect(plan).toBeDefined()
+      expect(general).toBeDefined()
+
+      const permission = PermissionNext.merge(general!.permission, derive({ parent: [], caller: plan, child: general! }))
+      expect(PermissionNext.evaluate("edit", "*", permission).action).toBe("deny")
+    },
+  })
+})
+
+test("plan caller denies edit for custom subagent", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      agent: {
+        helper: {
+          description: "Helper",
+          mode: "subagent",
+        },
+      },
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const plan = await Agent.get("plan")
+      const helper = await Agent.get("helper")
+      expect(plan).toBeDefined()
+      expect(helper).toBeDefined()
+
+      const permission = PermissionNext.merge(helper!.permission, derive({ parent: [], caller: plan, child: helper! }))
+      expect(PermissionNext.evaluate("edit", "*", permission).action).toBe("deny")
     },
   })
 })

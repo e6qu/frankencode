@@ -905,6 +905,31 @@ describe("session.message-v2.fromError", () => {
     expect(MessageV2.APIError.isInstance(result)).toBe(true)
   })
 
+  test("serializes zlib errors as retryable API errors", () => {
+    const error = Object.assign(new Error('ZlibError fetching "https://example.com"'), {
+      code: "ZlibError" as const,
+      errno: 0,
+      path: "",
+    })
+    const result = MessageV2.fromError(error, { providerID })
+
+    expect(MessageV2.APIError.isInstance(result)).toBe(true)
+    expect((result as MessageV2.APIError).data.isRetryable).toBe(true)
+    expect((result as MessageV2.APIError).data.message).toBe("Response decompression failed")
+    expect((result as MessageV2.APIError).data.metadata?.code).toBe("ZlibError")
+  })
+
+  test("serializes aborted zlib errors as aborted errors", () => {
+    const error = Object.assign(new Error('ZlibError fetching "https://example.com"'), {
+      code: "ZlibError" as const,
+      errno: 0,
+      path: "",
+    })
+    const result = MessageV2.fromError(error, { providerID, aborted: true })
+
+    expect(MessageV2.AbortedError.isInstance(result)).toBe(true)
+  })
+
   test("serializes unknown inputs", () => {
     const result = MessageV2.fromError(123, { providerID })
 

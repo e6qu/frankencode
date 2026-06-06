@@ -358,7 +358,7 @@ export namespace SessionProcessor {
               error: e instanceof Error ? e : String(e),
               stack: e instanceof Error ? (e.stack ?? null) : null,
             })
-            const error = MessageV2.fromError(e, { providerID: input.model.providerID })
+            const error = MessageV2.fromError(e, { providerID: input.model.providerID, aborted: input.abort.aborted })
             if (MessageV2.ContextOverflowError.isInstance(error)) {
               needsCompaction = true
               Bus.publish(

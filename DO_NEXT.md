@@ -1,22 +1,43 @@
-# Frankencode — Do Next
+# Frankencode Do Next
 
-All 6 planned phases are complete. Remaining work is backlog items.
+Use this file as the first handoff target in fresh sessions. It should describe only the next actionable work.
 
-## Backlog: Features
+## Immediate Task
 
-- [ ] TUI rendering of edit indicators (hidden/replaced/annotated parts)
-- [ ] CAS garbage collection improvements (size limits, age-based cleanup)
-- [ ] TUI features from upstream PRs (sidebar position, /edit command, syntax highlighting)
+Monitor and merge PR #37, then start PR 2 from `PLAN.md`.
 
-## Backlog: Maintenance
+Current branch:
 
-- [ ] Periodic upstream re-sync — cherry-pick new fixes as they land on `upstream/dev`
-- [ ] S3 workspace trust — full trust prompt (VS Code model) for `.opencode/` autoloading
-- [ ] Monitor upstream community PRs for backportable fixes
+```sh
+fix/upstream-bugfix-batch-1
+```
 
-## See Also
+## Current State
 
-- [PLAN.md](PLAN.md) — completed 6-phase roadmap
-- [GAP_ANALYSIS.md](GAP_ANALYSIS.md) — all phase gaps closed
-- [UPSTREAM_STATUS.md](UPSTREAM_STATUS.md) — upstream commit/PR catalogue with analysis
-- [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md) — CVE and vulnerability status
+- PR 1 code is implemented, committed, pushed, and opened as PR #37.
+- `cd packages/opencode && bun typecheck` passed on 2026-06-06.
+- `cd packages/opencode && bun test --timeout 30000` passed on 2026-06-06 with `1554 pass`, `8 skip`, `0 fail`.
+- Full tests were run outside the sandbox because socket tests failed sandboxed with `EADDRINUSE`.
+
+## Next Commands
+
+Run from repo root:
+
+```sh
+git status --short --branch
+gh pr view 37 --repo e6qu/frankencode --json state,mergeStateStatus,statusCheckRollup
+```
+
+If checks/review are clear, merge using the repository's normal PR process. Do not push directly to `dev`.
+
+## After PR 1
+
+Start PR 2 from `PLAN.md` only after PR 1 is merged or explicitly handed off. PR 2 queue:
+
+- MCP transport cleanup.
+- MCP output schema `$ref` tolerance.
+- TypeScript LSP native project config.
+- Webfetch timeout cleanup.
+- Shell truncation stream cleanup.
+- Interrupted assistant finalization.
+- Compaction tail restoration.

@@ -125,6 +125,16 @@ describe("session.retry.retryable", () => {
 
     expect(SessionRetry.retryable(error)).toBeUndefined()
   })
+
+  test("retries zlib api errors", () => {
+    const error = new MessageV2.APIError({
+      message: "Response decompression failed",
+      isRetryable: true,
+      metadata: { code: "ZlibError", message: 'ZlibError fetching "https://example.com"' },
+    }).toObject() as MessageV2.APIError
+
+    expect(SessionRetry.retryable(error)).toBe("Response decompression failed")
+  })
 })
 
 describe("session.message-v2.fromError", () => {
