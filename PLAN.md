@@ -10,7 +10,7 @@ Resync with upstream `anomalyco/opencode` by porting selected fixes and features
 
 | Item | State |
 | --- | --- |
-| Frankencode branch | `dev` at `b09874542` |
+| Frankencode branch | `dev` at `e6c148f54` |
 | Upstream branch | `upstream/dev` at `4519a1da3` |
 | Divergence | `34 ahead / 3613 behind` |
 | Upstream package version | `packages/opencode` `1.16.2` |
@@ -30,7 +30,7 @@ Rules for every upstream-sync PR:
 6. Run tests from package directories, normally `cd packages/opencode && bun typecheck && bun test`.
 7. Update `STATUS.md`, `DO_NEXT.md`, `WHAT_WE_DID.md`, and `BUGS.md` before handing off or opening a PR.
 
-## Active Phase: PR 1, Low-Risk Bugfix Backports
+## Completed Phase: PR 1, Low-Risk Bugfix Backports
 
 Port small, high-value fixes that still map to Frankencode's current `packages/opencode` layout.
 
@@ -55,21 +55,21 @@ Exit criteria:
 - Relevant package tests pass from `packages/opencode`: full suite passed 2026-06-06 with `1554 pass`, `8 skip`, `0 fail`.
 - `BUGS.md` is updated if any pre-existing or newly found issue remains: complete; no new confirmed runtime bugs.
 
-PR 1 is open as #37. Remaining work: monitor checks/review, merge when approved, then start Phase 2.
+PR 1 merged as #37 on 2026-06-06.
 
-## Phase 2: Reliability Fixes With More Coupling
+## Active Phase: PR 2, Reliability Fixes With More Coupling
 
-Evaluate after PR 1. These are likely useful but may need more manual adaptation.
+Evaluate and port these in a new feature branch. They are likely useful but may need more manual adaptation.
 
-| SHA | Upstream PR | Area | Fix |
-| --- | --- | --- | --- |
-| `2e6ac8ff4` | #19200 | MCP | Close transport on failed or timed-out connection |
-| `79d6b10d7` | #26614 | MCP | Tolerate output schema `$ref` failures |
-| `01f031919` | #19953 | LSP | Avoid TypeScript LSP memory leak by using native project config |
-| `bc1840b19` | #21378 | Web fetch | Clear webfetch timeouts on failed fetches |
-| `e26abd8da` | #27517 | Shell tool | Close shell truncation stream |
-| `e76cf967e` | #27254 | Session | Finalize interrupted assistant messages |
-| `ca28dd02e` | #27145 | Compaction | Restore tail turns after summarization |
+| SHA | Upstream PR | Area | Fix | Status |
+| --- | --- | --- | --- | --- |
+| `2e6ac8ff4` | #19200 | MCP | Close transport on failed or timed-out connection | Todo |
+| `79d6b10d7` | #26614 | MCP | Tolerate output schema `$ref` failures | Todo |
+| `01f031919` | #19953 | LSP | Avoid TypeScript LSP memory leak by using native project config | Todo |
+| `bc1840b19` | #21378 | Web fetch | Clear webfetch timeouts on failed fetches | Todo |
+| `e26abd8da` | #27517 | Shell tool | Close shell truncation stream | Todo |
+| `e76cf967e` | #27254 | Session | Finalize interrupted assistant messages | Todo |
+| `ca28dd02e` | #27145 | Compaction | Restore tail turns after summarization | Todo |
 
 Exit criteria:
 
