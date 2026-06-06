@@ -24,6 +24,18 @@ Compressed continuity log. Use git history and PRs for full details.
 - Noted that socket-based tests need to run outside the sandbox; sandboxed local binds failed with `EADDRINUSE`.
 - Committed the batch as `4ab1837d1` and opened PR #37 against `dev`.
 - PR #37 merged on 2026-06-06 at `e6c148f54`.
+- PR #38 merged on 2026-06-06 at `9d8296e32` and converted continuity updates from standalone docs work into updates bundled with implementation PRs.
+- Began PR 2 on branch `fix/upstream-reliability-batch-2`.
+- Ported upstream TypeScript LSP native project configuration behavior by resolving the local `typescript/lib/tsserver.js`, passing it with `--tsserver-path`, and adding `--ignore-node-modules` only when no `tsconfig.json` or `jsconfig.json` existed at the LSP root.
+- Ported MCP cleanup behavior for failed or timed-out remote/local connects, failed initial tool listing, and failed tool refreshes.
+- Ported MCP output schema tolerance by retrying `tools/list` with a schema that ignored invalid `outputSchema` fields while preserving tool names, descriptions, and input schemas.
+- Confirmed the upstream webfetch timeout cleanup was already present in Frankencode's `finally` block.
+- Skipped the upstream shell truncation-stream cleanup because Frankencode did not have upstream's `src/tool/shell.ts` truncation stream architecture.
+- Deferred interrupted assistant finalization and compaction tail restoration because both touched divergent session/compaction flows and needed dedicated regression plans.
+- Added focused TypeScript LSP argument coverage and a real stdio MCP server regression for invalid `outputSchema` handling.
+- Verified `cd packages/opencode && bun typecheck` passed.
+- Verified `cd packages/opencode && bun test test/lsp/server.test.ts test/mcp/lifecycle.test.ts test/tool/webfetch.test.ts` passed with `6 pass`, `0 fail`.
+- Verified user-approved unsandboxed `cd packages/opencode && bun test --timeout 30000` passed with `1557 pass`, `8 skip`, `0 fail`.
 
 ## Completed Baseline Through 2026-03-22
 
