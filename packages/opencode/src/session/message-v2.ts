@@ -1094,6 +1094,18 @@ export namespace MessageV2 {
           },
           { cause: e },
         ).toObject()
+      case e instanceof ProviderError.HeaderTimeoutError:
+        return new MessageV2.APIError(
+          {
+            message: e.message,
+            isRetryable: true,
+            metadata: {
+              code: e.name,
+              timeoutMs: String(e.ms),
+            },
+          },
+          { cause: e },
+        ).toObject()
       case APICallError.isInstance(e):
         const parsed = ProviderError.parseAPICallError({
           providerID: ctx.providerID,

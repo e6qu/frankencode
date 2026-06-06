@@ -56,3 +56,20 @@ test("set and remove are no-ops on keys without trailing slashes", async () => {
   const after = await Auth.all()
   expect(after["anthropic"]).toBeUndefined()
 })
+
+test("api auth preserves string metadata", async () => {
+  await Auth.set("snowflake-cortex", {
+    type: "api",
+    key: "pat-test",
+    metadata: {
+      account: "xy12345.us-east-1",
+    },
+  })
+
+  const data = await Auth.all()
+  const entry = data["snowflake-cortex"]
+  expect(entry?.type).toBe("api")
+  if (entry?.type === "api") {
+    expect(entry.metadata?.account).toBe("xy12345.us-east-1")
+  }
+})

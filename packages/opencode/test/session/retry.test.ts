@@ -5,6 +5,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { SessionRetry } from "../../src/session/retry"
 import { MessageV2 } from "../../src/session/message-v2"
 import { ProviderID } from "../../src/provider/schema"
+import { ProviderError } from "../../src/provider/error"
 
 const providerID = ProviderID.make("test")
 
@@ -198,5 +199,17 @@ describe("session.message-v2.fromError", () => {
     })
     const result = MessageV2.fromError(error, { providerID: ProviderID.make("openai") }) as MessageV2.APIError
     expect(result.data.isRetryable).toBe(true)
+  })
+
+  test("converts provider header timeouts to retryable APIError", () => {
+    const result = MessageV2.fromError(new ProviderError.HeaderTimeoutError(10000), {
+      providerID,
+    }) as MessageV2.APIError
+    expect(MessageV2.APIError.isInstance(result)).toBe(true)
+    expect(result.data.isRetryable).toBe(true)
+    expect(result.data.message).toBe("Provider response headers timed out after 10000ms")
+    expect(result.data.metadata?.code).toBe("ProviderHeaderTimeoutError")
+    expect(result.data.metadata?.timeoutMs).toBe("10000")
+    expect(SessionRetry.retryable(result)).toBe("Provider response headers timed out after 10000ms")
   })
 })

@@ -200,6 +200,7 @@ export function mockRoute(overrides?: Record<string, any>) {
   }
   mock.module("@tui/context/route", () => ({
     useRoute: () => routeState,
+    useRouteData: () => routeState.data,
   }))
   return routeState
 }
@@ -227,6 +228,7 @@ export function mockKV() {
 
 export function mockToast() {
   mock.module("@tui/ui/toast", () => ({
+    Toast: () => null,
     useToast: () => ({
       show: () => {},
       currentToast: null,
