@@ -55,7 +55,7 @@ Exit criteria:
 - Relevant package tests pass from `packages/opencode`: full suite passed 2026-06-06 with `1554 pass`, `8 skip`, `0 fail`.
 - `BUGS.md` is updated if any pre-existing or newly found issue remains: complete; no new confirmed runtime bugs.
 
-Remaining PR 1 work: review diff, rebase on `origin/dev`, commit, and open a PR against `dev`.
+PR 1 is open as #37. Remaining work: monitor checks/review, merge when approved, then start Phase 2.
 
 ## Phase 2: Reliability Fixes With More Coupling
 

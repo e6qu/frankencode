@@ -14,6 +14,7 @@ Frankencode is ready for a new upstream maintenance phase. The old March roadmap
 | Current upstream target | `upstream/dev` |
 | Upstream commit reviewed | `4519a1da3` |
 | Divergence after fetch | `34 ahead / 3613 behind` |
+| Current PR | #37 |
 | Last full verified baseline | 2026-03-22: 1512 pass, 0 fail, 8 skip, 0 tsgo errors |
 | Current typecheck | 2026-06-06: `cd packages/opencode && bun typecheck` passed |
 | Current full package tests | 2026-06-06: `cd packages/opencode && bun test --timeout 30000` passed with `1554 pass`, `8 skip`, `0 fail` |
@@ -22,11 +23,9 @@ Frankencode is ready for a new upstream maintenance phase. The old March roadmap
 
 Finish PR 1 of the June 2026 upstream resync plan:
 
-1. Review the `fix/upstream-bugfix-batch-1` working-tree diff.
-2. Commit with a conventional commit message.
-3. Rebase on `origin/dev`.
-4. Open a PR against `dev`.
-5. Then start PR 2 reliability fixes.
+1. Monitor PR #37 checks/review.
+2. Merge PR #37 when approved.
+3. Start PR 2 reliability fixes from `PLAN.md`.
 
 ## Fresh Session Checklist
 
@@ -53,4 +52,4 @@ Run these before implementation work:
 
 - `bun test test/session/retry.test.ts` and the full package suite require local server binds. In the sandbox they failed with `EADDRINUSE`; rerunning outside the sandbox passed.
 - Full package test count increased from the March baseline due existing repository changes plus PR 1 tests; current verified result is `1554 pass`, `8 skip`, `0 fail`.
-- PR number still pending; record it in `PLAN.md` and `WHAT_WE_DID.md` after PR creation.
+- PR #37 is open for the PR 1 bugfix batch.

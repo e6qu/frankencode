@@ -4,7 +4,7 @@ Use this file as the first handoff target in fresh sessions. It should describe 
 
 ## Immediate Task
 
-Finish PR 1 for `PLAN.md`: low-risk upstream bugfix backports.
+Monitor and merge PR #37, then start PR 2 from `PLAN.md`.
 
 Current branch:
 
@@ -14,7 +14,7 @@ fix/upstream-bugfix-batch-1
 
 ## Current State
 
-- PR 1 code is implemented in the working tree.
+- PR 1 code is implemented, committed, pushed, and opened as PR #37.
 - `cd packages/opencode && bun typecheck` passed on 2026-06-06.
 - `cd packages/opencode && bun test --timeout 30000` passed on 2026-06-06 with `1554 pass`, `8 skip`, `0 fail`.
 - Full tests were run outside the sandbox because socket tests failed sandboxed with `EADDRINUSE`.
@@ -25,20 +25,10 @@ Run from repo root:
 
 ```sh
 git status --short --branch
-git diff --check
+gh pr view 37 --repo e6qu/frankencode --json state,mergeStateStatus,statusCheckRollup
 ```
 
-Then commit, rebase, and open the PR:
-
-```sh
-git add PLAN.md STATUS.md WHAT_WE_DID.md DO_NEXT.md BUGS.md packages/opencode
-git commit -m "fix: backport upstream bugfix batch"
-git fetch origin
-git rebase origin/dev
-gh pr create --repo e6qu/frankencode --base dev
-```
-
-Do not use `--no-verify`.
+If checks/review are clear, merge using the repository's normal PR process. Do not push directly to `dev`.
 
 ## After PR 1
 
