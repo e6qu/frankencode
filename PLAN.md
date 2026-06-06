@@ -1,134 +1,124 @@
-# Frankencode Feature Roadmap
+# Frankencode Maintenance Plan
 
-> **Frankencode** is a fork of [OpenCode](https://github.com/anomalyco/opencode) (`dev` branch) that adds context editing, content-addressable storage, and an edit graph.
+Frankencode is a fork of OpenCode that adds context editing, content-addressable storage, and an edit graph. The original March 2026 feature/security roadmap is complete; current work is upstream maintenance without losing Frankencode-specific behavior.
 
-**Status (2026-03-22):** All 6 phases complete. 51 bugs fixed, 4 security issues fixed, 1 mitigated. Type safety complete. Zod v4 migrated. 1512 tests passing, 0 tsgo errors. Upstream Effect analysis done — zero items need reimplementation.
+## Current Objective
 
-**Upstream divergence:** 23 ahead, 162 behind, ~195 open PRs catalogued. See [UPSTREAM_STATUS.md](UPSTREAM_STATUS.md).
+Resync with upstream `anomalyco/opencode` by porting selected fixes and features from `upstream/dev` into Frankencode.
 
----
+**Snapshot:** 2026-06-06
 
-## Phase 1: Security Fixes (CRITICAL)
+| Item | State |
+| --- | --- |
+| Frankencode branch | `dev` at `b09874542` |
+| Upstream branch | `upstream/dev` at `4519a1da3` |
+| Divergence | `34 ahead / 3613 behind` |
+| Upstream package version | `packages/opencode` `1.16.2` |
+| Frankencode package version | `packages/opencode` `1.2.27` |
 
-Fix the 5 security issues documented in [BUGS.md](BUGS.md) and [docs/SECURITY_AUDIT.md](docs/SECURITY_AUDIT.md).
+## Strategy
 
-| # | Issue | Severity | Fix |
-|---|-------|----------|-----|
-| S1 | `Filesystem.contains()` symlink bypass | CRITICAL | Add `realpathSync()` before lexical check in `util/filesystem.ts` |
-| S2 | `exec()` command injection in github.ts | HIGH | Replace `exec(cmd)` with `spawn(["open", url])` |
-| S3 | Untrusted `.opencode/` autoloading | HIGH | Add workspace trust prompt before loading MCP/plugins |
-| S4 | Server unauthenticated on non-loopback | MED | Require password or bind loopback-only by default |
-| S5 | Read tool exposes .env files | MED | Add sensitive file deny-list |
+Do not rebase Frankencode onto upstream. Upstream now includes large V2 runtime, workspace, Effect, package-split, desktop, app, stats, generated SDK, and infrastructure work. Frankencode must port changes in small PRs.
 
-Also evaluate upstream security PRs:
-- [#10763](https://github.com/anomalyco/opencode/pull/10763) — CVE-2025-58179 fix
-- [#10974](https://github.com/anomalyco/opencode/pull/10974) — TUI server exposure guard
-- [#14581](https://github.com/anomalyco/opencode/pull/14581) — Cross-drive path bypass (Windows)
+Rules for every upstream-sync PR:
 
-**Exit criteria:** All S1-S5 fixed, regression tests added, `BUGS.md` updated.
+1. Start from a feature branch, never `dev`.
+2. Run `git fetch origin upstream`.
+3. Rebase the feature branch on `origin/dev` before opening a PR.
+4. Prefer narrow manual ports over cherry-picks when upstream touched new `packages/core`, `packages/server`, or `packages/llm` architecture.
+5. Preserve Frankencode context editing, CAS, edit graph, side-thread, and objective-tracking behavior.
+6. Run tests from package directories, normally `cd packages/opencode && bun typecheck && bun test`.
+7. Update `STATUS.md`, `DO_NEXT.md`, `WHAT_WE_DID.md`, and `BUGS.md` before handing off or opening a PR.
 
----
+## Active Phase: PR 1, Low-Risk Bugfix Backports
 
-## Phase 2: High-Priority Upstream Bug Fixes
+Port small, high-value fixes that still map to Frankencode's current `packages/opencode` layout.
 
-Cherry-pick 8 high-priority fixes from vouched contributors and critical bug reports. See [UPSTREAM_STATUS.md](UPSTREAM_STATUS.md) Phase 1.
+| SHA | Upstream PR | Area | Fix | Status |
+| --- | --- | --- | --- | --- |
+| `c2ca1494e` | #17064 | Session | Preserve prompt tool enables with empty agent permissions | Already present; existing `session.llm.stream` test covers it |
+| `e718db624` | #17748 | Provider | Treat `code: context_length_exceeded` as context overflow | Already present; existing `message-v2.fromError` test covers it |
+| `4cb29967f` | #17823 | Compaction | Apply message transforms during compaction | Already present in `SessionCompaction.process` |
+| `196a03caf` | #18539 | Compaction | Discourage `_noop` tool calls during LiteLLM compaction | Ported in `fix/upstream-bugfix-batch-1` |
+| `66a56551b` | #19125 | Task tool | Respect agent permission config for `todowrite` | Ported with task/subagent permission coverage |
+| `7123aad5a` | #19104 | Retry | Classify Bun `ZlibError` fetch failures as retryable | Ported with `message-v2` and retry tests |
+| `7f45943a9` | #16306 | Provider | Honor `model.limit.input` overrides | Ported with provider config test |
+| `81d3ac3bf` | #16952 | Tool registry | Prevent `Tool.define()` wrapper accumulation | Ported with `tool-define` tests |
+| `ba9e4b67e` | none | Read tool | Match permissions against worktree-relative path | Ported with read permission test |
+| `b8ca71d30` | #26597 | Security | Ensure subagents inherit parent deny rules in Plan Mode | Ported with general/custom subagent deny tests |
 
-| SHA/PR | Author | Fix | Size |
-|--------|--------|-----|------|
-| `cc818f803` / #18283 | Protocol Zero | thinkingConfig only for reasoning models | Small |
-| `7866dbcfc` / #18292 | Luke Parker | truncate permission import cycle | Small |
-| `d69962b0f` / #18264 | James Long | disable chunk timeout by default | Small |
-| `054075189` / #18259 | James Long | queue for event route processing | Small |
-| `0d7e62a53` / #17815 | Kit Langton | forked prompt attachments losing file parts | Small |
-| `84e62fc66` / #18165 | Kit Langton | preserve tagged error messages | Small |
-| [#18527](https://github.com/anomalyco/opencode/pull/18527) | Dax Raad (Vouched) | restore SIGHUP exit handler | 1 line |
-| [#18113](https://github.com/anomalyco/opencode/pull/18113) | Ariane Emory (Vouched) | fix default timeout value | 2 lines |
+Exit criteria:
 
-**Exit criteria:** All 8 cherry-picked, tests pass, no regressions.
+- All selected fixes are ported or explicitly dropped with reason: complete in working tree.
+- Focused regression tests are added or existing upstream tests are adapted: complete.
+- `cd packages/opencode && bun typecheck` passes: passed 2026-06-06.
+- Relevant package tests pass from `packages/opencode`: full suite passed 2026-06-06 with `1554 pass`, `8 skip`, `0 fail`.
+- `BUGS.md` is updated if any pre-existing or newly found issue remains: complete; no new confirmed runtime bugs.
 
----
+Remaining PR 1 work: review diff, rebase on `origin/dev`, commit, and open a PR against `dev`.
 
-## Phase 3: Upstream Quality Fixes + OpenTUI Upgrade
+## Phase 2: Reliability Fixes With More Coupling
 
-| SHA/PR | Author | Fix |
-|--------|--------|-----|
-| `040f551c5` / #18079 | Sebastian | OpenTUI 0.1.88 upgrade |
-| [#18551](https://github.com/anomalyco/opencode/pull/18551) | Sebastian (Vouched) | OpenTUI 0.1.90 upgrade |
-| `2dbcd79fd` / #18261 | jorge g | stabilize agent/skill ordering |
-| `4b4dd2b88` / #18009 | Ariane Emory | apply_patch in EDIT_TOOLS filter |
-| `5ddfe4ada` / #18123 | Kit Langton | type Provider.list() properly |
-| `fee3c196c` / #17812 | Kit Langton | prompt schema validation debug logs |
+Evaluate after PR 1. These are likely useful but may need more manual adaptation.
 
-Also evaluate community bug fix PRs (~17 candidates, see UPSTREAM_STATUS.md):
-- Retry backoff cap, 429 retry, lone surrogate prevention, empty content filtering
-- LSP memory leak fix, MCP client recovery, snapshot git timeout
+| SHA | Upstream PR | Area | Fix |
+| --- | --- | --- | --- |
+| `2e6ac8ff4` | #19200 | MCP | Close transport on failed or timed-out connection |
+| `79d6b10d7` | #26614 | MCP | Tolerate output schema `$ref` failures |
+| `01f031919` | #19953 | LSP | Avoid TypeScript LSP memory leak by using native project config |
+| `bc1840b19` | #21378 | Web fetch | Clear webfetch timeouts on failed fetches |
+| `e26abd8da` | #27517 | Shell tool | Close shell truncation stream |
+| `e76cf967e` | #27254 | Session | Finalize interrupted assistant messages |
+| `ca28dd02e` | #27145 | Compaction | Restore tail turns after summarization |
 
-**Exit criteria:** OpenTUI upgraded, quality fixes applied, tests pass.
+Exit criteria:
 
----
+- Each fix is marked ported, skipped, or deferred with a precise reason.
+- Regression coverage exists for any ported behavior.
+- Typecheck and relevant tests pass.
 
-## Phase 4: Community Bug Fixes + Features
+## Phase 3: Feature Candidates
 
-Cherry-pick or reimplement the best community contributions:
+Evaluate only after the bugfix phases. Prefer features with direct CLI/provider/plugin value and low architectural coupling.
 
-**Bug fixes:**
-- [#18539](https://github.com/anomalyco/opencode/pull/18539) — discourage _noop tool call during compaction
-- [#18538](https://github.com/anomalyco/opencode/pull/18538) — handle SSE client disconnect
-- [#18443](https://github.com/anomalyco/opencode/pull/18443) — retry 429 even when non-retryable
-- [#17758](https://github.com/anomalyco/opencode/pull/17758) — prevent lone surrogate 400 errors
-- [#17742](https://github.com/anomalyco/opencode/pull/17742) — filter empty text content blocks
-- [#18137](https://github.com/anomalyco/opencode/pull/18137) — reduce memory during prompting (BYK)
-- [#18516](https://github.com/anomalyco/opencode/pull/18516) — prevent subagent plan escape (BYK)
-- [#17635](https://github.com/anomalyco/opencode/pull/17635) — remove dead LSP clients (memory leak)
+| SHA | Upstream PR | Area | Feature | Notes |
+| --- | --- | --- | --- | --- |
+| `ba57718b0` | #31054 | CLI/MCP | Non-interactive `mcp add` | Likely useful and contained |
+| `3f0ef9b71` | #31053 | CLI/Auth | Search in auth logout command | Small UX improvement |
+| `519d34447` | #29493 | Plugin | Plugin dispose hook | Useful for cleanup |
+| `f965db9e1` | #29484 | Provider | `headerTimeout` config | Reliability feature |
+| `2859ce6e7` | #29901 | Provider | Snowflake Cortex provider | Provider expansion |
+| `d34a0194e` | #27394 | Provider | NVIDIA endpoints origin header | Small provider correctness |
+| `159964b17` | #26095 | Provider/plugin | DigitalOcean OAuth and inference routers | Medium size |
+| `0de5f1ff3` | #28255 | TUI | Configurable prompt size | Small TUI UX |
+| `bba76009a` | #29710 | TUI | Wide-character paste safety | Bugfix-grade TUI item |
+| `5fb85a6aa` | #28664 | TUI | Wrapped inline tool row layout | Bugfix-grade TUI item |
+| `17d66ee4f` + followups | #28476, #28728, #30935 | TUI | Diff viewer and hunk navigation | Larger feature set |
 
-**Features (evaluate):**
-- [#12633](https://github.com/anomalyco/opencode/pull/12633) — auto-accept mode for TUI permissions (Dax)
-- [#18317](https://github.com/anomalyco/opencode/pull/18317) — quiet mode for CLI runs
-- [#18235](https://github.com/anomalyco/opencode/pull/18235) — offline mode
-- [#18450](https://github.com/anomalyco/opencode/pull/18450) — native Output.object() (net code deletion)
+## Deferred Architecture Work
 
-**Exit criteria:** Selected fixes applied, features evaluated, tests pass.
+Do not start these until a dedicated architecture plan exists:
 
----
+- Upstream V2 session runtime and tool foundation.
+- Workspace sync, warping, moving sessions, and project-copy machinery.
+- Native HTTP API / server package migration.
+- `packages/core`, `packages/server`, `packages/llm` package split.
+- Effect service rewrites and runtime flag migration.
+- AI SDK v6 migration as a standalone large project.
+- ACP-next implementation.
+- `fff` search tools, because it depends on upstream's new filesystem service stack.
+- Desktop, app, stats, Zen, nix, release, generated-only, and CI-only changes unless they directly unblock Frankencode.
 
-## Phase 5: Remaining Tests
+## Completed Baseline
 
-- [ ] filterEdited unit tests (hidden parts stripped, empty messages dropped)
-- [ ] ContextEdit validation tests (ownership, budget, recency, privileged agents)
-- [ ] TUI dialog tests (9: command, provider, session-rename, stash, etc.)
-- [ ] TUI interaction tests (keyboard nav, prompt input, command palette)
+Completed March 2026 work is compressed here for continuity:
 
-**Exit criteria:** Test count increases, coverage gaps filled.
-
----
-
-## Phase 6: Effect Behavioral Analysis — COMPLETE
-
-Analyzed all 12 upstream Effect PRs. Result: **zero items need reimplementation.**
-
-- 2 bug fixes (VcsService HEAD filter, FileTimeService await+Semaphore) — already in our tree
-- 10 pure structural refactors — not applicable to our architecture
-
-See [UPSTREAM_STATUS.md](UPSTREAM_STATUS.md) for full per-PR analysis.
-
----
-
-## Backlog: Features
-
-- [ ] TUI rendering of edit indicators (hidden/replaced/annotated parts)
-- [ ] CAS garbage collection improvements (size limits, age-based cleanup)
-- [ ] TUI features from upstream PRs (sidebar position, /edit command, syntax highlighting)
-
----
-
-## Completed (PRs #16-#25)
-
-| Feature | PR |
-|---------|-----|
-| Upstream bug backports (B1-B22) | #16-#18 |
-| Upstream full rebase | #19 |
-| Effect-ification (Instance deleted, 0 ALS fallbacks, 81 TUI tests) | #20-#21 |
-| Bug fixes B47-B52 + type safety (~250 `any` eliminated) + architecture docs | #22 |
-| TUI types + logger types | #23 |
-| Zod v4 migration + 25 Frankencode unit tests | #24 |
-| Upstream catalogue + security audit | #25 |
+- Security fixes S1, S2, S4, S5 fixed; S3 mitigated with warning.
+- Upstream backports through PRs #16-#18 and #27.
+- Full rebase PR #19.
+- Effect-ification PRs #20-#21.
+- Type safety, bug fixes, architecture docs PRs #22-#23.
+- Zod v4 migration and Frankencode tests PR #24.
+- Upstream March catalogue and security audit PR #25.
+- Phase 5 tests PR #29.
+- Effect behavioral analysis PR #30: zero March Effect PRs needed reimplementation.

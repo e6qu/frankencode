@@ -155,6 +155,30 @@ describe("tool.read external_directory permission", () => {
       },
     })
   })
+
+  test("asks for read permission using worktree-relative path", async () => {
+    await using tmp = await tmpdir({
+      git: true,
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "src", "secret.ts"), "secret")
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const read = await ReadTool.init()
+        const requests: Array<Omit<PermissionNext.Request, "id" | "sessionID" | "tool">> = []
+        const testCtx = {
+          ...ctx,
+          ask: async (req: Omit<PermissionNext.Request, "id" | "sessionID" | "tool">) => {
+            requests.push(req)
+          },
+        }
+        await read.execute({ filePath: path.join(tmp.path, "src", "secret.ts") }, testCtx)
+        expect(requests.find((req) => req.permission === "read")?.patterns).toStrictEqual([path.join("src", "secret.ts")])
+      },
+    })
+  })
 })
 
 describe("tool.read env file permissions", () => {

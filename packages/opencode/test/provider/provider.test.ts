@@ -528,6 +528,43 @@ test("model options are merged from existing model", async () => {
   })
 })
 
+test("model input limit is merged from config", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            anthropic: {
+              models: {
+                "claude-sonnet-4-20250514": {
+                  limit: {
+                    context: 128000,
+                    input: 12345,
+                    output: 4096,
+                  },
+                },
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      Env.set("ANTHROPIC_API_KEY", "test-api-key", Instance.directory)
+    },
+    fn: async () => {
+      const model = await Provider.getModel(ProviderID.anthropic, ModelID.make("claude-sonnet-4-20250514"))
+      expect(model.limit.input).toBe(12345)
+      expect(model.limit.context).toBeGreaterThan(0)
+    },
+  })
+})
+
 test("provider removed when all models filtered out", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {

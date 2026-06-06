@@ -73,7 +73,7 @@ export const ReadTool = Tool.define("read", {
 
     await ctx.ask({
       permission: "read",
-      patterns: [filepath],
+      patterns: [path.relative(ctx.worktree, filepath)],
       always: sensitive ? [] : ["*"],
       metadata: {},
     })

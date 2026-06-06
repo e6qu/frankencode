@@ -1,38 +1,56 @@
-# Frankencode — Project Status
+# Frankencode Status
 
-**Date:** 2026-03-22
-**All 6 phases complete.** See [PLAN.md](PLAN.md).
+**Date:** 2026-06-06
 
-## Metrics
+## Current State
 
-| Metric | Value |
-|--------|-------|
-| Tests | 1512 pass, 0 fail, 8 skip (133 files) |
-| tsgo errors | 0 |
-| Security issues | 4 fixed (S1,S2,S4,S5), 1 mitigated (S3) |
-| Open bugs | 0 |
-| Deferred bugs | 1 (B51) |
-| Fixed bugs | 51 |
-| `any` remaining | 20 documented structural exceptions |
-| Upstream Effect PRs | All 12 analyzed — 0 need reimplementation |
-| PRs merged | #16-#30 |
+Frankencode is ready for a new upstream maintenance phase. The old March roadmap is complete and no longer the active plan.
 
-## Phase Progress
+| Item | Value |
+| --- | --- |
+| Working branch | `fix/upstream-bugfix-batch-1` |
+| Base branch | `dev` |
+| Default branch | `dev` |
+| Current upstream target | `upstream/dev` |
+| Upstream commit reviewed | `4519a1da3` |
+| Divergence after fetch | `34 ahead / 3613 behind` |
+| Last full verified baseline | 2026-03-22: 1512 pass, 0 fail, 8 skip, 0 tsgo errors |
+| Current typecheck | 2026-06-06: `cd packages/opencode && bun typecheck` passed |
+| Current full package tests | 2026-06-06: `cd packages/opencode && bun test --timeout 30000` passed with `1554 pass`, `8 skip`, `0 fail` |
 
-| Phase | Status | PR |
-|-------|--------|-----|
-| 1 | **Done** — Security fixes (S1-S5) | #26 |
-| 2 | **Done** — High-priority upstream fixes (5 backported) | #27 |
-| 3+4 | **Done** — OpenTUI upgrade + agent ordering | #28 |
-| 5 | **Done** — Remaining tests (24 new) | #29 |
-| 6 | **Done** — Effect behavioral analysis (0 need reimplementation) | #30 |
+## Active Work
 
-## What's Next
+Finish PR 1 of the June 2026 upstream resync plan:
 
-All planned phases complete. Remaining work is in the backlog:
-- TUI rendering of edit indicators
-- CAS garbage collection improvements
-- TUI features from upstream PRs
-- Periodic upstream re-sync (cherry-pick new fixes as they land)
+1. Review the `fix/upstream-bugfix-batch-1` working-tree diff.
+2. Commit with a conventional commit message.
+3. Rebase on `origin/dev`.
+4. Open a PR against `dev`.
+5. Then start PR 2 reliability fixes.
 
-See [DO_NEXT.md](DO_NEXT.md) and [PLAN.md](PLAN.md).
+## Fresh Session Checklist
+
+Run these before implementation work:
+
+1. `git status --short --branch`
+2. `git fetch origin upstream`
+3. `git switch dev`
+4. `git pull --rebase origin dev`
+5. `git switch -c <type>/<short-topic>`
+6. Read `PLAN.md`, `DO_NEXT.md`, `BUGS.md`, and this file.
+7. For code changes, run checks from `packages/opencode`, not repo root.
+
+## Current Risks
+
+| Risk | Handling |
+| --- | --- |
+| Upstream is much newer and architecturally split | Port manually in small PRs; do not rebase |
+| Frankencode-specific context editing can regress during session/tool ports | Add focused tests around prompt/session/tool behavior when touched |
+| Old continuity docs can become stale quickly | Update `STATUS.md`, `DO_NEXT.md`, `WHAT_WE_DID.md`, and `BUGS.md` after every PR or handoff |
+| S3 workspace trust remains mitigated, not fully fixed | Keep tracked in `BUGS.md`; do not lose during upstream ports |
+
+## Validation Notes
+
+- `bun test test/session/retry.test.ts` and the full package suite require local server binds. In the sandbox they failed with `EADDRINUSE`; rerunning outside the sandbox passed.
+- Full package test count increased from the March baseline due existing repository changes plus PR 1 tests; current verified result is `1554 pass`, `8 skip`, `0 fail`.
+- PR number still pending; record it in `PLAN.md` and `WHAT_WE_DID.md` after PR creation.
